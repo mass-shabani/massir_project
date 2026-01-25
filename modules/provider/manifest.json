@@ -1,0 +1,8 @@
+{
+  "name": "math_provider",
+  "version": "1.0",
+  "enabled": true,
+  "entrypoint": "MathModule",
+  "provides": ["calculator_service"],
+  "requires": []
+}

@@ -1,28 +1,34 @@
-import uvicorn
-from fastapi import FastAPI
+import asyncio
+import signal
+import sys
+from core import Kernel
 
-from app.core import CoreManager
+async def main():
+    kernel = Kernel()
+    
+    # هندل کردن خاموشی ناگهانی
+    def signal_handler(sig, frame):
+        print("\n⚠️ Interrupt received. Shutting down...")
+        asyncio.create_task(kernel.shutdown())
+        sys.exit(0)
 
-app = FastAPI(
-    title="Modular FastAPI Application",
-    version="1.0.0",
-)
+    signal.signal(signal.SIGINT, signal_handler)
 
-core_manager = CoreManager()
-
-@app.on_event("startup")
-async def startup():
-    # بارگذاری ماژول‌ها در شروع اپ
-    core_manager.load_modules()
-
-@app.on_event("shutdown")
-async def shutdown():
-    # می‌توانید cleanup ماژول‌ها را اینجا انجام دهید
-    pass
-
-@app.get("/")
-def root():
-    return {"message": "Welcome to Modular FastAPI App"}
+    # بوت‌استرپ فریم‌ورک
+    await kernel.bootstrap(modules_dir="modules")
+    
+    # برنامه در اینجا اجرا می‌شود. 
+    # برای تست، یک لوپ ساده نگه می‌داریم.
+    print("✨ Application is running. Press Ctrl+C to stop.")
+    
+    # چون این یک فریم‌ورک است، منطق برنامه باید در ماژول‌ها باشد
+    # اینجا فقط یک تاخیر برای نشان دادن حیات برنامه است
+    await asyncio.sleep(5) 
+    
+    await kernel.shutdown()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

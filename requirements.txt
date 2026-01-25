@@ -1,0 +1,9 @@
+# ==========================================
+# Modular Framework Requirements
+# ==========================================
+# Note: The core framework uses only Python Standard Libraries.
+# No external packages are required to run the current code.
+
+# --- Development Tools (Optional) ---
+# If you want to run tests in the future, uncomment below:
+# pytest>=7.0.0
