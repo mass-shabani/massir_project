@@ -2,7 +2,8 @@
   "name": "app_consumer",
   "version": "1.0",
   "enabled": true,
+  "type": "application",
   "entrypoint": "AppModule",
   "provides": [],
-  "requires": ["calculator_service"]
+  "requires": ["core_logger"]
 }

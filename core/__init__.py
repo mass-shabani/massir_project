@@ -1,8 +1,10 @@
 # core/__init__.py
 
-from .kernel import Kernel
-from .interfaces import IModule, ModuleContext
+from .kernel import Kernel, ModuleContext
+from .interfaces import IModule
 from .registry import ModuleRegistry
+from .apis.system_apis import CoreLoggerAPI, CoreConfigAPI
+from .hooks.definitions import SystemHook
 from .exceptions import (
     FrameworkError,
     ModuleLoadError,
@@ -11,9 +13,12 @@ from .exceptions import (
 
 __all__ = [
     'Kernel',
-    'ModuleContext',
-    'IModule',
+    'ModuleContext', 
+    'IModule', 
     'ModuleRegistry',
+    'CoreLoggerAPI', 
+    'CoreConfigAPI', 
+    'SystemHook',
     'FrameworkError',
     'ModuleLoadError',
     'DependencyResolutionError'

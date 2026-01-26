@@ -1,0 +1,9 @@
+{
+  "name": "sys_logger",
+  "version": "1.0",
+  "enabled": true,
+  "type": "system",
+  "entrypoint": "SystemLoggerModule",
+  "provides": ["core_logger"],
+  "requires": []
+}
