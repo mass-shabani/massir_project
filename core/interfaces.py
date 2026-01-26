@@ -1,5 +1,11 @@
 from abc import ABC, abstractmethod
-from core.kernel import ModuleContext
+from core.registry import ModuleRegistry
+
+# تعریف ModuleContext در اینجا برای جلوگیری از Circular Import
+class ModuleContext:
+    def __init__(self):
+        self.services = ModuleRegistry()
+        self.metadata = {} 
 
 class IModule(ABC):
     """
@@ -12,7 +18,6 @@ class IModule(ABC):
     async def load(self, context: ModuleContext):
         """
         فاز اول: لود اولیه و ثبت سرویس‌ها در Registry.
-        در این مرحله نباید به سرویس‌های دیگران دسترسی زد چون هنوز لود نشده‌اند.
         """
         pass
 
@@ -20,13 +25,12 @@ class IModule(ABC):
     async def start(self, context: ModuleContext):
         """
         فاز دوم: شروع کار و ارتباط با سایر ماژول‌ها.
-        در این مرحله می‌توان از context.services.get استفاده کرد.
         """
         pass
 
     @abstractmethod
     async def stop(self, context: ModuleContext):
         """
-        فاز سوم: پاکسازی منابع قبل از بسته شدن.
+        فاز سوم: پاکسازی منابع.
         """
         pass

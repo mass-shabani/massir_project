@@ -1,7 +1,7 @@
 # core/__init__.py
 
-from .kernel import Kernel, ModuleContext
-from .interfaces import IModule
+from .kernel import Kernel
+from .interfaces import IModule, ModuleContext
 from .registry import ModuleRegistry
 from .exceptions import (
     FrameworkError,
@@ -9,7 +9,6 @@ from .exceptions import (
     DependencyResolutionError
 )
 
-# لیست کلاس‌ها و توابعی که وقتی کسی import core می‌کند، در دسترس هستند
 __all__ = [
     'Kernel',
     'ModuleContext',
