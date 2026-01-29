@@ -1,6 +1,7 @@
 import json
 import importlib
 import asyncio
+import os
 from pathlib import Path
 from typing import List, Dict, Optional, Callable
 
@@ -9,32 +10,61 @@ from core.registry import ModuleRegistry
 from core.exceptions import DependencyResolutionError
 from core.apis.system_apis import CoreLoggerAPI, CoreConfigAPI
 from core.hooks.definitions import SystemHook
+from core.settings_manager import SettingsManager
 
 # --- پیاده‌سازی‌های پیش‌فرض (Fallback) ---
+
 class DefaultLogger(CoreLoggerAPI):
+    """کلاس لاگر پیش‌فرض که تنظیمات را رعایت می‌کند"""
+    def __init__(self, config_api: CoreConfigAPI):
+        self.config = config_api
+
     def log(self, message: str, level: str = "INFO"):
-        print(f"[{level}] {message}")
+        # اگر دیباگ خاموش است، چاپ نکن
+        if not self.config.is_debug():
+            return
+
+        if os.name == 'nt':
+            os.system('')
+
+        template = self.config.get_system_log_template()
+        color_code = self.config.get_system_log_color_code()
+        
+        formatted_msg = template.format(
+            project_name=self.config.get_project_name(),
+            level=level,
+            message=message
+        )
+
+        color_code_start = f'\033[{color_code}m'
+        reset_code = '\033[0m'
+        
+        print(f"{color_code_start}{formatted_msg}{reset_code}")
 
 class DefaultConfig(CoreConfigAPI):
     def get(self, key: str):
         return None
 
 # --- هسته اصلی ---
+
 class Kernel:
     def __init__(self):
         self._modules: Dict[str, IModule] = {}
         self.context = ModuleContext()
         
-        # API ها با کلاس‌های پیش‌فرض مقداردهی می‌شوند
-        self.logger_api: CoreLoggerAPI = DefaultLogger()
-        self.config_api: CoreConfigAPI = DefaultConfig()
+        # لود تنظیمات و ساخت لاگر پیش‌فرض
+        self.config_api: CoreConfigAPI = SettingsManager()
+        self.logger_api: CoreLoggerAPI = DefaultLogger(self.config_api)
         
-        # دیکشنری نگهداری کال‌بک‌ها
         self._hooks: Dict[SystemHook, List[Callable]] = {}
-
-        # هسته را در کانتکست ثبت می‌کند تا ماژول‌ها بتوانند register_hook کنند
         self.context.set_kernel(self)
 
+        # ⭐ ثبت سرویس‌های پیش‌فرض هسته در رجیستری
+        # این باعث می‌شود حتی اگر ماژول سیستمی لود نشود، ماژول‌ها این سرویس‌ها را پیدا کنند
+        self.context.services.set("core_logger", self.logger_api)
+        self.context.services.set("core_config", self.config_api)
+
+    # ... متدهای register_hook و _dispatch_hook بدون تغییر ...
     def register_hook(self, hook: SystemHook, callback: Callable):
         if hook not in self._hooks:
             self._hooks[hook] = []
@@ -53,17 +83,22 @@ class Kernel:
                     print(f"Hook Error in {hook.value}: {e}")
 
     async def bootstrap(self, modules_dir: str = "modules"):
-        await self._dispatch_hook(SystemHook.ON_KERNEL_BOOTSTRAP_START)
-        self.logger_api.log("🚀 Starting Framework Kernel...")
         
+        # --- فاز ۰: لود و اعمال تنظیمات ---
+        self.logger_api.log("🔧 Loading Project Settings...")
+        await self._dispatch_hook(SystemHook.ON_SETTINGS_LOADED)
+        self._print_banner()
+
+        await self._dispatch_hook(SystemHook.ON_KERNEL_BOOTSTRAP_START)
+        self._log_internal("🚀 Starting Framework Kernel...")
+
         modules_data = self._discover_modules(modules_dir)
         
-        # تفکیک ماژول‌های سیستمی و کاربردی
         system_data = [m for m in modules_data if m["manifest"].get("type") == "system"]
         app_data = [m for m in modules_data if m["manifest"].get("type") != "system"]
 
-        # --- فاز ۰: لود سیستم ---
-        self.logger_api.log("🔩 Loading System Modules...")
+        # --- فاز ۲: لود سیستم ---
+        self._log_internal("🔩 Loading System Modules...")
         for mod_info in system_data:
             instance = self._instantiate_module(mod_info)
             await instance.load(self.context)
@@ -72,10 +107,9 @@ class Kernel:
             self._modules[instance.name] = instance
             await self._dispatch_hook(SystemHook.ON_MODULE_LOADED, instance)
 
-        # --- فاز ۱: لود اپلیکیشن ---
-        self.logger_api.log("🔍 Resolving Application Modules...")
+        # --- فاز ۳: لود اپلیکیشن ---
+        self._log_internal("🔍 Resolving Application Modules...")
         
-        # ⭐ اصلاح شده: ساخت نقشه قابلیت‌های سیستمی برای پاس دادن به رزولور
         system_provides = {}
         for m in system_data:
             name = m["manifest"]["name"]
@@ -83,39 +117,61 @@ class Kernel:
             for cap in provides:
                 system_provides[cap] = name
 
-        # پاس دادن قابلیت‌های سیستمی به تابع مرتب‌ساز
+        # ⭐ اضافه کردن قابلیت‌های پیش‌فرض هسته به لیست تامین‌کنندگان
+        # این کار باعث می‌شود حل‌کننده وابستگی بداند که هسته هم می‌تواند Logger و Config را فراهم کند
+        system_provides["core_logger"] = "Kernel_Default"
+        system_provides["core_config"] = "Kernel_Default"
+
         sorted_app = self._resolve_load_order(app_data, existing_provides=system_provides)
 
-        self.logger_api.log("📦 Loading Application Modules...")
+        self._log_internal("📦 Loading Application Modules...")
         for mod_info in sorted_app:
             instance = self._instantiate_module(mod_info)
             await instance.load(self.context)
             self._modules[instance.name] = instance
             await self._dispatch_hook(SystemHook.ON_MODULE_LOADED, instance)
 
-        self.logger_api.log("▶️ Starting Application Modules...")
+        self._log_internal("▶️ Starting Application Modules...")
         for instance in self._modules.values():
              if instance not in [m['manifest']['name'] for m in system_data]:
                 await instance.start(self.context)
 
         await self._dispatch_hook(SystemHook.ON_KERNEL_BOOTSTRAP_END)
-        self.logger_api.log("✅ Framework initialization complete.\n")
+        self._log_internal("✅ Framework initialization complete.\n")
 
+    def _log_internal(self, message: str):
+        if not self.config_api.is_debug():
+            return
+        self.logger_api.log(message, level="INFO") 
+
+    def _print_banner(self):
+        template = self.config_api.get_banner_template()
+        project_name = self.config_api.get_project_name()
+        banner_content = template.format(project_name=project_name)
+        color_code = self.config_api.get_banner_color_code()
+        if os.name == 'nt':
+            os.system('')
+        color_start = f'\033[{color_code}m'
+        reset_code = '\033[0m'
+        print(f"{color_start}{banner_content}{reset_code}")
+
+    # ... متدهای inject_system_apis و discover و resolve و instantiate مانند قبل هستند ...
     async def _inject_system_apis(self, system_module: IModule):
-        # تزریق لاگر
         logger_service = self.context.services.get("core_logger")
         if logger_service and isinstance(logger_service, CoreLoggerAPI):
             self.logger_api.log(f"🔄 Overriding Core Logger with module: {system_module.name}")
             self.logger_api = logger_service 
             self.context.services.set("core_logger", self.logger_api)
 
-        # تزریق کانفیگ
         config_service = self.context.services.get("core_config")
         if config_service and isinstance(config_service, CoreConfigAPI):
             self.logger_api.log(f"🔄 Overriding Core Config with module: {system_module.name}")
             self.config_api = config_service
+            self.context.services.set("core_config", self.config_api)
+            
+            if isinstance(self.logger_api, DefaultLogger):
+                self.logger_api.config = self.config_api
 
-    # ... متدهای کمکی ...
     def _discover_modules(self, directory: str) -> List[Dict]:
         found = []
         base_path = Path(directory)
@@ -132,11 +188,8 @@ class Kernel:
         sorted_list = []
         visited = set()
         visiting = set()
-        
-        # ⭐ اصلاح شده: اگر قابلیت‌های قبلی (سیستم) وجود دارند، اضافه کن
         provides_map = existing_provides.copy() if existing_provides else {}
 
-        # اضافه کردن قابلیت‌های خود ماژول‌های درون لیست فعلی
         for m in modules_data:
             name = m["manifest"]["name"]
             provides = m["manifest"].get("provides", [])
@@ -154,7 +207,6 @@ class Kernel:
                     raise DependencyResolutionError(f"'{name}' requires '{req_cap}' but none provides it.")
                 provider_name = provides_map[req_cap]
                 provider_info = next((m for m in modules_data if m["manifest"]["name"] == provider_name), None)
-                # اگر ارائه دهنده در سیستم بود (نه در لیست فعلی)، نیاز به بازگشت ندارد چون قبلاً لود شده
                 if provider_info: visit(provider_info)
             visiting.remove(name)
             visited.add(name)
@@ -182,6 +234,6 @@ class Kernel:
             raise ModuleLoadError(f"Failed to load '{mod_name}': {e}")
 
     async def shutdown(self):
-        self.logger_api.log("🛑 Shutting down framework...")
+        self._log_internal("🛑 Shutting down framework...")
         for instance in reversed(list(self._modules.values())):
             await instance.stop(self.context)

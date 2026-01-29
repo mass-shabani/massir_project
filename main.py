@@ -5,9 +5,9 @@ async def main():
     kernel = Kernel()
     await kernel.bootstrap(modules_dir="modules")
     
-    # نگه داشتن برنامه برای تست
-    print("✨ App running. Press Ctrl+C to exit.")
-    await asyncio.sleep(5)
+    # # نگه داشتن برنامه برای تست
+    # print("✨ App running. Press Ctrl+C to exit.")
+    # await asyncio.sleep(5)
     
     await kernel.shutdown()
 

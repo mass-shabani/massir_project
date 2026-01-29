@@ -2,7 +2,9 @@ from core.interfaces import IModule
 
 class AppModule(IModule):
     async def load(self, context):
-        print("   [AppModule] Loading...")
+        logger = context.services.get("core_logger")
+        if logger:
+            logger.log("AppConsumer Loading...")
 
     async def start(self, context):
         # دریافت لاگر سیستمی که توسط هسته تزریق شده است

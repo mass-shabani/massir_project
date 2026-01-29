@@ -1,0 +1,8 @@
+{
+  "project_name": "Massir",
+  "project_banner_template": "\n\n------------------------------------------------\n{project_name}\n\tVersion 1.0.0\n\tProduction Mode\n------------------------------------------------\n",
+  "system_log_template": "[{project_name}][{level}]\t{message}",
+  "banner_color_code": "33",
+  "system_log_color_code": "96",
+  "debug_mode": true
+}

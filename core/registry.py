@@ -6,9 +6,9 @@ class ModuleRegistry:
 
     def set(self, key: str, instance: Any):
         """ثبت یک سرویس با کلید رشته‌ای"""
-        if key in self._services:
-            # هشدار می‌دهیم که در حال بازنویسی یک سرویس هستیم
-            print(f"⚠️ Warning: Overwriting service '{key}'")
+        # if key in self._services:
+        #     # هشدار می‌دهیم که در حال بازنویسی یک سرویس هستیم
+        #     print(f"⚠️ Warning: Overwriting service '{key}'")
         self._services[key] = instance
 
     def get(self, key: str) -> Optional[Any]:
