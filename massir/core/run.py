@@ -25,6 +25,7 @@ class Kernel:
         self._logger_api_ref = [None]
         self._config_api_ref = [None]
         self._background_tasks: List[asyncio.Task] = []
+        self._stop_event = asyncio.Event()
         
         self._bootstrap_system()
 
@@ -32,6 +33,7 @@ class Kernel:
         initialize_core_services(self.context.services)
         self._logger_api_ref[0] = self.context.services.get("core_logger")
         self._config_api_ref[0] = self.context.services.get("core_config")
+        
         self.context.set_kernel(self)
 
     def register_hook(self, hook: SystemHook, callback):
@@ -45,53 +47,68 @@ class Kernel:
             task = asyncio.create_task(asyncio.to_thread(coroutine))
             self._background_tasks.append(task)
 
-    async def run(self):
-        stop_event = asyncio.Event()
-        loop = asyncio.get_running_loop()
-        modules_dir = self._config_api_ref[0].get("general.modules_dir", "modules")
-
+    def _setup_signal_handlers(self, loop: asyncio.AbstractEventLoop):
         def _shutdown_handler():
             print("\n\n⚠️ Shutdown signal received. Initiating graceful shutdown...")
-            stop_event.set()
-
+            self._stop_event.set()
         try:
             for sig in (signal.SIGINT, signal.SIGTERM):
                 loop.add_signal_handler(sig, _shutdown_handler)
         except NotImplementedError:
             pass
 
+    async def run(self):
+        loop = asyncio.get_running_loop()
+        self._setup_signal_handlers(loop)
+
         try:
-            await self._bootstrap_phases(modules_dir)
+            await self._bootstrap_phases()
             print("✨ Application is running. Press Ctrl+C to stop.")
-            await stop_event.wait()
+            await self._stop_event.wait()
             
         except asyncio.CancelledError:
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", tag="core")
         except Exception as e:
-            self._logger_api_ref[0].log(f"Fatal Error in core execution: {e}", level="ERROR")
+            # اینجا هم تگ core را ارسال می‌کنیم
+            self._logger_api_ref[0].log(f"Fatal Error in core execution: {e}", level="ERROR", tag="core")
         finally:
             await shutdown(self.modules, self._background_tasks, 
                           self._config_api_ref[0], self._logger_api_ref[0])
 
-    async def _bootstrap_phases(self, modules_dir: str):
+    async def _bootstrap_phases(self):
+        # فاز ۰
         await self.hooks.dispatch(SystemHook.ON_SETTINGS_LOADED)
         print_banner(self._config_api_ref[0])
 
+        # فاز ۱
         await self.hooks.dispatch(SystemHook.ON_KERNEL_BOOTSTRAP_START)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🚀 Starting Framework Kernel...")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🚀 Starting Framework Kernel...", tag="core_pre")
 
-        modules_data = self.loader.discover(modules_dir)
-        system_data = [m for m in modules_data if m["manifest"].get("type") == "system"]
-        app_data = [m for m in modules_data if m["manifest"].get("type") != "system"]
+        # ⭐ منطق جدید: دریافت لیست مسیرها و جمع‌آوری همه ماژول‌ها
+        modules_dirs = self._config_api_ref[0].get_modules_dir() # این تابع یک لیست برمی‌گرداند
+        all_modules_data = []
+        
+        for directory in modules_dirs:
+            try:
+                discovered = self.loader.discover(directory)
+                all_modules_data.extend(discovered)
+            except FileNotFoundError:
+                # اگر یکی از پوشه‌ها وجود نداشت، خطا نده فقط لاگ کن
+                if self._logger_api_ref[0]:
+                    self._logger_api_ref[0].log(f"Module directory not found: {directory}", level="WARNING", tag="core")
+
+        # تفکیک سیستم و اپ
+        system_data = [m for m in all_modules_data if m["manifest"].get("type") == "system"]
+        app_data = [m for m in all_modules_data if m["manifest"].get("type") != "system"]
 
         await self._load_system_modules(system_data)
         await self._load_application_modules(app_data, system_data)
 
         await self.hooks.dispatch(SystemHook.ON_KERNEL_BOOTSTRAP_END)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "✅ Framework initialization complete.\n")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "✅ Framework initialization complete.\n", tag="core")
 
     async def _load_system_modules(self, system_data: List[Dict]):
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🔩 Loading System Modules...")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🔩 Loading System Modules...", tag="core_pre")
         for mod_info in system_data:
             instance = self.loader.instantiate(mod_info)
             instance._context = self.context 
@@ -104,7 +121,7 @@ class Kernel:
             await self.hooks.dispatch(SystemHook.ON_MODULE_LOADED, instance)
 
     async def _load_application_modules(self, app_data: List[Dict], system_data: List[Dict]):
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🔍 Resolving Application Modules...")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🔍 Resolving Application Modules...", tag="core")
         
         system_provides = {}
         for m in system_data:
@@ -118,7 +135,7 @@ class Kernel:
 
         sorted_app = self.loader.resolve_order(app_data, existing_provides=system_provides)
 
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "📦 Loading Application Modules...")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "📦 Loading Application Modules...", tag="core")
         for mod_info in sorted_app:
             instance = self.loader.instantiate(mod_info)
             instance._context = self.context
@@ -126,7 +143,9 @@ class Kernel:
             self.modules[instance.name] = instance
             await self.hooks.dispatch(SystemHook.ON_MODULE_LOADED, instance)
 
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "▶️ Starting Application Modules...")
+        # ⭐ اصلاح باگ: مقایسه instance.name به جای instance
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "▶️ Starting Application Modules...", tag="core")
         for instance in self.modules.values():
-             if instance not in [m['manifest']['name'] for m in system_data]:
+            # اصلاح شد: instance.name را با لیست نام‌ها مقایسه می‌کند
+             if instance.name not in [m['manifest']['name'] for m in system_data]:
                 await instance.start(self.context)

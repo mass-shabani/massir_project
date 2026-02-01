@@ -1,10 +1,11 @@
 import json
 import os
 from pathlib import Path
+from typing import Optional
+
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 
 class SettingsManager(CoreConfigAPI):
-    """مدیریت تنظیمات پروژه از فایل JSON"""
     def __init__(self, settings_path: str = "app_settings.json"):
         self._settings = self._load_settings(settings_path)
 
@@ -28,33 +29,80 @@ class SettingsManager(CoreConfigAPI):
     def set(self, key: str, value):
         self._settings[key] = value
 
-    # تنظیمات هسته
-    def is_debug(self) -> bool: return self.get("core.debug_mode", False)
-    def get_project_name(self) -> str: return self.get("core.project_name", "Unknown Project")
-    def get_banner_template(self) -> str: return self.get("core.project_banner_template", "{project_name}\n")
-    def get_system_log_template(self) -> str: return self.get("core.system_log_template", "[{level}] {message}")
-    def get_banner_color_code(self) -> str: return self.get("core.banner_color_code", "33")
-    def get_system_log_color_code(self) -> str: return self.get("core.system_log_color_code", "96")
+    # --- تنظیمات سیستم ---
+    def get_modules_dir(self) -> list:
+        return self.get("system.modules_dir", ["./modules"])
 
-    # تنظیمات وب
-    def get_web_host(self) -> str: return self.get("fastapi_provider.web.host", "127.0.0.1")
-    def get_web_port(self) -> int: return self.get("fastapi_provider.web.port", 8000)
-    def get_web_reload(self) -> bool: return self.get("fastapi_provider.web.reload", False)
+    # --- تنظیمات لاگ (Logs) ---
+    def show_logs(self) -> bool:
+        return self.get("logs.show_logs", True)
+    
+    def show_banner(self) -> bool:
+        return self.get("logs.show_banner", True)
 
+    def get_hide_log_levels(self) -> list:
+        return self.get("logs.hide_log_levels", [])
+
+    def get_hide_log_tags(self) -> list:
+        return self.get("logs.hide_log_tags", [])
+
+    def is_debug(self) -> bool:
+        return self.get("logs.debug_mode", True)
+
+    # --- اطلاعات پروژه ---
+    def get_project_name(self) -> str:
+        return self.get("information.project_name", "Unknown Project")
+    
+    def get_project_version(self) -> str:
+        return self.get("information.project_version", "1.0.0")
+    
+    def get_project_info(self) -> str:
+        return self.get("information.project_info", "")
+
+    # --- تمپلیت‌ها ---
+    def get_banner_template(self) -> str:
+        template = self.get("template.project_banner_template", "{project_name}\n")
+        return template
+
+    def get_system_log_template(self) -> str:
+        return self.get("template.system_log_template", "[{level}] {message}")
+    
+    def get_banner_color_code(self) -> str:
+        return self.get("template.banner_color_code", "33")
+    
+    def get_system_log_color_code(self) -> str:
+        return self.get("template.system_log_color_code", "96")
+
+# --- مقادیر پیش‌فرض ---
 class DefaultConfig(CoreConfigAPI):
-    """کانفیگ پیش‌فرض ساده"""
     def get(self, key: str): return None
 
 class DefaultLogger(CoreLoggerAPI):
-    """لاگر پیش‌فرض که از تنظیمات استفاده می‌کند"""
+    """لاگر پیش‌فرض با پشتیبانی از تگ"""
     def __init__(self, config_api: CoreConfigAPI):
         self.config = config_api
 
-    def log(self, message: str, level: str = "INFO"):
-        if not self.config.is_debug():
+    def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
+        config = self.config
+        if not config.show_logs():
+            return False
+        if tag:
+            hidden_tags = config.get_hide_log_tags()
+            if tag in hidden_tags:
+                return False
+        hidden_levels = config.get_hide_log_levels()
+        if level in hidden_levels:
+            return False
+        critical_levels = ["ERROR", "WARNING", "EXCEPTION", "CRITICAL"]
+        if level in critical_levels and not config.is_debug():
+            return False
+        return True
+
+    def log(self, message: str, level: str = "INFO", tag: Optional[str] = None):
+        if not self._should_log(level, tag):
             return
-        if os.name == 'nt': os.system('')
-        
+        if os.name == 'nt':
+            os.system('')
         template = self.config.get_system_log_template()
         color_code = self.config.get_system_log_color_code()
         formatted_msg = template.format(

@@ -6,7 +6,7 @@
     ]
   },
   "logs": {
-    "show_logs": false,
+    "show_logs": true,
     "show_banner": true,
     "hide_log_levels": ["MASS"],
     "hide_log_tags":["core_pre"],

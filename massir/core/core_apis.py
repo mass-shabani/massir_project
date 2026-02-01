@@ -1,14 +1,12 @@
-# massir/core/core_apis.py
-
 from abc import ABC, abstractmethod
+from typing import Optional # اضافه شد
 
 class CoreLoggerAPI(ABC):
     """
     اینترفیس استاندارد لاگینگ هسته.
-    ماژول‌های سیستمی می‌توانند این را پیاده‌سازی کنند.
     """
     @abstractmethod
-    def log(self, message: str, level: str = "INFO"):
+    def log(self, message: str, level: str = "INFO", tag: Optional[str] = None):
         pass
 
 class CoreConfigAPI(ABC):
