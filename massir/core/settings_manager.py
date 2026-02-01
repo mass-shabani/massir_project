@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from core.apis.system_apis import CoreConfigAPI
+from massir.core.core_apis import CoreConfigAPI
 
 class SettingsManager(CoreConfigAPI):
     def __init__(self, settings_path: str = "app_settings.json"):

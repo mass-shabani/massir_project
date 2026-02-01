@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from core.system_apis import CoreLoggerAPI, CoreConfigAPI
+from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 
 class SettingsManager(CoreConfigAPI):
     """مدیریت تنظیمات پروژه از فایل JSON"""

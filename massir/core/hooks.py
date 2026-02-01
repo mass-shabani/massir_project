@@ -1,6 +1,6 @@
 import asyncio
 from typing import List, Callable, Dict
-from core.hook_types import SystemHook
+from massir.core.hook_types import SystemHook
 
 class HooksManager:
     def __init__(self):

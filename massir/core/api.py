@@ -1,6 +1,7 @@
-from core.config import SettingsManager, DefaultLogger, DefaultConfig
-from core.registry import ModuleRegistry
-from core.system_apis import CoreLoggerAPI, CoreConfigAPI
+# ⭐ ایمپورت از نیم‌اسپیس massir
+from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
+from massir.core.registry import ModuleRegistry
+from massir.core.config import SettingsManager, DefaultLogger
 
 def initialize_core_services(registry: ModuleRegistry):
     """ساخت و رجیستر کردن سرویس‌های پیش‌فرض هسته"""

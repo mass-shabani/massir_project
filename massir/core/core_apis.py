@@ -1,11 +1,11 @@
-# core/system_apis.py
+# massir/core/core_apis.py
 
 from abc import ABC, abstractmethod
 
 class CoreLoggerAPI(ABC):
     """
-    API استاندارد لاگینگ هسته.
-    ماژول‌های سیستمی می‌توانند این را پیاده‌سازی و ریسایت کنند.
+    اینترفیس استاندارد لاگینگ هسته.
+    ماژول‌های سیستمی می‌توانند این را پیاده‌سازی کنند.
     """
     @abstractmethod
     def log(self, message: str, level: str = "INFO"):
@@ -13,7 +13,7 @@ class CoreLoggerAPI(ABC):
 
 class CoreConfigAPI(ABC):
     """
-    API استاندارد دسترسی به تنظیمات.
+    اینترفیس استاندارد دسترسی به تنظیمات.
     """
     @abstractmethod
     def get(self, key: str):

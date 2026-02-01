@@ -1,9 +1,9 @@
 import asyncio
-from core import Kernel
+# ⭐ طبق درخواست شما: دسترسی به هسته از طریق نیم‌اسپیس massir.core
+from massir import Kernel
 
 async def main():
     kernel = Kernel()
-    # ⭐ استفاده از متد run() به جای bootstrap()
     await kernel.run()
 
 if __name__ == "__main__":

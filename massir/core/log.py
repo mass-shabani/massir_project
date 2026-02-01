@@ -1,5 +1,5 @@
 import os
-from core.system_apis import CoreLoggerAPI, CoreConfigAPI
+from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 
 def print_banner(config_api: CoreConfigAPI):
     """چاپ بنر پروژه بر اساس تنظیمات"""

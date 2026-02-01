@@ -1,9 +1,10 @@
 import asyncio
-from core.system_apis import CoreLoggerAPI, CoreConfigAPI
-from core.interfaces import IModule
-from core.config import DefaultLogger
-from core.registry import ModuleRegistry
-from core.log import log_internal
+from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
+from massir.core.interfaces import IModule
+from massir.core.config import DefaultLogger
+from massir.core.registry import ModuleRegistry
+from massir.core.log import log_internal
+
 
 async def inject_system_apis(module_instance: IModule, registry: ModuleRegistry, 
                               logger_ref: list[CoreLoggerAPI], config_ref: list[CoreConfigAPI]):

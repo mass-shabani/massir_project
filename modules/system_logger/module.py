@@ -1,8 +1,8 @@
 import datetime
 import os
-from core.interfaces import IModule
-from core.system_apis import CoreLoggerAPI, CoreConfigAPI
-from core.hook_types import SystemHook
+from massir.core.interfaces import IModule
+from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
+from massir.core.hook_types import SystemHook
 
 class AdvancedLogger(CoreLoggerAPI):
     def __init__(self, config_api: CoreConfigAPI):

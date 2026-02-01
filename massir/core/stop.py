@@ -1,8 +1,9 @@
 import asyncio
 from typing import List, Dict
-from core.interfaces import IModule
-from core.system_apis import CoreLoggerAPI, CoreConfigAPI
-from core.log import log_internal
+# ⭐ ایمپورت از نیم‌اسپیس massir
+from massir.core.interfaces import IModule
+from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
+from massir.core.log import log_internal
 
 async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.Task], 
                   config_api: CoreConfigAPI, logger_api: CoreLoggerAPI):

@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-# ⭐ این خط اضافه شد: ایمپورت مستقیم رجیستری برای استفاده در زمان اجرا
-from core.registry import ModuleRegistry
+# ⭐ اصلاح ایمپورت: استفاده از نیم‌اسپیس massir
+from massir.core.registry import ModuleRegistry
 
 if TYPE_CHECKING:
-    # این خط فقط برای IDE و تایپ چیک استفاده می‌شود و در اجرا بارگذاری نمی‌شود
-    from core.kernel import Kernel
+    # برای تایپ چیک از massir.core.run استفاده می‌کنیم
+    from massir.core.run import Kernel
 
 class ModuleContext:
     """
@@ -15,7 +15,7 @@ class ModuleContext:
     """
     def __init__(self):
         self._kernel = None
-        self.services = ModuleRegistry()  # حالا خطای اینجا برطرف می‌شود
+        self.services = ModuleRegistry()
         self.metadata = {}
 
     def set_kernel(self, kernel: 'Kernel'):

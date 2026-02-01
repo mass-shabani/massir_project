@@ -1,4 +1,4 @@
-# core/hook_types.py
+# massir/core/hook_types.py
 
 from enum import Enum
 

@@ -2,8 +2,10 @@ import json
 import importlib
 from pathlib import Path
 from typing import List, Dict
-from core.interfaces import IModule
-from core.exceptions import ModuleLoadError, DependencyResolutionError
+
+# ⭐ اصلاح ایمپورت‌ها
+from massir.core.interfaces import IModule
+from massir.core.exceptions import ModuleLoadError, DependencyResolutionError
 
 class ModuleLoader:
     def __init__(self):

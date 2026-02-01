@@ -1,4 +1,4 @@
-from core.interfaces import IModule
+from massir.core.interfaces import IModule
 
 class AppModule(IModule):
     async def load(self, context):
