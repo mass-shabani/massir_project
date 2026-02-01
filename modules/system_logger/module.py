@@ -1,8 +1,8 @@
 import datetime
 import os
 from core.interfaces import IModule
-from core.apis.system_apis import CoreLoggerAPI, CoreConfigAPI
-from core.hooks.definitions import SystemHook
+from core.system_apis import CoreLoggerAPI, CoreConfigAPI
+from core.hook_types import SystemHook
 
 class AdvancedLogger(CoreLoggerAPI):
     def __init__(self, config_api: CoreConfigAPI):
@@ -21,7 +21,7 @@ class AdvancedLogger(CoreLoggerAPI):
     def log(self, message: str, level: str = "INFO"):
         # ⭐ منطق جدید برای دیباگ:
         # پیام‌های DEBUG فقط اگر debug_mode True باشند چاپ می‌شوند.
-        # پیام‌های INFO, WARNING, ERROR همیشه چاپ می‌شوند (چه دیباگ روشن باشد چه خاموش).
+        # پیام‌های INFO, WARNING, ERROR همیشه چاپ می‌شوند.
         if level == "DEBUG" and not self.config.is_debug():
             return
 
@@ -58,15 +58,14 @@ class SystemLoggerModule(IModule):
     async def load(self, context):
         self.context = context 
         
-        kernel = context.get_kernel()
-        if kernel:
-            config = kernel.config_api 
-        else:
-            config = None 
+        # ⭐ اصلاح شده: دریافت کانفیگ از رجیستری سرویس‌ها
+        # (چون در run.py سرویس‌ها قبل از لود ماژول‌ها ست می‌شوند)
+        config = context.services.get("core_config")
         
         my_logger = AdvancedLogger(config)
         context.services.set("core_logger", my_logger)
         
+        kernel = context.get_kernel()
         kernel.register_hook(SystemHook.ON_MODULE_LOADED, self._on_module_loaded)
         kernel.register_hook(SystemHook.ON_SETTINGS_LOADED, self._on_settings_loaded)
 
