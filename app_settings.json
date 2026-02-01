@@ -1,14 +1,27 @@
 {
-  "general": {
-    "modules_dir": "modules"
+  "system": {
+    "modules_dir": [
+      "./modules", 
+      "./app"
+    ]
   },
-  "core": {
-    "project_name": "Modular Framework",
-    "project_banner_template": "\n\n------------------------------------------------\n{project_name}\n\tVersion 1.0.0\n\tProduction Mode\n------------------------------------------------\n",
-    "system_log_template": "[{project_name}][{level}]\t{message}",
-    "banner_color_code": "33",
-    "system_log_color_code": "96",
+  "logs": {
+    "show_logs": false,
+    "show_banner": true,
+    "hide_log_levels": ["MASS"],
+    "hide_log_tags":["core_pre"],
     "debug_mode": true
+  },
+  "information": {
+    "project_name": "Massir Project",
+    "project_version": "0.0.2 Alpha",
+    "project_info": "Modular Application Architecture"
+  },
+  "template": {
+    "project_banner_template": "\n\n------------------------------------------------\n\t{project_name}\n\t{project_version}\n\t{project_info}\n------------------------------------------------\n",
+    "system_log_template": "[{level}]\t{message}",
+    "banner_color_code": "33",
+    "system_log_color_code": "96"
   },
   "fastapi_provider": {
     "web": {
