@@ -82,7 +82,7 @@ class Kernel:
 
         # فاز ۱
         await self.hooks.dispatch(SystemHook.ON_KERNEL_BOOTSTRAP_START)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🚀 Starting Framework Kernel...", tag="core_pre")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🚀 Starting Framework Kernel...", tag="core_preloaded")
 
         # ⭐ منطق جدید: دریافت لیست مسیرها و جمع‌آوری همه ماژول‌ها
         modules_dirs = self._config_api_ref[0].get_modules_dir() # این تابع یک لیست برمی‌گرداند
@@ -108,7 +108,7 @@ class Kernel:
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "✅ Framework initialization complete.\n", tag="core")
 
     async def _load_system_modules(self, system_data: List[Dict]):
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🔩 Loading System Modules...", tag="core_pre")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "🔩 Loading System Modules...", tag="core_preloaded")
         for mod_info in system_data:
             instance = self.loader.instantiate(mod_info)
             instance._context = self.context 

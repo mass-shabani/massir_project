@@ -8,8 +8,8 @@
   "logs": {
     "show_logs": true,
     "show_banner": true,
-    "hide_log_levels": ["MASS"],
-    "hide_log_tags":["core_pre"],
+    "hide_log_levels": 0,
+    "hide_log_tags":["core_preloaded"],
     "debug_mode": true
   },
   "information": {

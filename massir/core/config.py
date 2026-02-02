@@ -31,7 +31,11 @@ class SettingsManager(CoreConfigAPI):
 
     # --- تنظیمات سیستم ---
     def get_modules_dir(self) -> list:
-        return self.get("system.modules_dir", ["./modules"])
+        val = self.get("system.modules_dir", ["./modules"])
+        # اگر کاربر یه رشته مسیر داده، داخل لیست می‌گذاریم تا حلقه روی آن کار کند
+        if isinstance(val, str):
+            return [val]
+        return val
 
     # --- تنظیمات لاگ (Logs) ---
     def show_logs(self) -> bool:
@@ -41,12 +45,26 @@ class SettingsManager(CoreConfigAPI):
         return self.get("logs.show_banner", True)
 
     def get_hide_log_levels(self) -> list:
-        return self.get("logs.hide_log_levels", [])
+        """سطوحی که نباید نمایش داده شوند (مثلا ['DEBUG'])"""
+        val = self.get("logs.hide_log_levels")
+        # ⭐ بررسی نوع: اگر لیست نیست، لیست خالی برگردان
+        if isinstance(val, list):
+            return val
+        return []
 
     def get_hide_log_tags(self) -> list:
-        return self.get("logs.hide_log_tags", [])
+        """تگ‌هایی که نباید نمایش داده شوند"""
+        val = self.get("logs.hide_log_tags")
+        # ⭐ بررسی نوع: اگر لیست نیست، لیست خالی برگردان
+        if isinstance(val, list):
+            return val
+        return []
 
     def is_debug(self) -> bool:
+        """
+        حالت دیباگ:
+        طبق درخواست: فقط اجازه خروجی خطاها، هشدارها و اکسپشن‌ها را می‌دهد.
+        """
         return self.get("logs.debug_mode", True)
 
     # --- اطلاعات پروژه ---
@@ -78,38 +96,55 @@ class DefaultConfig(CoreConfigAPI):
     def get(self, key: str): return None
 
 class DefaultLogger(CoreLoggerAPI):
-    """لاگر پیش‌فرض با پشتیبانی از تگ"""
+    """لاگر پیش‌فرض با منطق فیلترینگ جدید و کنترل خطا"""
     def __init__(self, config_api: CoreConfigAPI):
         self.config = config_api
 
     def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
+        """
+        بررسی اینکه آیا پیام باید چاپ شود.
+        """
         config = self.config
+
         if not config.show_logs():
             return False
+
         if tag:
             hidden_tags = config.get_hide_log_tags()
-            if tag in hidden_tags:
+            # از all() استفاده می‌کنیم تا مطمئن شویم hidden_tags لیست است
+            if isinstance(hidden_tags, list) and tag in hidden_tags:
                 return False
+
         hidden_levels = config.get_hide_log_levels()
-        if level in hidden_levels:
-            return False
+        # ⭐ بررسی نوع قبل از استفاده در دستور in
+        if isinstance(hidden_levels, list):
+            if level in hidden_levels:
+                return False
+
         critical_levels = ["ERROR", "WARNING", "EXCEPTION", "CRITICAL"]
-        if level in critical_levels and not config.is_debug():
-            return False
+        if level in critical_levels:
+            if not config.is_debug():
+                return False
+
         return True
 
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None):
         if not self._should_log(level, tag):
             return
+
         if os.name == 'nt':
             os.system('')
+
         template = self.config.get_system_log_template()
         color_code = self.config.get_system_log_color_code()
+        
         formatted_msg = template.format(
             project_name=self.config.get_project_name(),
             level=level,
             message=message
         )
+
         color_code_start = f'\033[{color_code}m'
         reset_code = '\033[0m'
+        
         print(f"{color_code_start}{formatted_msg}{reset_code}")
