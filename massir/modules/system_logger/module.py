@@ -12,22 +12,17 @@ class AdvancedLogger(CoreLoggerAPI):
             self.config = self._get_fallback()
 
     def _get_fallback(self):
-        # کلاس کمکی برای زمانی که کانفیگ وجود ندارد
         class F:
             def get_project_name(self): return "Unknown"
             def get_system_log_template(self): return "[{level}]\t{message}"
             def get_system_log_color_code(self): return "92"
             def is_debug(self): return True
             def show_logs(self): return True
-            # ⭐ حتماً لیست خالی برگردان تا خطا ندهد
             def get_hide_log_levels(self): return []
             def get_hide_log_tags(self): return []
         return F()
 
     def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
-        """
-        منطق فیلترینگ پیشرفته (مشابه هسته)
-        """
         config = self.config
 
         if not config.show_logs():
@@ -39,7 +34,6 @@ class AdvancedLogger(CoreLoggerAPI):
                 return False
 
         hidden_levels = config.get_hide_log_levels()
-        # ⭐ بررسی نوع قبل از استفاده
         if isinstance(hidden_levels, list):
             if level in hidden_levels:
                 return False
@@ -52,13 +46,14 @@ class AdvancedLogger(CoreLoggerAPI):
 
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None,
             level_color: Optional[str] = None, text_color: Optional[str] = None, bracket_color: Optional[str] = None):
-        # 1. بررسی فیلترینگ (مشابه هسته)
+        # ⭐ بررسی فیلترینگ
         if not self._should_log(level, tag):
             return
 
         if os.name == 'nt':
             os.system('')
 
+        # رنگ‌های پیش‌فرض
         _bracket_color = bracket_color if bracket_color else '\033[92m'
         _text_color = text_color if text_color else '\033[97m'
         _level_color = level_color if level_color else '\033[92m'
@@ -83,7 +78,6 @@ class AdvancedLogger(CoreLoggerAPI):
         print(f"{str_time}{str_header}\t{str_message}")
 
 class SystemLoggerModule(IModule):
-    # ... (بقیه کد SystemLoggerModule بدون تغییر) ...
     async def load(self, context):
         self.context = context 
         config = context.services.get("core_config")
@@ -96,7 +90,13 @@ class SystemLoggerModule(IModule):
         kernel.register_hook(SystemHook.ON_SETTINGS_LOADED, self._on_settings_loaded)
 
     async def start(self, context):
+        # ⭐ اصلاح مهم: به‌روزرسانی رفرنس کانفیگ ماژول
+        # چون ممکن است تنظیمات کد (initial_settings) بعد از load اعمال شده باشد
+        # یا کانفیگ در رجیستری جایگزین شده باشد.
         logger = context.services.get("core_logger")
+        if logger and hasattr(logger, 'config'):
+            logger.config = context.services.get("core_config")
+
         logger.log("System Logger Module Active.", tag="System")
 
     async def stop(self, context):

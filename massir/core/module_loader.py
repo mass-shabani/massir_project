@@ -1,9 +1,8 @@
 import json
 import importlib
 from pathlib import Path
-from typing import List, Dict
-
-# ⭐ اصلاح ایمپورت‌ها
+from typing import List, Dict, Optional
+# ⭐ ایمپورت خطاها اضافه شد
 from massir.core.interfaces import IModule
 from massir.core.exceptions import ModuleLoadError, DependencyResolutionError
 
@@ -24,8 +23,14 @@ class ModuleLoader:
                 found.append({"path": module_folder, "manifest": data})
         return found
 
-    def resolve_order(self, modules_data: List[Dict], existing_provides: Dict[str, str] = None) -> List[Dict]:
-        """مرتب‌سازی ماژول‌ها بر اساس وابستگی‌ها"""
+    def resolve_order(self, modules_data: List[Dict], existing_provides: Dict[str, str] = None, force_execute: bool = False) -> List[Dict]:
+        """
+        مرتب‌سازی ماژول‌ها بر اساس وابستگی‌ها.
+        
+        Args:
+            force_execute: اگر True باشد، وابستگی‌های گمشده نادیده گرفته می‌شوند
+                           و ماژول‌ها در هر صورت لود می‌شوند.
+        """
         sorted_list = []
         visited = set()
         visiting = set()
@@ -45,10 +50,15 @@ class ModuleLoader:
             requires = mod_info["manifest"].get("requires", [])
             for req_cap in requires:
                 if req_cap not in provides_map:
-                    raise DependencyResolutionError(f"'{name}' requires '{req_cap}' but none provides it.")
-                provider_name = provides_map[req_cap]
-                provider_info = next((m for m in modules_data if m["manifest"]["name"] == provider_name), None)
-                if provider_info: visit(provider_info)
+                    # ⭐ منطق جدید: اگر اجبار لود نباشد، خطا بده
+                    if not force_execute:
+                        raise DependencyResolutionError(f"'{name}' requires '{req_cap}' but none provides it.")
+                    else:
+                        # در حالت اجبار، فقط لاگ وارنینگ می‌دهیم
+                        print(f"[WARNING] Forced load: Module '{name}' requires '{req_cap}' (missing) but loading anyway.")
+            provider_name = provides_map[req_cap]
+            provider_info = next((m for m in modules_data if m["manifest"]["name"] == provider_name), None)
+            if provider_info: visit(provider_info)
             visiting.remove(name)
             visited.add(name)
             sorted_list.append(mod_info)

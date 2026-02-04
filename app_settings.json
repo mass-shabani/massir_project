@@ -1,15 +1,15 @@
 {
   "system": {
     "modules_dir": [
-      "./modules", 
+      "./massir/modules",
       "./app"
     ]
   },
   "logs": {
     "show_logs": true,
     "show_banner": true,
-    "hide_log_levels": 0,
-    "hide_log_tags":["core_preloaded"],
+    "": "",
+    "hide_log_tags":["", ""],
     "debug_mode": true
   },
   "information": {
@@ -17,12 +17,7 @@
     "project_version": "0.0.2 Alpha",
     "project_info": "Modular Application Architecture"
   },
-  "template": {
-    "project_banner_template": "\n\n------------------------------------------------\n\t{project_name}\n\t{project_version}\n\t{project_info}\n------------------------------------------------\n",
-    "system_log_template": "[{level}]\t{message}",
-    "banner_color_code": "33",
-    "system_log_color_code": "96"
-  },
+
   "fastapi_provider": {
     "web": {
       "host": "127.0.0.1",

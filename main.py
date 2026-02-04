@@ -1,10 +1,19 @@
 import asyncio
-# ⭐ طبق درخواست شما: دسترسی به هسته از طریق نیم‌اسپیس massir.core
-from massir import Kernel
+from massir import App
 
 async def main():
-    kernel = Kernel()
-    await kernel.run()
+    # تنظیمات کد با اولویت بالاتر از JSON
+    # مثلا: پوشه ماژول‌ها را از اینجا تغییر می‌دهیم
+    # اگر در JSON تعریف شده باشد، این مقدار جایگزین می‌شود
+    initial_settings = {
+        "system": {
+            # "modules_dir": ["./massir/modulesss", "./app"] # اگر این پوشه وجود نداشته، طبق کد قبلی خطا می‌دهد و سرچ می‌کند
+        },
+
+    }
+
+    app = App(initial_settings=initial_settings)
+    await app.run()
 
 if __name__ == "__main__":
     try:

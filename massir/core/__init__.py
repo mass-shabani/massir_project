@@ -1,4 +1,4 @@
-from .run import Kernel, ModuleContext
+from .app import App, ModuleContext
 from .interfaces import IModule
 from .registry import ModuleRegistry
 from .core_apis import CoreLoggerAPI, CoreConfigAPI
@@ -13,7 +13,7 @@ from .stop import shutdown
 from .exceptions import FrameworkError, ModuleLoadError, DependencyResolutionError
 
 __all__ = [
-    'Kernel', 
+    'App', 
     'ModuleContext', 
     'IModule', 
     'ModuleRegistry',
@@ -27,5 +27,7 @@ __all__ = [
     'SystemHook',
     'FrameworkError',
     'ModuleLoadError',
+    'inject_system_apis',
     'DependencyResolutionError'
 ]
+
