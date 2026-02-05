@@ -67,20 +67,60 @@ class ModuleLoader:
         return sorted_list
 
     def instantiate(self, mod_info: Dict) -> IModule:
-        """ایجاد نمونه (Object) از کلاس ماژول"""
+        """
+        ایجاد نمونه (Object) از کلاس ماژول
+        
+        هر ماژول دارای شناسه یکتا (id) است که در manifest ذخیره می‌شود.
+        اگر شناسه وجود نداشته باشد، یک شناسه تصادفی تولید می‌شود.
+        """
         manifest = mod_info["manifest"]
         mod_name = manifest["name"]
+        
+        # تولید شناسه یکتا اگر وجود ندارد
+        if "id" not in manifest:
+            import uuid
+            manifest["id"] = str(uuid.uuid4())[:8]
+        
+        mod_id = manifest["id"]
         class_name = manifest.get("entrypoint")
         if not class_name:
             raise ModuleLoadError(f"Module '{mod_name}' missing entrypoint.")
+        
+        # مسیر ماژول را به مسیر نسبی تبدیل کن
         rel_path = mod_info["path"]
-        parts = list(rel_path.parts)
-        import_path = ".".join(parts)
+        
+        # تلاش برای تبدیل به مسیر نسبی از massir یا cwd
+        try:
+            # اگر مسیر مطلق است، سعی کن نسبی کنیم
+            if rel_path.is_absolute():
+                # تلاش برای یافتن مسیر نسبی از cwd
+                cwd = Path.cwd()
+                try:
+                    rel_path = rel_path.relative_to(cwd)
+                except ValueError:
+                    # اگر از cwd نتوان نسبی کرد، از massir_dir تلاش کن
+                    massir_dir = Path(__file__).parent.parent.resolve()
+                    try:
+                        rel_path = rel_path.relative_to(massir_dir)
+                    except ValueError:
+                        pass  # همان مسیر مطلق را نگه‌دار
+        except:
+            pass
+        
+        # ساخت import_path
+        if rel_path.is_absolute():
+            # اگر هنوز مطلق است، از name استفاده کن (فقط نام پوشه)
+            import_path = rel_path.name
+        else:
+            parts = list(rel_path.parts)
+            import_path = ".".join(parts)
+        
         try:
             module_lib = importlib.import_module(f"{import_path}.module")
             entry_class = getattr(module_lib, class_name)
             instance: IModule = entry_class()
             instance.name = mod_name
+            instance.id = mod_id  # شناسه یکتا
             return instance
         except Exception as e:
             raise ModuleLoadError(f"Failed to load '{mod_name}': {e}")

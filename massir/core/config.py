@@ -5,7 +5,30 @@ from typing import Optional
 
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 
+class _FallbackLogger:
+    """لاگر موقت برای زمانی که logger اصلی وجود ندارد"""
+    
+    def log(self, message: str, level: str = "INFO", tag: Optional[str] = None, **kwargs):
+        level_prefix = f"[{level}]" if level else ""
+        tag_prefix = f" [{tag}]" if tag else ""
+        print(f"{level_prefix}{tag_prefix} {message}")
+
 class SettingsManager(CoreConfigAPI):
+    # لاگر کلاسی - موقت برای قبل از ثبت logger
+    _class_logger: Optional[CoreLoggerAPI] = None
+    
+    @classmethod
+    def set_logger(cls, logger_api: CoreLoggerAPI):
+        """تنظیم logger برای استفاده در کلاس"""
+        cls._class_logger = logger_api
+    
+    def _log(self, message: str, level: str = "ERROR"):
+        """لاگ کردن با logger کلاسی یا لاگر موقت"""
+        if SettingsManager._class_logger:
+            SettingsManager._class_logger.log(message, level=level, tag="config")
+        else:
+            print(f"[{level}] [config] {message}")
+    
     def __init__(self, settings_path: str = "app_settings.json", initial_settings: Optional[dict] = None):
         """
         ترتیب اولویت:
@@ -26,7 +49,9 @@ class SettingsManager(CoreConfigAPI):
     def _get_defaults(self) -> dict:
         return {
             "system": {
-                "modules_dir": ["./massir/modules"]
+                "modules": [
+                    {"path": "{massir_dir}", "names": []}
+                ]
             },
             "logs": {
                 "show_logs": True,
@@ -37,7 +62,7 @@ class SettingsManager(CoreConfigAPI):
             },
             "information": {
                 "project_name": "Massir Framework",
-                "project_version": "0.0.3 alpha",
+                "project_version": "0.0.4 alpha",
                 "project_info": "Modular Application Architecture"
             },
             "template": {
@@ -51,9 +76,16 @@ class SettingsManager(CoreConfigAPI):
     def _load_settings(self, path: str) -> dict:
         full_path = Path(path)
         if full_path.exists():
-            with open(full_path, 'r', encoding='utf-8') as f:
-                json_data = json.load(f)
-                self.update_settings(json_data)
+            try:
+                with open(full_path, 'r', encoding='utf-8') as f:
+                    json_data = json.load(f)
+                    self.update_settings(json_data)
+            except json.JSONDecodeError as e:
+                self._log(f"Invalid JSON in {full_path}: {e}")
+                self._log("Skipping settings file. Using default settings.", "WARNING")
+            except Exception as e:
+                self._log(f"Failed to load settings from {full_path}: {e}")
+                self._log("Skipping settings file. Using default settings.", "WARNING")
         return {} 
 
     def get(self, key: str, default=None):
@@ -85,9 +117,25 @@ class SettingsManager(CoreConfigAPI):
 
     # --- تنظیمات سیستم ---
     def get_modules_dir(self) -> list:
+        """
+        دریافت مسیرهای ماژول‌ها (فرمت قدیمی - برای سازگاری)
+        """
         val = self.get("system.modules_dir")
         if isinstance(val, str): return [val]
         return val if isinstance(val, list) else ["./massir/modules"]
+    
+    def get_modules_config(self) -> list:
+        """
+        دریافت تنظیمات ماژول‌ها (فرمت جدید با path و names)
+        
+        Returns:
+            لیست تنظیمات ماژول‌ها
+            فرمت: [{"path": "...", "names": ["..."]}]
+        """
+        val = self.get("system.modules", [])
+        if not isinstance(val, list):
+            return []
+        return val
 
     # --- تنظیمات لاگ (Logs) ---
     def show_logs(self) -> bool:
@@ -144,6 +192,20 @@ class DefaultLogger(CoreLoggerAPI):
     """
     def __init__(self, config_api: CoreConfigAPI):
         self.config = config_api
+        if self.config is None:
+            self.config = self._get_fallback()
+    
+    def _get_fallback(self):
+        """ایجاد کانفیگ fallback برای زمانی که کانفیگ اصلی وجود ندارد"""
+        class FallbackConfig:
+            def get_project_name(self): return "Massir"
+            def get_system_log_template(self): return "[{level}]\t{message}"
+            def get_system_log_color_code(self): return "96"
+            def is_debug(self): return True
+            def show_logs(self): return True
+            def get_hide_log_levels(self): return []
+            def get_hide_log_tags(self): return []
+        return FallbackConfig()
 
     def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
         config = self.config

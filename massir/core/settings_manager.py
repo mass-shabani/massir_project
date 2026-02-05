@@ -45,13 +45,3 @@ class SettingsManager(CoreConfigAPI):
     
     def get_system_log_color_code(self) -> str:
         return self.get("core.system_log_color_code", "96")
-
-    # --- تنظیمات وب (برای استفاده در fastapi_provider) ---
-    def get_web_host(self) -> str:
-        return self.get("fastapi_provider.web.host", "127.0.0.1")
-    
-    def get_web_port(self) -> int:
-        return self.get("fastapi_provider.web.port", 8000)
-    
-    def get_web_reload(self) -> bool:
-        return self.get("fastapi_provider.web.reload", False)
