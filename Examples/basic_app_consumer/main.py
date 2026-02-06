@@ -35,8 +35,8 @@ async def main():
 
 
     # نمایش مسیرهای فعال درون پروژه
-    print (f"MASSIR_ROOT = {str(app.path.massir.resolve())}")
-    print (f"CURRENT_ROOT = {str(app.path.app.resolve())}")
+    # print (f"MASSIR_ROOT = {str(app.path.massir.resolve())}")
+    # print (f"CURRENT_ROOT = {str(app.path.app.resolve())}")
 
     # تغییر مسیرهای فعال
     # app.path.set("massir_dir", MASSIR_ROOT)

@@ -122,7 +122,8 @@ class App:
             self._logger_api_ref[0].log(f"Fatal Error in core execution: {e}", level="ERROR", tag="core")
         finally:
             await shutdown(self.modules, self._background_tasks, 
-                          self._config_api_ref[0], self._logger_api_ref[0])
+                          self._config_api_ref[0], self._logger_api_ref[0],
+                          self._system_module_names, self._app_module_names)
 
     async def _bootstrap_phases(self):
         """مدیریت فازهای بوت‌استرپ ماژول‌ها"""
