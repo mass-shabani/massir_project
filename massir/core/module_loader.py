@@ -5,6 +5,7 @@ from typing import List, Dict, Optional
 # ⭐ ایمپورت خطاها اضافه شد
 from massir.core.interfaces import IModule
 from massir.core.exceptions import ModuleLoadError, DependencyResolutionError
+from massir.core.path import Path as PathManager
 
 class ModuleLoader:
     def __init__(self):
@@ -89,30 +90,29 @@ class ModuleLoader:
         # مسیر ماژول را به مسیر نسبی تبدیل کن
         rel_path = mod_info["path"]
         
-        # تلاش برای تبدیل به مسیر نسبی از massir یا cwd
-        try:
-            # اگر مسیر مطلق است، سعی کن نسبی کنیم
-            if rel_path.is_absolute():
-                # تلاش برای یافتن مسیر نسبی از cwd
-                cwd = Path.cwd()
+        # تشخیص اینکه ماژول زیرمجموعه massir است یا app_dir
+        is_massir_module = False
+        
+        if rel_path.is_absolute():
+            path_manager = PathManager()
+            massir_dir = path_manager.massir
+            try:
+                rel_path = rel_path.relative_to(massir_dir)
+                is_massir_module = True
+            except ValueError:
+                # از app_dir تلاش کن
+                app_dir = path_manager.app
                 try:
-                    rel_path = rel_path.relative_to(cwd)
+                    rel_path = rel_path.relative_to(app_dir)
+                    is_massir_module = False
                 except ValueError:
-                    # اگر از cwd نتوان نسبی کرد، از massir_dir تلاش کن
-                    massir_dir = Path(__file__).parent.parent.resolve()
-                    try:
-                        rel_path = rel_path.relative_to(massir_dir)
-                    except ValueError:
-                        pass  # همان مسیر مطلق را نگه‌دار
-        except:
-            pass
+                    pass  # همان مسیر مطلق را نگه‌دار
         
         # ساخت import_path
-        if rel_path.is_absolute():
-            # اگر هنوز مطلق است، از name استفاده کن (فقط نام پوشه)
-            import_path = rel_path.name
+        parts = list(rel_path.parts)
+        if is_massir_module:
+            import_path = "massir." + ".".join(parts)
         else:
-            parts = list(rel_path.parts)
             import_path = ".".join(parts)
         
         try:

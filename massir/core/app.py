@@ -29,7 +29,7 @@ class App:
     def __init__(
         self,
         initial_settings: Optional[dict] = None,
-        settings_path: str = "__dir__",
+        settings_path: Optional[str] = None,
         app_dir: Optional[str] = None
     ):
         """
@@ -171,14 +171,14 @@ class App:
             path = self._resolve_path(path_template)
             
             if not path.exists() or not path.is_dir():
-                # لاگ مسیرهای یافت نشده (فقط در debug mode)
-                if self._config_api_ref[0].is_debug():
-                    log_internal(
-                        self._config_api_ref[0], 
-                        self._logger_api_ref[0], 
-                        f"Path not found or not a directory: {path}", 
-                        tag="core_init"
-                    )
+                # هشدار همیشه - پیدا نشدن پوشه ماژول
+                module_type = "System" if is_system else "Application"
+                log_internal(
+                    self._config_api_ref[0], 
+                    self._logger_api_ref[0], 
+                    f"{module_type} module path not found: {path}", 
+                    tag="core"
+                )
                 continue
             
             # اگر names = "{all}"، همه پوشه‌ها را لیست کن

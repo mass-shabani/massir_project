@@ -6,5 +6,5 @@
   "entrypoint": "AppModule",
   "provides": [],
   "requires": ["core_logger"],
-  "forced_execute": true
+  "forced_execute": false
 }

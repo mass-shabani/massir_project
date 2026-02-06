@@ -30,10 +30,17 @@ def initialize_core_services(
     
     # حل مسیر فایل تنظیمات
     if settings_path == "__cwd__":
-        full_settings_path = path_manager.resolve("app")
+        full_settings_path = path_manager.resolve("app") / "app_settings.json"
     elif settings_path == "__dir__":
-        full_settings_path = path_manager.resolve("app")
+        # بررسی مستقیم app_settings.json در app_dir
+        app_dir_path = path_manager.resolve("app")
+        settings_in_app = app_dir_path / "app_settings.json"
+        if settings_in_app.exists():
+            full_settings_path = settings_in_app
+        else:
+            full_settings_path = app_dir_path / "app_settings.json"
     elif not os.path.isabs(settings_path):
+        # مسیر نسبی - بر اساس app_dir
         full_settings_path = path_manager.resolve("app") / settings_path
     else:
         full_settings_path = settings_path

@@ -3,12 +3,11 @@ import sys
 from pathlib import Path
 
 # اضافه کردن مسیر پروژه اصلی به sys.path
-MASSIR_ROOT = Path(__file__).parent.parent.resolve()
+MASSIR_ROOT = Path(__file__).parent.parent.parent.resolve()
 CURRENT_ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(MASSIR_ROOT))
 
 from massir import App
-
 
 async def main():
     # تنظیمات کد با اولویت بالاتر از JSON
@@ -35,9 +34,9 @@ async def main():
 
 
 
-    #نمایش مسیرهای فعال درون پروژه
-    # print (f"MASSIR_ROOT = {str(app.path.massir.resolve())}")
-    # print (f"CURRENT_ROOT = {str(app.path.app.resolve())}")
+    # نمایش مسیرهای فعال درون پروژه
+    print (f"MASSIR_ROOT = {str(app.path.massir.resolve())}")
+    print (f"CURRENT_ROOT = {str(app.path.app.resolve())}")
 
     # تغییر مسیرهای فعال
     # app.path.set("massir_dir", MASSIR_ROOT)

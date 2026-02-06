@@ -2,7 +2,6 @@
 """
 مدیریت مسیرهای پروژه
 """
-import os
 from typing import Optional, Dict
 from pathlib import Path as PathLib
 
@@ -24,8 +23,10 @@ class Path:
             app_dir: مسیر پوشه برنامه کاربر
         """
         # تشخیص خودکار massir_dir
+        # path.py در massir/core/path.py است
+        # massir/__init__.py در massir/__init__.py است
+        # پس باید 2 سطح بالا برویم
         self._massir_dir = PathLib(__file__).parent.parent.resolve()
-        
         # تنظیم app_dir
         if app_dir:
             self._app_dir = PathLib(app_dir).resolve()

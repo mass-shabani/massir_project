@@ -28,6 +28,6 @@ __all__ = [
     'FrameworkError',
     'ModuleLoadError',
     'inject_system_apis',
-    'DependencyResolutionError'
+    'DependencyResolutionError',
 ]
 

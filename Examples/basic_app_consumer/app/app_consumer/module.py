@@ -11,8 +11,8 @@ class AppModule(IModule):
         logger = context.services.get("core_logger")
         
         if logger:
-            logger.log("App Module started successfully and using System Logger!")
-            logger.log("Performing some business logic...", level="MASS")
+            logger.log("App Module started successfully and using System Logger!", level_color='\033[94m')
+            logger.log("Performing some business logic...", level="CUST", level_color='\033[94m')
         else:
             print("   [AppModule] Fallback to standard print because system logger is missing.")
 
