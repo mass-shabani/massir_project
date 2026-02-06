@@ -2,14 +2,17 @@ import json
 import importlib
 from pathlib import Path
 from typing import List, Dict, Optional
-# ⭐ ایمپورت خطاها اضافه شد
 from massir.core.interfaces import IModule
 from massir.core.exceptions import ModuleLoadError, DependencyResolutionError
 from massir.core.path import Path as PathManager
 
 class ModuleLoader:
-    def __init__(self):
-        pass
+    def __init__(self, path: Optional[PathManager] = None):
+        """
+        Args:
+            path: نمونه PathManager برای دسترسی به مسیرها (اختیاری)
+        """
+        self._path = path
 
     def discover(self, directory: str) -> List[Dict]:
         """پیدا کردن تمام فایل‌های manifest.json"""
@@ -51,11 +54,9 @@ class ModuleLoader:
             requires = mod_info["manifest"].get("requires", [])
             for req_cap in requires:
                 if req_cap not in provides_map:
-                    # ⭐ منطق جدید: اگر اجبار لود نباشد، خطا بده
                     if not force_execute:
                         raise DependencyResolutionError(f"'{name}' requires '{req_cap}' but none provides it.")
                     else:
-                        # در حالت اجبار، فقط لاگ وارنینگ می‌دهیم
                         print(f"[WARNING] Forced load: Module '{name}' requires '{req_cap}' (missing) but loading anyway.")
             provider_name = provides_map[req_cap]
             provider_info = next((m for m in modules_data if m["manifest"]["name"] == provider_name), None)
@@ -67,17 +68,31 @@ class ModuleLoader:
         for mod_info in modules_data: visit(mod_info)
         return sorted_list
 
-    def instantiate(self, mod_info: Dict) -> IModule:
+    def _get_app_dir(self) -> Path:
+        """دریافت app_dir از path.py"""
+        if self._path:
+            return self._path.app
+        # fallback: استفاده از PathManager جدید
+        return PathManager().app
+
+    def _get_massir_dir(self) -> Path:
+        """دریافت massir_dir از path.py"""
+        if self._path:
+            return self._path.massir
+        # fallback: استفاده از PathManager جدید
+        return PathManager().massir
+
+    def instantiate(self, mod_info: Dict, is_system: bool = False) -> IModule:
         """
         ایجاد نمونه (Object) از کلاس ماژول
         
-        هر ماژول دارای شناسه یکتا (id) است که در manifest ذخیره می‌شود.
-        اگر شناسه وجود نداشته باشد، یک شناسه تصادفی تولید می‌شود.
+        Args:
+            mod_info: اطلاعات ماژول شامل path و manifest
+            is_system: آیا ماژول سیستمی است؟
         """
         manifest = mod_info["manifest"]
         mod_name = manifest["name"]
         
-        # تولید شناسه یکتا اگر وجود ندارد
         if "id" not in manifest:
             import uuid
             manifest["id"] = str(uuid.uuid4())[:8]
@@ -87,40 +102,35 @@ class ModuleLoader:
         if not class_name:
             raise ModuleLoadError(f"Module '{mod_name}' missing entrypoint.")
         
-        # مسیر ماژول را به مسیر نسبی تبدیل کن
+        # مسیر ماژول
         rel_path = mod_info["path"]
         
-        # تشخیص اینکه ماژول زیرمجموعه massir است یا app_dir
-        is_massir_module = False
-        
-        if rel_path.is_absolute():
-            path_manager = PathManager()
-            massir_dir = path_manager.massir
-            try:
-                rel_path = rel_path.relative_to(massir_dir)
-                is_massir_module = True
-            except ValueError:
-                # از app_dir تلاش کن
-                app_dir = path_manager.app
+        # ساخت import_path بر اساس نوع ماژول
+        if is_system:
+            # ماژول‌های سیستمی از massir لود می‌شوند
+            massir_dir = self._get_massir_dir()
+            if rel_path.is_absolute():
+                try:
+                    rel_path = rel_path.relative_to(massir_dir)
+                except ValueError:
+                    pass
+            import_path = "massir." + ".".join(rel_path.parts)
+        else:
+            # ماژول‌های application از app_dir لود می‌شوند
+            app_dir = self._get_app_dir()
+            if rel_path.is_absolute():
                 try:
                     rel_path = rel_path.relative_to(app_dir)
-                    is_massir_module = False
                 except ValueError:
-                    pass  # همان مسیر مطلق را نگه‌دار
-        
-        # ساخت import_path
-        parts = list(rel_path.parts)
-        if is_massir_module:
-            import_path = "massir." + ".".join(parts)
-        else:
-            import_path = ".".join(parts)
+                    pass
+            import_path = ".".join(rel_path.parts)
         
         try:
             module_lib = importlib.import_module(f"{import_path}.module")
             entry_class = getattr(module_lib, class_name)
             instance: IModule = entry_class()
             instance.name = mod_name
-            instance.id = mod_id  # شناسه یکتا
+            instance.id = mod_id
             return instance
         except Exception as e:
             raise ModuleLoadError(f"Failed to load '{mod_name}': {e}")

@@ -109,11 +109,34 @@ class SettingsManager(CoreConfigAPI):
         return val if isinstance(val, list) else ["./massir/modules"]
     
     def get_modules_config(self) -> list:
-        """دریافت تنظیمات ماژول‌ها (فرمت جدید با path و names)"""
-        val = self.get("system.modules", [])
+        """
+        دریافت تنظیمات ماژول‌ها
+        
+        Returns:
+            لیست تنظیمات ماژول‌ها (شامل path، type، names)
+        """
+        val = self.get("modules", [])
         if not isinstance(val, list):
             return []
         return val
+    
+    def get_modules_config_for_type(self, config_type: str) -> list:
+        """
+        دریافت تنظیمات ماژول‌ها برای یک نوع خاص
+        
+        Args:
+            config_type: نوع فاز لود (systems, applications, all)
+        
+        Returns:
+            لیست تنظیمات ماژول‌های مناسب برای این فاز
+        """
+        all_config = self.get_modules_config()
+        result = []
+        for item in all_config:
+            folder_type = item.get("type", "all")
+            if folder_type == "all" or folder_type == config_type:
+                result.append(item)
+        return result
     
     # --- تنظیمات لاگ ---
     def show_logs(self) -> bool:

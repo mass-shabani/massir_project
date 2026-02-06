@@ -25,11 +25,11 @@ def print_banner(config_api: CoreConfigAPI):
     reset_code = '\033[0m'
     print(f"{color_start}{banner_content}{reset_code}")
 
-def log_internal(config_api: CoreConfigAPI, logger_api: CoreLoggerAPI, message: str, tag: str = "core"):
+def log_internal(config_api: CoreConfigAPI, logger_api: CoreLoggerAPI, message: str, level: str = "INFO", tag: str = "core"):
     """
     چاپ پیام‌های داخلی هسته.
     """
-    logger_api.log(message, level="INFO", tag=tag)
+    logger_api.log(message, level=level, tag=tag)
 
 # --- کلاس‌های کمکی برای لاگ ---
 

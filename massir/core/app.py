@@ -41,9 +41,14 @@ class App:
                 - "__cwd__" : پوشه جاری
             app_dir: مسیر پوشه برنامه کاربر (جایی که main.py قرار دارد)
         """
+        # مدیریت مسیرها
+        self.path = PathManager(app_dir)
+        
+        # ماژول‌لودر با دسترسی به path
+        self.loader = ModuleLoader(path=self.path)
+        
         self.modules: Dict[str, IModule] = {}
         self.context = ModuleContext()
-        self.loader = ModuleLoader()
         self.hooks = HooksManager()
         
         # رفرنس‌ها برای اجازه تغییر توسط ماژول‌های دیگر
@@ -55,9 +60,6 @@ class App:
         # متغیرهای مدیریت نام ماژول‌ها
         self._system_module_names: List[str] = []
         self._app_module_names: List[str] = []
-        
-        # مدیریت مسیرها
-        self.path = PathManager(app_dir)
         
         # مقداردهی اولیه سرویس‌ها
         self._bootstrap_system(initial_settings, settings_path)
@@ -132,15 +134,15 @@ class App:
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_START)
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Starting Massir Framework...", tag="core_init")
 
-        # دریافت لیست ماژول‌ها از تنظیمات جدید
-        modules_config = self._config_api_ref[0].get_modules_config()
-        
-        # کشف و لود ماژول‌های سیستمی
-        system_data = await self._discover_modules(modules_config, is_system=True)
+        # دریافت تنظیمات ماژول‌ها بر اساس type پوشه
+        # فاز سیستمی: پوشه‌های با type='systems' یا type='all'
+        system_modules_config = self._config_api_ref[0].get_modules_config_for_type("systems")
+        system_data = await self._discover_modules(system_modules_config, is_system=True)
         await self._load_system_modules(system_data)
 
-        # کشف و لود ماژول‌های کاربردی
-        app_data = await self._discover_modules(modules_config, is_system=False)
+        # فاز کاربردی: پوشه‌های با type='applications' یا type='all'
+        app_modules_config = self._config_api_ref[0].get_modules_config_for_type("applications")
+        app_data = await self._discover_modules(app_modules_config, is_system=False)
         await self._load_application_modules(app_data, system_data)
 
         # فاز ۳ - استارت ماژول‌ها به ترتیب
@@ -177,6 +179,7 @@ class App:
                     self._config_api_ref[0], 
                     self._logger_api_ref[0], 
                     f"{module_type} module path not found: {path}", 
+                    level="WARNING",
                     tag="core"
                 )
                 continue
@@ -295,13 +298,14 @@ class App:
         """لود ماژول‌های کاربردی"""
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Loading Application Modules...", tag="core")
         
-        # استخراج قابلیت‌های سیستم‌های لود شده
+        # استخراج قابلیت‌های سیستم‌های لود شده (از نمونه‌های واقعی، نه manifest)
         system_provides = {}
-        for m in system_data:
-            name = m["manifest"]["name"]
-            provides = m["manifest"].get("provides", [])
-            for cap in provides:
-                system_provides[cap] = name
+        for m in self.modules.values():
+            if hasattr(m, '_is_system') and m._is_system:
+                provides = getattr(m, 'provides', [])
+                if isinstance(provides, list):
+                    for cap in provides:
+                        system_provides[cap] = m.name
         
         system_provides["core_logger"] = "App_Default"
         system_provides["core_config"] = "App_Default"
@@ -381,7 +385,7 @@ class App:
         """
         نمونه‌سازی و load ماژول
         """
-        instance = self.loader.instantiate(mod_info)
+        instance = self.loader.instantiate(mod_info, is_system=is_system)
         instance._context = self.context
         
         await instance.load(self.context)
