@@ -28,7 +28,18 @@ def print_banner(config_api: CoreConfigAPI):
 def log_internal(config_api: CoreConfigAPI, logger_api: CoreLoggerAPI, message: str, level: str = "INFO", tag: str = "core"):
     """
     چاپ پیام‌های داخلی هسته.
+    
+    Args:
+        config_api: API تنظیمات
+        logger_api: API لاگر
+        message: پیام لاگ
+        level: سطح لاگ (INFO, WARNING, ERROR, DEBUG, etc.)
+        tag: تگ برای فیلتر کردن
     """
+    if logger_api is None:
+        # Fallback به print اگر logger_api وجود ندارد
+        print(f"[{level}][{tag}] {message}")
+        return
     logger_api.log(message, level=level, tag=tag)
 
 # --- کلاس‌های کمکی برای لاگ ---

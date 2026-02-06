@@ -21,7 +21,7 @@ DEFAULT_SETTINGS = {
     },
     "information": {
         "project_name": "Massir Framework",
-        "project_version": "0.0.3 alpha",
+        "project_version": "0.0.4 alpha",
         "project_info": "Modular Application Architecture"
     },
     "template": {

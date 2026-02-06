@@ -96,7 +96,7 @@ class App:
     # --- مدیریت سیگنال‌ها ---
     def _setup_signal_handlers(self, loop: asyncio.AbstractEventLoop):
         def _shutdown_handler():
-            print("\n\nShutdown signal received. Initiating graceful shutdown...")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nShutdown signal received. Initiating graceful shutdown...", level="INFO")
             self._stop_event.set()
 
         try:
@@ -113,13 +113,13 @@ class App:
 
         try:
             await self._bootstrap_phases()
-            print("Application is running. Press Ctrl+C to stop.")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="INFO")
             await self._stop_event.wait()
             
         except asyncio.CancelledError:
             log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", tag="core")
         except Exception as e:
-            self._logger_api_ref[0].log(f"Fatal Error in core execution: {e}", level="ERROR", tag="core")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Fatal Error in core execution: {e}", level="ERROR", tag="core")
         finally:
             await shutdown(self.modules, self._background_tasks, 
                           self._config_api_ref[0], self._logger_api_ref[0],
@@ -276,24 +276,25 @@ class App:
                 requirements_met, missing = await self._check_requirements(mod_info, system_provides)
                 
                 if not requirements_met:
-                    self._logger_api_ref[0].log(
+                    log_internal(
+                        self._config_api_ref[0], self._logger_api_ref[0],
                         f"System module '{mod_name}' requires: {', '.join(missing)} (not found)",
                         level="WARNING", tag="core"
                     )
                     
                     if not is_forced:
-                        self._logger_api_ref[0].log(f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
+                        log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
                         continue
                     else:
-                        self._logger_api_ref[0].log(f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
+                        log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
                 
                 mod_instance = await self._instantiate_and_load(mod_info, is_system=True)
                 self.modules[mod_name] = mod_instance
                 self._system_module_names.append(mod_name)
-                self._logger_api_ref[0].log(f"System module '{mod_name}' loaded", level="INFO", tag="core")
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"System module '{mod_name}' loaded", level="INFO", tag="core")
                 
             except Exception as e:
-                self._logger_api_ref[0].log(f"System module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"System module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
 
     async def _load_application_modules(self, app_data: List[Dict], system_data: List[Dict]):
         """لود ماژول‌های کاربردی"""
@@ -323,19 +324,20 @@ class App:
                 requirements_met, missing = await self._check_requirements(mod_info, system_provides)
                 
                 if not requirements_met:
-                    self._logger_api_ref[0].log(
+                    log_internal(
+                        self._config_api_ref[0], self._logger_api_ref[0],
                         f"Application module '{mod_name}' requires: {', '.join(missing)} (not found)",
                         level="WARNING", tag="core"
                     )
-                    self._logger_api_ref[0].log(f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
+                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
                 
                 mod_instance = await self._instantiate_and_load(mod_info, is_system=False)
                 self.modules[mod_name] = mod_instance
                 self._app_module_names.append(mod_name)
-                self._logger_api_ref[0].log(f"Application module '{mod_name}' loaded", level="INFO", tag="core")
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' loaded", level="INFO", tag="core")
                 
             except Exception as e:
-                self._logger_api_ref[0].log(f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
         
         # --- پردازش معمولی ---
         for mod_info in regular_app_data:
@@ -345,20 +347,21 @@ class App:
                 requirements_met, missing = await self._check_requirements(mod_info, system_provides)
                 
                 if not requirements_met:
-                    self._logger_api_ref[0].log(
+                    log_internal(
+                        self._config_api_ref[0], self._logger_api_ref[0],
                         f"Application module '{mod_name}' requires: {', '.join(missing)} (not found)",
                         level="WARNING", tag="core"
                     )
-                    self._logger_api_ref[0].log(f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
+                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
                     continue
                 
                 mod_instance = await self._instantiate_and_load(mod_info, is_system=False)
                 self.modules[mod_name] = mod_instance
                 self._app_module_names.append(mod_name)
-                self._logger_api_ref[0].log(f"Application module '{mod_name}' loaded", level="INFO", tag="core")
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' loaded", level="INFO", tag="core")
                 
             except Exception as e:
-                self._logger_api_ref[0].log(f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
 
     async def _start_all_modules(self):
         """استارت تمام ماژول‌ها"""
@@ -371,7 +374,7 @@ class App:
                     await self.modules[mod_name].start(self.context)
                     await self.hooks.dispatch(SystemHook.ON_MODULE_LOADED, self.modules[mod_name])
                 except Exception as e:
-                    self._logger_api_ref[0].log(f"Error starting system module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Error starting system module '{mod_name}': {e}", level="ERROR", tag="core")
         
         # استارت ماژول‌های کاربردی
         for mod_name in self._app_module_names:
@@ -380,7 +383,7 @@ class App:
                     await self.modules[mod_name].start(self.context)
                     await self.hooks.dispatch(SystemHook.ON_MODULE_LOADED, self.modules[mod_name])
                 except Exception as e:
-                    self._logger_api_ref[0].log(f"Error starting application module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Error starting application module '{mod_name}': {e}", level="ERROR", tag="core")
 
     async def _instantiate_and_load(self, mod_info: Dict, is_system: bool) -> IModule:
         """

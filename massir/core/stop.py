@@ -35,9 +35,9 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
             if mod_name in modules:
                 try:
                     await modules[mod_name].stop(modules[mod_name]._context)
-                    logger_api.log(f"Application module '{mod_name}' stopped", level="INFO", tag="core")
+                    log_internal(config_api, logger_api, f"Application module '{mod_name}' stopped", level="INFO", tag="core")
                 except Exception as e:
-                    logger_api.log(f"Error stopping application module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(config_api, logger_api, f"Error stopping application module '{mod_name}': {e}", level="ERROR", tag="core")
         
         # استاپ ماژول‌های سیستمی به ترتیب معکوس
         log_internal(config_api, logger_api, "Stopping System Modules...", tag="core")
@@ -45,9 +45,9 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
             if mod_name in modules:
                 try:
                     await modules[mod_name].stop(modules[mod_name]._context)
-                    logger_api.log(f"System module '{mod_name}' stopped", level="INFO", tag="core")
+                    log_internal(config_api, logger_api, f"System module '{mod_name}' stopped", level="INFO", tag="core")
                 except Exception as e:
-                    logger_api.log(f"Error stopping system module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(config_api, logger_api, f"Error stopping system module '{mod_name}': {e}", level="ERROR", tag="core")
     else:
         # حالت سازگار با نسخه‌های قبلی: استاپ همه ماژول‌ها به ترتیب معکوس
         log_internal(config_api, logger_api, "Stopping Modules (legacy mode)...", tag="core")
@@ -55,4 +55,4 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
             try:
                 await instance.stop(instance._context)
             except Exception as e:
-                logger_api.log(f"Error stopping module {instance.name}: {e}", level="ERROR", tag="core")
+                log_internal(config_api, logger_api, f"Error stopping module {instance.name}: {e}", level="ERROR", tag="core")

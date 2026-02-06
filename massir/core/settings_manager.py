@@ -13,7 +13,7 @@ from massir.core.settings_default import (
     DEFAULT_SETTINGS,
     DefaultConfig,
 )
-from massir.core.log import DefaultLogger, _FallbackConfig
+from massir.core.log import DefaultLogger, _FallbackConfig, log_internal
 
 class SettingsManager(CoreConfigAPI):
     """
@@ -38,7 +38,7 @@ class SettingsManager(CoreConfigAPI):
         if SettingsManager._class_logger:
             SettingsManager._class_logger.log(message, level=level, tag="config")
         else:
-            print(f"[{level}] [config] {message}")
+            log_internal(None, None, message, level=level, tag="config")
     
     def __init__(self, settings_path: str = "app_settings.json", initial_settings: Optional[dict] = None):
         """

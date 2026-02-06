@@ -29,5 +29,8 @@ __all__ = [
     'ModuleLoadError',
     'inject_system_apis',
     'DependencyResolutionError',
+    'print_banner',
+    'log_internal',
+    'shutdown',
 ]
 

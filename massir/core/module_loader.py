@@ -5,6 +5,7 @@ from typing import List, Dict, Optional
 from massir.core.interfaces import IModule
 from massir.core.exceptions import ModuleLoadError, DependencyResolutionError
 from massir.core.path import Path as PathManager
+from massir.core.log import log_internal
 
 class ModuleLoader:
     def __init__(self, path: Optional[PathManager] = None):
@@ -57,7 +58,7 @@ class ModuleLoader:
                     if not force_execute:
                         raise DependencyResolutionError(f"'{name}' requires '{req_cap}' but none provides it.")
                     else:
-                        print(f"[WARNING] Forced load: Module '{name}' requires '{req_cap}' (missing) but loading anyway.")
+                        log_internal(None, None, f"Forced load: Module '{name}' requires '{req_cap}' (missing) but loading anyway.", level="WARNING")
             provider_name = provides_map[req_cap]
             provider_info = next((m for m in modules_data if m["manifest"]["name"] == provider_name), None)
             if provider_info: visit(provider_info)
