@@ -75,7 +75,7 @@ class App:
         self._config_api_ref[0] = self.context.services.get("core_config")
         self._logger_api_ref[0] = self.context.services.get("core_logger")
         
-        self.context.set_kernel(self)
+        self.context.set_app(self)
 
     # --- هوک‌ها ---
     def register_hook(self, hook: SystemHook, callback):
@@ -129,7 +129,7 @@ class App:
         print_banner(self._config_api_ref[0])
 
         # فاز ۱
-        await self.hooks.dispatch(SystemHook.ON_KERNEL_BOOTSTRAP_START)
+        await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_START)
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Starting Massir Framework...", tag="core_init")
 
         # دریافت لیست ماژول‌ها از تنظیمات جدید
@@ -147,7 +147,7 @@ class App:
         await self._start_all_modules()
 
         # فاز نهایی
-        await self.hooks.dispatch(SystemHook.ON_KERNEL_BOOTSTRAP_END)
+        await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework initialization complete.", tag="core")
 
     async def _discover_modules(self, modules_config: List[Dict], is_system: bool) -> List[Dict]:
@@ -393,7 +393,4 @@ class App:
         
         return instance
 
-# --- رفرنس کلاس اصلی ---
-Kernel = App
-ModuleContext = ModuleContext
-IModule = IModule
+

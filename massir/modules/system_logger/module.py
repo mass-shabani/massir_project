@@ -85,9 +85,9 @@ class SystemLoggerModule(IModule):
         my_logger = AdvancedLogger(config)
         context.services.set("core_logger", my_logger)
         
-        kernel = context.get_kernel()
-        kernel.register_hook(SystemHook.ON_MODULE_LOADED, self._on_module_loaded)
-        kernel.register_hook(SystemHook.ON_SETTINGS_LOADED, self._on_settings_loaded)
+        app = context.get_app()
+        app.register_hook(SystemHook.ON_MODULE_LOADED, self._on_module_loaded)
+        app.register_hook(SystemHook.ON_SETTINGS_LOADED, self._on_settings_loaded)
 
     async def start(self, context):
         # ⭐ اصلاح مهم: به‌روزرسانی رفرنس کانفیگ ماژول

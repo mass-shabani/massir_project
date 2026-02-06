@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-# ⭐ اصلاح ایمپورت: استفاده از نیم‌اسپیس massir
 from massir.core.registry import ModuleRegistry
 
 if TYPE_CHECKING:
-    # برای تایپ چیک از massir.core.run استفاده می‌کنیم
-    from massir.core.run import Kernel
+    from massir.core.app import App
 
 class ModuleContext:
     """
@@ -14,15 +12,15 @@ class ModuleContext:
     شامل رجیستری سرویس‌ها و رفرنس به هسته برای ثبت کال‌بک‌ها.
     """
     def __init__(self):
-        self._kernel = None
+        self._app = None
         self.services = ModuleRegistry()
         self.metadata = {}
 
-    def set_kernel(self, kernel: 'Kernel'):
-        self._kernel = kernel
+    def set_app(self, app: 'App'):
+        self._app = app
 
-    def get_kernel(self) -> 'Kernel':
-        return self._kernel
+    def get_app(self) -> 'App':
+        return self._app
 
 class IModule(ABC):
     """
