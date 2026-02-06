@@ -4,7 +4,8 @@
 """
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.registry import ModuleRegistry
-from massir.core.config import SettingsManager, DefaultLogger
+from massir.core.log import DefaultLogger
+from massir.core.settings_manager import SettingsManager
 from massir.core.path import Path
 import os
 from typing import Optional

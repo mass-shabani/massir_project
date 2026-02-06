@@ -76,3 +76,57 @@ class _FallbackConfig:
     
     def get_banner_color_code(self) -> str:
         return "33"
+
+
+class DefaultLogger(CoreLoggerAPI):
+    """
+    لاگر پیش‌فرض ساده.
+    """
+    def __init__(self, config_api: CoreConfigAPI):
+        self.config = config_api
+        if self.config is None:
+            self.config = _FallbackConfig()
+    
+    def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
+        config = self.config
+        
+        if not config.show_logs():
+            return False
+        
+        if tag:
+            hidden_tags = config.get_hide_log_tags()
+            if isinstance(hidden_tags, list) and tag in hidden_tags:
+                return False
+        
+        hidden_levels = config.get_hide_log_levels()
+        if isinstance(hidden_levels, list):
+            if level in hidden_levels:
+                return False
+        
+        critical_levels = ["ERROR", "WARNING", "EXCEPTION", "CRITICAL"]
+        if level in critical_levels and not config.is_debug():
+            return False
+        
+        return True
+    
+    def log(self, message: str, level: str = "INFO", tag: Optional[str] = None, **kwargs):
+        """لاگ کردن با پشتیبانی از رنگ‌ها"""
+        if not self._should_log(level, tag):
+            return
+        
+        if os.name == 'nt':
+            os.system('')
+        
+        template = self.config.get_system_log_template()
+        color_code = self.config.get_system_log_color_code()
+        
+        formatted_msg = template.format(
+            project_name=self.config.get_project_name(),
+            level=level,
+            message=message
+        )
+        
+        color_code_start = f'\033[{color_code}m'
+        reset_code = '\033[0m'
+        
+        print(f"{color_code_start}{formatted_msg}{reset_code}")
