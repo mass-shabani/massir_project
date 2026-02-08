@@ -9,11 +9,6 @@
       "path": "{app_dir}/app",
       "type": "all",
       "names": "{all}"
-    },
-    {
-      "path": "./subfolder/localmodules",
-      "type": "applications",
-      "names": "{all}"
     }
   ],
   "template": {

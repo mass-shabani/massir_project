@@ -144,7 +144,7 @@ class App:
         # فاز کاربردی: پوشه‌های با type='applications' یا type='all'
         app_modules_config = self._config_api_ref[0].get_modules_config_for_type("applications")
         app_data = await self._discover_modules(app_modules_config, is_system=False)
-        await self._load_application_modules(app_data, system_data)
+        await self._load_application_modules(app_data)
 
         # فاز ۳ - استارت ماژول‌ها به ترتیب
         await self._start_all_modules()
@@ -164,241 +164,52 @@ class App:
         Returns:
             لیست ماژول‌های کشف شده
         """
-        discovered = []
-        
-        for module_group in modules_config:
-            path_template = module_group.get("path", "")
-            names = module_group.get("names", [])
-            
-            # جایگزینی placeholders
-            path = self._resolve_path(path_template)
-            
-            if not path.exists() or not path.is_dir():
-                # هشدار همیشه - پیدا نشدن پوشه ماژول
-                module_type = "System" if is_system else "Application"
-                log_internal(
-                    self._config_api_ref[0], 
-                    self._logger_api_ref[0], 
-                    f"{module_type} module path not found: {path}", 
-                    level="WARNING",
-                    tag="core"
-                )
-                continue
-            
-            # اگر names = "{all}"، همه پوشه‌ها را لیست کن
-            if names == "{all}":
-                # از مسیر حل شده (path) استفاده کن، نه از template
-                names = [f.name for f in path.iterdir() if f.is_dir()]
-            
-            # کشف هر ماژول
-            for name in names:
-                module_path = path / name
-                manifest_path = module_path / "manifest.json"
-                
-                if manifest_path.exists():
-                    import json
-                    with open(manifest_path, 'r', encoding='utf-8') as f:
-                        manifest = json.load(f)
-                        
-                    # بررسی نوع ماژول
-                    manifest_type = manifest.get("type", "application")
-                    is_module_system = (manifest_type == "system")
-                    
-                    # اگر دنبال ماژول سیستمی هستیم، فقط سیستمی‌ها
-                    # اگر دنبال ماژول کاربردی هستیم، فقط کاربردی‌ها
-                    if is_system and not is_module_system:
-                        continue
-                    if not is_system and is_module_system:
-                        continue
-                    
-                    # تولید شناسه یکتا اگر وجود ندارد
-                    if "id" not in manifest:
-                        import uuid
-                        manifest["id"] = str(uuid.uuid4())[:8]
-                    
-                    discovered.append({
-                        "path": module_path,
-                        "manifest": manifest
-                    })
-        
-        return discovered
-
-    def _resolve_path(self, path_template: str) -> Path:
-        """
-        جایگزینی placeholders در مسیر
-        
-        Args:
-            path_template: مسیر با placeholders
-            
-        Returns:
-            مسیر حل شده
-        """
-        path = path_template
-        path = path.replace("{massir_dir}", str(self.path.massir))
-        path = path.replace("{app_dir}", str(self.path.app))
-        return Path(path)
-
-    async def _check_requirements(self, mod_info: Dict, system_provides: Dict) -> tuple[bool, List[str]]:
-        """
-        بررسی پیشنیازهای یک ماژول.
-        Returns: (all_requirements_met: bool, missing_requirements: List[str])
-        """
-        requires = mod_info["manifest"].get("requires", [])
-        missing = []
-        
-        for req_cap in requires:
-            if req_cap not in system_provides:
-                missing.append(req_cap)
-        
-        return (len(missing) == 0), missing
+        return await self.loader.discover_modules(
+            modules_config, 
+            is_system, 
+            self._config_api_ref[0], 
+            self._logger_api_ref[0]
+        )
 
     async def _load_system_modules(self, system_data: List[Dict]):
         """لود ماژول‌های سیستمی"""
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Loading System Modules...", tag="core_init")
+        await self.loader.load_system_modules(
+            system_data, 
+            self.modules, 
+            self._config_api_ref[0], 
+            self._logger_api_ref[0]
+        )
         
+        # جمع‌آوری نام ماژول‌های سیستمی
         for mod_info in system_data:
             mod_name = mod_info["manifest"]["name"]
-            is_forced = mod_info["manifest"].get("forced_execute", False)
-            
-            # استخراج قابلیت‌های سیستم‌های قبلی
-            system_provides = {}
-            for m in self.modules.values():
-                if hasattr(m, '_is_system') and m._is_system:
-                    provides = getattr(m, 'provides', [])
-                    if isinstance(provides, list):
-                        for cap in provides:
-                            system_provides[cap] = m.name
-            
-            system_provides["core_logger"] = "App_Default"
-            system_provides["core_config"] = "App_Default"
-            
-            try:
-                requirements_met, missing = await self._check_requirements(mod_info, system_provides)
-                
-                if not requirements_met:
-                    log_internal(
-                        self._config_api_ref[0], self._logger_api_ref[0],
-                        f"System module '{mod_name}' requires: {', '.join(missing)} (not found)",
-                        level="WARNING", tag="core"
-                    )
-                    
-                    if not is_forced:
-                        log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
-                        continue
-                    else:
-                        log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
-                
-                mod_instance = await self._instantiate_and_load(mod_info, is_system=True)
-                self.modules[mod_name] = mod_instance
+            if mod_name in self.modules:
                 self._system_module_names.append(mod_name)
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"System module '{mod_name}' loaded", level="INFO", tag="core")
-                
-            except Exception as e:
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"System module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
 
-    async def _load_application_modules(self, app_data: List[Dict], system_data: List[Dict]):
+    async def _load_application_modules(self, app_data: List[Dict]):
         """لود ماژول‌های کاربردی"""
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Loading Application Modules...", tag="core")
+        await self.loader.load_application_modules(
+            app_data, 
+            self.modules, 
+            self._config_api_ref[0], 
+            self._logger_api_ref[0]
+        )
         
-        # استخراج قابلیت‌های سیستم‌های لود شده (از نمونه‌های واقعی، نه manifest)
-        system_provides = {}
-        for m in self.modules.values():
-            if hasattr(m, '_is_system') and m._is_system:
-                provides = getattr(m, 'provides', [])
-                if isinstance(provides, list):
-                    for cap in provides:
-                        system_provides[cap] = m.name
-        
-        system_provides["core_logger"] = "App_Default"
-        system_provides["core_config"] = "App_Default"
-        
-        # تفکیک اجباری و معمولی
-        forced_app_data = [m for m in app_data if m["manifest"].get("forced_execute", False)]
-        regular_app_data = [m for m in app_data if not m["manifest"].get("forced_execute", False)]
-        
-        # --- پردازش اجباری ---
-        for mod_info in forced_app_data:
+        # جمع‌آوری نام ماژول‌های کاربردی
+        for mod_info in app_data:
             mod_name = mod_info["manifest"]["name"]
-            
-            try:
-                requirements_met, missing = await self._check_requirements(mod_info, system_provides)
-                
-                if not requirements_met:
-                    log_internal(
-                        self._config_api_ref[0], self._logger_api_ref[0],
-                        f"Application module '{mod_name}' requires: {', '.join(missing)} (not found)",
-                        level="WARNING", tag="core"
-                    )
-                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
-                
-                mod_instance = await self._instantiate_and_load(mod_info, is_system=False)
-                self.modules[mod_name] = mod_instance
+            if mod_name in self.modules:
                 self._app_module_names.append(mod_name)
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' loaded", level="INFO", tag="core")
-                
-            except Exception as e:
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
-        
-        # --- پردازش معمولی ---
-        for mod_info in regular_app_data:
-            mod_name = mod_info["manifest"]["name"]
-            
-            try:
-                requirements_met, missing = await self._check_requirements(mod_info, system_provides)
-                
-                if not requirements_met:
-                    log_internal(
-                        self._config_api_ref[0], self._logger_api_ref[0],
-                        f"Application module '{mod_name}' requires: {', '.join(missing)} (not found)",
-                        level="WARNING", tag="core"
-                    )
-                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
-                    continue
-                
-                mod_instance = await self._instantiate_and_load(mod_info, is_system=False)
-                self.modules[mod_name] = mod_instance
-                self._app_module_names.append(mod_name)
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' loaded", level="INFO", tag="core")
-                
-            except Exception as e:
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
 
     async def _start_all_modules(self):
         """استارت تمام ماژول‌ها"""
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Starting Modules...", tag="core")
-        
-        # استارت ماژول‌های سیستمی
-        for mod_name in self._system_module_names:
-            if mod_name in self.modules:
-                try:
-                    await self.modules[mod_name].start(self.context)
-                    await self.hooks.dispatch(SystemHook.ON_MODULE_LOADED, self.modules[mod_name])
-                except Exception as e:
-                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Error starting system module '{mod_name}': {e}", level="ERROR", tag="core")
-        
-        # استارت ماژول‌های کاربردی
-        for mod_name in self._app_module_names:
-            if mod_name in self.modules:
-                try:
-                    await self.modules[mod_name].start(self.context)
-                    await self.hooks.dispatch(SystemHook.ON_MODULE_LOADED, self.modules[mod_name])
-                except Exception as e:
-                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Error starting application module '{mod_name}': {e}", level="ERROR", tag="core")
-
-    async def _instantiate_and_load(self, mod_info: Dict, is_system: bool) -> IModule:
-        """
-        نمونه‌سازی و load ماژول
-        """
-        instance = self.loader.instantiate(mod_info, is_system=is_system)
-        instance._context = self.context
-        
-        await instance.load(self.context)
-        await inject_system_apis(instance, self.context.services, 
-                                 self._logger_api_ref, self._config_api_ref)
-        
-        if is_system:
-            setattr(instance, '_is_system', True)
-        
-        return instance
+        await self.loader.start_all_modules(
+            self.modules, 
+            self._system_module_names, 
+            self._app_module_names, 
+            self._config_api_ref[0], 
+            self._logger_api_ref[0], 
+            self.hooks
+        )
 
 
