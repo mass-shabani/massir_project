@@ -200,7 +200,7 @@ class ModuleLoader:
             logger_ref: رفرنس به لاگر (برای بروزرسانی)
             config_ref: رفرنس به کانفیگ (برای بروزرسانی)
         """
-        log_internal(config_api, logger_api, "Loading System Modules...", tag="core_init")
+        log_internal(config_api, logger_api, "Loading System Modules...", level="CORE", tag="core_init")
         
         for mod_info in system_data:
             mod_name = mod_info["manifest"]["name"]
@@ -229,7 +229,7 @@ class ModuleLoader:
                     )
                     
                     if not is_forced:
-                        log_internal(config_api, logger_api, f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
+                        log_internal(config_api, logger_api, f"Skipping module '{mod_name}' (not forced)", level="CORE", tag="core")
                         continue
                     else:
                         log_internal(config_api, logger_api, f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
@@ -242,7 +242,7 @@ class ModuleLoader:
                     config_ref=config_ref
                 )
                 modules[mod_name] = mod_instance
-                log_internal(config_api, logger_api, f"System module '{mod_name}' loaded", level="INFO", tag="core")
+                log_internal(config_api, logger_api, f"System module '{mod_name}' loaded", level="CORE", tag="core")
                 
             except Exception as e:
                 log_internal(config_api, logger_api, f"System module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
@@ -269,7 +269,7 @@ class ModuleLoader:
             logger_ref: رفرنس به لاگر (برای بروزرسانی)
             config_ref: رفرنس به کانفیگ (برای بروزرسانی)
         """
-        log_internal(config_api, logger_api, "Loading Application Modules...", tag="core")
+        log_internal(config_api, logger_api, "Loading Application Modules...", level="CORE", tag="core")
         
         # استخراج قابلیت‌های سیستم‌های لود شده (از نمونه‌های واقعی، نه manifest)
         system_provides = {}
@@ -310,7 +310,7 @@ class ModuleLoader:
                     config_ref=config_ref
                 )
                 modules[mod_name] = mod_instance
-                log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="INFO", tag="core")
+                log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="CORE", tag="core")
                 
             except Exception as e:
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
@@ -328,7 +328,7 @@ class ModuleLoader:
                         f"Application module '{mod_name}' requires: {', '.join(missing)} (not found)",
                         level="WARNING", tag="core"
                     )
-                    log_internal(config_api, logger_api, f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
+                    log_internal(config_api, logger_api, f"Skipping module '{mod_name}' (not forced)", level="CORE", tag="core")
                     continue
                 
                 mod_instance = await self.instantiate_and_load(
@@ -339,7 +339,7 @@ class ModuleLoader:
                     config_ref=config_ref
                 )
                 modules[mod_name] = mod_instance
-                log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="INFO", tag="core")
+                log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="CORE", tag="core")
                 
             except Exception as e:
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
@@ -364,7 +364,7 @@ class ModuleLoader:
             logger_api: API لاگر
             hooks_manager: مدیریت هوک‌ها
         """
-        log_internal(config_api, logger_api, "Starting Modules...", tag="core")
+        log_internal(config_api, logger_api, "Starting Modules...", level="CORE", tag="core")
         
         # استارت ماژول‌های سیستمی
         for mod_name in system_module_names:

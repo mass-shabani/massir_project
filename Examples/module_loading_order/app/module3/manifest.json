@@ -1,0 +1,10 @@
+{
+  "name": "module3",
+  "version": "1.0",
+  "enabled": true,
+  "type": "application",
+  "entrypoint": "Module3",
+  "provides": [],
+  "requires": ["core_logger"],
+  "forced_execute": false
+}

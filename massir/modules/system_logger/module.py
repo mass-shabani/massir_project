@@ -107,4 +107,4 @@ class SystemLoggerModule(IModule):
 
     def _on_module_loaded(self, module_instance):
         logger = self.context.services.get("core_logger")
-        logger.log(f"Detected loaded module: {module_instance.name}", level="DEBUG", tag="Detailed")
+        logger.log(f"Detected loaded module: {module_instance.name}", level="CORE", tag="Detailed")

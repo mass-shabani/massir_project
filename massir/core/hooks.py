@@ -14,7 +14,7 @@ class HooksManager:
         self._hooks[hook].append(callback)
         # استفاده از fallback config و logger برای log_internal
         config_api = None  # در اینجا config_api در دسترس نیست
-        log_internal(config_api, logger_api, f"🪝 Registered hook: {hook.value}", level="DEBUG", tag="core_hooks")
+        log_internal(config_api, logger_api, f"🪝 Registered hook: {hook.value}", level="CORE", tag="core_hooks")
 
     async def dispatch(self, hook: SystemHook, *args, **kwargs):
         if hook in self._hooks:

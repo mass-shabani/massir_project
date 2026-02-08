@@ -96,7 +96,7 @@ class App:
     # --- مدیریت سیگنال‌ها ---
     def _setup_signal_handlers(self, loop: asyncio.AbstractEventLoop):
         def _shutdown_handler():
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nShutdown signal received. Initiating graceful shutdown...", level="INFO")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nShutdown signal received. Initiating graceful shutdown...", level="CORE")
             self._stop_event.set()
 
         try:
@@ -113,11 +113,11 @@ class App:
 
         try:
             await self._bootstrap_phases()
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="INFO")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="CORE")
             await self._stop_event.wait()
             
         except asyncio.CancelledError:
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", tag="core")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", level="CORE", tag="core")
         except Exception as e:
             log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Fatal Error in core execution: {e}", level="ERROR", tag="core")
         finally:
@@ -133,7 +133,7 @@ class App:
 
         # فاز ۱
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_START)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Starting Massir Framework...", tag="core_init")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Starting Massir Framework...", level="CORE", tag="core_init")
 
         # دریافت تنظیمات ماژول‌ها بر اساس type پوشه
         # فاز سیستمی: پوشه‌های با type='systems' یا type='all'
@@ -151,7 +151,7 @@ class App:
 
         # فاز نهایی
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework initialization complete.", tag="core")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework initialization complete.", level="CORE", tag="core")
 
     async def _discover_modules(self, modules_config: List[Dict], is_system: bool) -> List[Dict]:
         """
