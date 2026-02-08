@@ -14,11 +14,11 @@ async def main():
     # اگر در JSON تعریف شده باشد، این مقدار جایگزین می‌شود
     initial_settings = {
         # "logs": {
-        #     "show_banner": False,
-        #     "hide_log_tags": ["core_init", "core_hooks", "core"],
+        #     "show_banner": True,
+        #     "hide_log_tags": ["core_init", "core_hooks"],
         # },
         "template": {
-        "banner_color_code": "33"
+        # "banner_color_code": "33"
   },
     }
     # استفاده از تنظیمات محلی پوشه SubApp

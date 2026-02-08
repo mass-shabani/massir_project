@@ -177,7 +177,10 @@ class App:
             system_data, 
             self.modules, 
             self._config_api_ref[0], 
-            self._logger_api_ref[0]
+            self._logger_api_ref[0],
+            self.context,
+            self._logger_api_ref,
+            self._config_api_ref
         )
         
         # جمع‌آوری نام ماژول‌های سیستمی
@@ -192,7 +195,10 @@ class App:
             app_data, 
             self.modules, 
             self._config_api_ref[0], 
-            self._logger_api_ref[0]
+            self._logger_api_ref[0],
+            self.context,
+            self._logger_api_ref,
+            self._config_api_ref
         )
         
         # جمع‌آوری نام ماژول‌های کاربردی
@@ -211,5 +217,3 @@ class App:
             self._logger_api_ref[0], 
             self.hooks
         )
-
-

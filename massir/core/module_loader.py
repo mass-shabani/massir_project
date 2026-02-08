@@ -8,6 +8,7 @@ from massir.core.path import Path as PathManager
 from massir.core.log import log_internal
 from massir.core.core_apis import CoreConfigAPI, CoreLoggerAPI
 from massir.core.hook_types import SystemHook
+from massir.core.inject import inject_system_apis
 
 class ModuleLoader:
     def __init__(self, path: Optional[PathManager] = None):
@@ -148,8 +149,8 @@ class ModuleLoader:
         mod_info: Dict,
         is_system: bool,
         context: 'ModuleContext',
-        logger_api: CoreLoggerAPI,
-        config_api: CoreConfigAPI
+        logger_ref: list[CoreLoggerAPI],
+        config_ref: list[CoreConfigAPI]
     ) -> 'IModule':
         """
         نمونه‌سازی و load ماژول
@@ -158,8 +159,8 @@ class ModuleLoader:
             mod_info: اطلاعات ماژول شامل path و manifest
             is_system: آیا ماژول سیستمی است؟
             context: کانتکست ماژول
-            logger_api: API لاگر
-            config_api: API تنظیمات
+            logger_ref: رفرنس به لاگر (برای بروزرسانی)
+            config_ref: رفرنس به کانفیگ (برای بروزرسانی)
             
         Returns:
             نمونه ماژول
@@ -168,6 +169,9 @@ class ModuleLoader:
         instance._context = context
         
         await instance.load(context)
+        
+        # تزریق API های سیستم در صورت ارائه توسط ماژول
+        await inject_system_apis(instance, context.services, logger_ref, config_ref)
         
         if is_system:
             setattr(instance, '_is_system', True)
@@ -179,7 +183,10 @@ class ModuleLoader:
         system_data: List[Dict],
         modules: Dict[str, 'IModule'],
         config_api: CoreConfigAPI,
-        logger_api: CoreLoggerAPI
+        logger_api: CoreLoggerAPI,
+        context: 'ModuleContext',
+        logger_ref: list[CoreLoggerAPI],
+        config_ref: list[CoreConfigAPI]
     ):
         """
         لود ماژول‌های سیستمی
@@ -189,6 +196,9 @@ class ModuleLoader:
             modules: دیکشنری ماژول‌های لود شده
             config_api: API تنظیمات
             logger_api: API لاگر
+            context: کانتکست ماژول
+            logger_ref: رفرنس به لاگر (برای بروزرسانی)
+            config_ref: رفرنس به کانفیگ (برای بروزرسانی)
         """
         log_internal(config_api, logger_api, "Loading System Modules...", tag="core_init")
         
@@ -224,7 +234,13 @@ class ModuleLoader:
                     else:
                         log_internal(config_api, logger_api, f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
                 
-                mod_instance = await self.instantiate(mod_info, is_system=True)
+                mod_instance = await self.instantiate_and_load(
+                    mod_info,
+                    is_system=True,
+                    context=context,
+                    logger_ref=logger_ref,
+                    config_ref=config_ref
+                )
                 modules[mod_name] = mod_instance
                 log_internal(config_api, logger_api, f"System module '{mod_name}' loaded", level="INFO", tag="core")
                 
@@ -236,7 +252,10 @@ class ModuleLoader:
         app_data: List[Dict],
         modules: Dict[str, 'IModule'],
         config_api: CoreConfigAPI,
-        logger_api: CoreLoggerAPI
+        logger_api: CoreLoggerAPI,
+        context: 'ModuleContext',
+        logger_ref: list[CoreLoggerAPI],
+        config_ref: list[CoreConfigAPI]
     ):
         """
         لود ماژول‌های کاربردی
@@ -246,6 +265,9 @@ class ModuleLoader:
             modules: دیکشنری ماژول‌های لود شده
             config_api: API تنظیمات
             logger_api: API لاگر
+            context: کانتکست ماژول
+            logger_ref: رفرنس به لاگر (برای بروزرسانی)
+            config_ref: رفرنس به کانفیگ (برای بروزرسانی)
         """
         log_internal(config_api, logger_api, "Loading Application Modules...", tag="core")
         
@@ -280,7 +302,13 @@ class ModuleLoader:
                     )
                     log_internal(config_api, logger_api, f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
                 
-                mod_instance = await self.instantiate(mod_info, is_system=False)
+                mod_instance = await self.instantiate_and_load(
+                    mod_info,
+                    is_system=False,
+                    context=context,
+                    logger_ref=logger_ref,
+                    config_ref=config_ref
+                )
                 modules[mod_name] = mod_instance
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="INFO", tag="core")
                 
@@ -303,7 +331,13 @@ class ModuleLoader:
                     log_internal(config_api, logger_api, f"Skipping module '{mod_name}' (not forced)", level="INFO", tag="core")
                     continue
                 
-                mod_instance = await self.instantiate(mod_info, is_system=False)
+                mod_instance = await self.instantiate_and_load(
+                    mod_info,
+                    is_system=False,
+                    context=context,
+                    logger_ref=logger_ref,
+                    config_ref=config_ref
+                )
                 modules[mod_name] = mod_instance
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="INFO", tag="core")
                 

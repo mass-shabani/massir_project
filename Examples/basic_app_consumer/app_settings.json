@@ -20,7 +20,7 @@
   "logs": {
     "show_logs": true,
     "show_banner": true,
-    "hide_log_tags": [],
+    "hide_log_tags": ["core_init", "core_hooks"],
     "hide_log_levels": [],
     "debug_mode": true
   },
