@@ -5,17 +5,12 @@ from typing import List, Dict, Optional, TYPE_CHECKING
 
 # Imports with flat structure
 from massir.core.interfaces import IModule, ModuleContext
-from massir.core.registry import ModuleRegistry
-from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.hook_types import SystemHook
-from massir.core.config import SettingsManager
 from massir.core.module_loader import ModuleLoader
 from massir.core.api import initialize_core_services
 from massir.core.log import print_banner, log_internal
-from massir.core.inject import inject_system_apis
 from massir.core.hooks import HooksManager
 from massir.core.stop import shutdown
-from massir.core.exceptions import DependencyResolutionError
 from massir.core.path import Path as PathManager
 
 if TYPE_CHECKING:

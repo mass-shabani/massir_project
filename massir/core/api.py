@@ -2,7 +2,6 @@
 """
 Core interfaces and services.
 """
-from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.registry import ModuleRegistry
 from massir.core.log import DefaultLogger
 from massir.core.settings_manager import SettingsManager

@@ -2,7 +2,7 @@ import asyncio
 from typing import List, Callable, Dict, Optional
 from massir.core.hook_types import SystemHook
 from massir.core.log import log_internal
-from massir.core.core_apis import CoreConfigAPI, CoreLoggerAPI
+from massir.core.core_apis import CoreLoggerAPI
 
 
 class HooksManager:

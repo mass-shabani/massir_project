@@ -8,11 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from massir.core.core_apis import CoreConfigAPI, CoreLoggerAPI
-from massir.core.settings_default import (
-    get_default_settings,
-    DEFAULT_SETTINGS,
-    DefaultConfig,
-)
+from massir.core.settings_default import get_default_settings
 from massir.core.log import DefaultLogger, _FallbackConfig, log_internal
 
 

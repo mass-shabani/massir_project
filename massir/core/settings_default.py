@@ -2,7 +2,6 @@
 """
 Default settings values.
 """
-from typing import Optional
 from massir.core.core_apis import CoreConfigAPI
 
 # Default settings values
@@ -21,7 +20,7 @@ DEFAULT_SETTINGS = {
     },
     "information": {
         "project_name": "Massir Framework",
-        "project_version": "0.0.4 alpha",
+        "project_version": "0.0.5 alpha",
         "project_info": "Modular Application Architecture"
     },
     "template": {
