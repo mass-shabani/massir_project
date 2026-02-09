@@ -1,60 +1,63 @@
 # massir/core/path.py
 """
-مدیریت مسیرهای پروژه
+Project path management.
 """
 from typing import Optional, Dict
 from pathlib import Path as PathLib
 
+
 class Path:
     """
-    کلاس مدیریت مسیرهای پروژه
-    
-    این کلاس مسیرهای مختلف پروژه را نگهداری می‌کند و امکان
-    تغییر و دسترسی به آنها را فراهم می‌کند.
-    
-    مسیرهای پیش‌فرض:
-        - massir_dir: پوشه اصلی فریم‌ورک Massir
-        - app_dir: پوشه برنامه کاربر (جایی که main.py قرار دارد)
+    Project path management class.
+
+    This class maintains various project paths and provides
+    functionality to change and access them.
+
+    Default paths:
+        - massir_dir: Main Massir framework directory
+        - app_dir: User application directory (where main.py is located)
     """
-    
+
     def __init__(self, app_dir: Optional[str] = None):
         """
+        Initialize path manager.
+
         Args:
-            app_dir: مسیر پوشه برنامه کاربر
+            app_dir: Path to user application directory
         """
-        # تشخیص خودکار massir_dir
-        # path.py در massir/core/path.py است
-        # massir/__init__.py در massir/__init__.py است
-        # پس باید 2 سطح بالا برویم
+        # Auto-detect massir_dir
+        # path.py is at massir/core/path.py
+        # massir/__init__.py is at massir/__init__.py
+        # So we need to go 2 levels up
         self._massir_dir = PathLib(__file__).parent.parent.resolve()
-        # تنظیم app_dir
+        # Set app_dir
         if app_dir:
             self._app_dir = PathLib(app_dir).resolve()
         else:
             self._app_dir = PathLib.cwd().resolve()
-        
-        # دیکشنری مسیرهای اضافی
+
+        # Dictionary of additional paths
         self._custom_paths: Dict[str, PathLib] = {}
-    
+
     @property
     def massir(self) -> PathLib:
-        """مسیر فریم‌ورک Massir (فقط خواندنی)"""
+        """Massir framework path (read-only)."""
         return self._massir_dir
-    
+
     @property
     def app(self) -> PathLib:
-        """مسیر برنامه کاربر"""
+        """User application path."""
         return self._app_dir
-    
+
     def get(self, key: str) -> str:
         """
-        دریافت مسیر به صورت رشته
-        
+        Get path as string.
+
         Args:
-            key: نام مسیر (massir، app، یا نام سفارشی)
-            
+            key: Path name (massir, app, or custom name)
+
         Returns:
-            رشته مسیر
+            Path string
         """
         if key in ("massir_dir", "massir"):
             return str(self._massir_dir)
@@ -64,14 +67,14 @@ class Path:
             return str(self._custom_paths[key])
         else:
             raise KeyError(f"Path '{key}' not found")
-    
+
     def set(self, key: str, value: str):
         """
-        تنظیم یا اضافه کردن مسیر
-        
+        Set or add a path.
+
         Args:
-            key: نام مسیر
-            value: مقدار مسیر (رشته)
+            key: Path name
+            value: Path value (string)
         """
         if key in ("massir_dir", "massir"):
             self._massir_dir = PathLib(value).resolve()
@@ -79,16 +82,16 @@ class Path:
             self._app_dir = PathLib(value).resolve()
         else:
             self._custom_paths[key] = PathLib(value).resolve()
-    
+
     def resolve(self, key: str) -> PathLib:
         """
-        دریافت مسیر به صورت PathLib
-        
+        Get path as PathLib object.
+
         Args:
-            key: نام مسیر (massir، massir_dir، app، app_dir، یا نام سفارشی)
-            
+            key: Path name (massir, massir_dir, app, app_dir, or custom name)
+
         Returns:
-            شیء PathLib
+            PathLib object
         """
         if key in ("massir_dir", "massir"):
             return self._massir_dir
@@ -98,24 +101,24 @@ class Path:
             return self._custom_paths[key]
         else:
             raise KeyError(f"Path '{key}' not found")
-    
+
     def get_all_folders(self, base_key: str) -> list[str]:
         """
-        دریافت لیست تمام پوشه‌های موجود در مسیر پایه
-        
+        Get list of all folders in base path.
+
         Args:
-            base_key: کلید مسیر پایه (مثل 'massir_dir' یا 'app_dir')
-            
+            base_key: Base path key (e.g., 'massir_dir' or 'app_dir')
+
         Returns:
-            لیست نام پوشه‌ها
+            List of folder names
         """
         base_path = self.resolve(base_key)
         if base_path.exists() and base_path.is_dir():
             return [f.name for f in base_path.iterdir() if f.is_dir()]
         return []
-    
+
     def __str__(self) -> str:
         return f"Path(massir={self._massir_dir}, app={self._app_dir})"
-    
+
     def __repr__(self) -> str:
         return self.__str__()

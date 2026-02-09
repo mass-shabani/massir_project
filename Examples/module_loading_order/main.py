@@ -2,15 +2,22 @@ import asyncio
 import sys
 from pathlib import Path
 
-# اضافه کردن مسیر پروژه اصلی به sys.path
+# Add the main project path to sys.path
 MASSIR_ROOT = Path(__file__).parent.parent.parent.resolve()
 CURRENT_ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(MASSIR_ROOT))
 
 from massir import App
 
+
 async def main():
-    # تنظیمات کد با اولویت بالاتر از JSON
+    """
+    Main entry point for the module loading order example.
+
+    This function initializes and runs the Massir application with three
+    application modules to demonstrate their loading order.
+    """
+    # Initial settings with higher priority than JSON configuration
     initial_settings = {
         "template": {
             "banner_color_code": "33"
@@ -24,6 +31,7 @@ async def main():
     )
 
     await app.run()
+
 
 if __name__ == "__main__":
     try:

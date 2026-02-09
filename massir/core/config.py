@@ -1,9 +1,9 @@
 # massir/core/config.py
 """
-ری-اکسپورت کلاس‌های تنظیمات
+Re-export of configuration classes.
 
-تمام کلاس‌ها به settings_manager.py منتقل شدند.
-این فایل برای سازگاری با کدهای قبلی نگه‌داری می‌شود.
+All classes have been moved to settings_manager.py.
+This file is maintained for compatibility with previous code.
 """
 from massir.core.settings_manager import (
     SettingsManager,

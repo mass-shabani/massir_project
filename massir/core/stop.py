@@ -1,35 +1,40 @@
 import asyncio
 from typing import List, Dict, Optional
-# ⭐ ایمپورت از نیم‌اسپیس massir
+# Import from massir namespace
 from massir.core.interfaces import IModule
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.log import log_internal
 
-async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.Task], 
+
+async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.Task],
                   config_api: CoreConfigAPI, logger_api: CoreLoggerAPI,
                   system_module_names: Optional[List[str]] = None,
                   app_module_names: Optional[List[str]] = None):
     """
-    اجرای مراحل توقف برنامه
-    
+    Execute the shutdown sequence for the application.
+
+    This function cancels background tasks and stops all modules in the
+    correct order (application modules first, then system modules, both in
+    reverse order of their loading).
+
     Args:
-        modules: دیکشنری تمام ماژول‌ها
-        background_tasks: لیست تسک‌های پس‌زمینه
-        config_api: API تنظیمات
-        logger_api: API لاگر
-        system_module_names: لیست نام ماژول‌های سیستمی (اختیاری)
-        app_module_names: لیست نام ماژول‌های کاربردی (اختیاری)
+        modules: Dictionary of all loaded modules
+        background_tasks: List of background tasks to cancel
+        config_api: Configuration API
+        logger_api: Logger API
+        system_module_names: List of system module names (optional)
+        app_module_names: List of application module names (optional)
     """
     log_internal(config_api, logger_api, "🛑 Shutting down framework...", level="CORE")
-    
-    # کنسل کردن تسک‌های پس‌زمینه
+
+    # Cancel background tasks
     for task in background_tasks:
         if not task.done():
             task.cancel()
-    
-    # اگر لیست‌های نام ماژول‌ها ارائه شده، از ترتیب صحیح استفاده کن
+
+    # If module name lists are provided, use the correct order
     if system_module_names is not None and app_module_names is not None:
-        # استاپ ماژول‌های کاربردی به ترتیب معکوس
+        # Stop application modules in reverse order
         log_internal(config_api, logger_api, "Stopping Application Modules...", level="CORE", tag="core")
         for mod_name in reversed(app_module_names):
             if mod_name in modules:
@@ -38,8 +43,8 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
                     log_internal(config_api, logger_api, f"Application module '{mod_name}' stopped", level="CORE", tag="core")
                 except Exception as e:
                     log_internal(config_api, logger_api, f"Error stopping application module '{mod_name}': {e}", level="ERROR", tag="core")
-        
-        # استاپ ماژول‌های سیستمی به ترتیب معکوس
+
+        # Stop system modules in reverse order
         log_internal(config_api, logger_api, "Stopping System Modules...", level="CORE", tag="core")
         for mod_name in reversed(system_module_names):
             if mod_name in modules:
@@ -49,7 +54,7 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
                 except Exception as e:
                     log_internal(config_api, logger_api, f"Error stopping system module '{mod_name}': {e}", level="ERROR", tag="core")
     else:
-        # حالت سازگار با نسخه‌های قبلی: استاپ همه ماژول‌ها به ترتیب معکوس
+        # Legacy mode: stop all modules in reverse order
         log_internal(config_api, logger_api, "Stopping Modules (legacy mode)...", level="CORE", tag="core")
         for instance in reversed(list(modules.values())):
             try:

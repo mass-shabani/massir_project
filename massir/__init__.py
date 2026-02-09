@@ -1,5 +1,5 @@
 # massir/__init__.py
-# این فایل دسترسی‌دهنده اصلی به پروژه است
+# Main access point to the project
 
 from .core import App
 

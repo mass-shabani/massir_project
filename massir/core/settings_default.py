@@ -1,11 +1,11 @@
 # massir/core/settings_default.py
 """
-مقادیر پیش‌فرض تنظیمات
+Default settings values.
 """
 from typing import Optional
 from massir.core.core_apis import CoreConfigAPI
 
-# مقادیر پیش‌فرض تنظیمات
+# Default settings values
 DEFAULT_SETTINGS = {
     "system": {
         "modules": [
@@ -32,29 +32,32 @@ DEFAULT_SETTINGS = {
     },
 }
 
+
 class DefaultConfig(CoreConfigAPI):
     """
-    کلاس کانفیگ پیش‌فرض ساده.
-    از این کلاس زمانی استفاده می‌شود که کانفیگ اصلی وجود ندارد.
+    Simple default config class.
+    This class is used when the main config does not exist.
     """
     def get(self, key: str) -> None:
-        """همیشه None برمی‌گرداند"""
+        """Always returns None."""
         return None
+
 
 def get_default_settings() -> dict:
     """
-    دریافت مقادیر پیش‌فرض تنظیمات
-    
+    Get default settings values.
+
     Returns:
-        دیکشنری مقادیر پیش‌فرض
+        Dictionary of default values
     """
     return DEFAULT_SETTINGS.copy()
 
+
 def create_default_config() -> CoreConfigAPI:
     """
-    ساخت یک نمونه از DefaultConfig
-    
+    Create an instance of DefaultConfig.
+
     Returns:
-        نمونه DefaultConfig
+        DefaultConfig instance
     """
     return DefaultConfig()
