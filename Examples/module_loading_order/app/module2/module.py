@@ -35,6 +35,19 @@ class Module2(IModule):
         else:
             print("   [Module2] Fallback to standard print because system logger is missing.")
 
+    async def ready(self, context):
+        """
+        Called when all modules have started and are ready.
+
+        Args:
+            context: The module context containing services and configuration.
+        """
+        logger = context.services.get("core_logger")
+        if logger:
+            logger.log("...<m2>... Module2 is ready! All modules have started.", level_color='\033[93m', text_color='\033[96m')
+        else:
+            print("   [Module2] Ready - Fallback to standard print because system logger is missing.")
+
     async def stop(self, context):
         """
         Stop the module and cleanup resources.

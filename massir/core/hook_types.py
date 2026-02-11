@@ -20,5 +20,7 @@ class SystemHook(Enum):
     """Triggered when application bootstrap completes."""
     ON_MODULE_LOADED = "on_module_loaded"
     """Triggered when a module is loaded."""
+    ON_ALL_MODULES_READY = "on_all_modules_ready"
+    """Triggered when all modules have started and are ready."""
     ON_ERROR = "on_error"
     """Triggered when an error occurs."""

@@ -178,6 +178,9 @@ class App:
         # Phase 3 - Start modules in order
         await self._start_all_modules()
 
+        # Phase 4 - Call ready on all modules
+        await self._ready_all_modules()
+
         # Final phase
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework initialization complete.", level="CORE", tag="core")
@@ -251,6 +254,19 @@ class App:
         Start all modules.
         """
         await self.loader.start_all_modules(
+            self.modules,
+            self._system_module_names,
+            self._app_module_names,
+            self._config_api_ref[0],
+            self._logger_api_ref[0],
+            self.hooks
+        )
+
+    async def _ready_all_modules(self):
+        """
+        Call ready on all modules after they have started.
+        """
+        await self.loader.ready_all_modules(
             self.modules,
             self._system_module_names,
             self._app_module_names,

@@ -391,6 +391,48 @@ class ModuleLoader:
                 except Exception as e:
                     log_internal(config_api, logger_api, f"Error starting application module '{mod_name}': {e}", level="ERROR", tag="core")
 
+    async def ready_all_modules(
+        self,
+        modules: Dict[str, 'IModule'],
+        system_module_names: List[str],
+        app_module_names: List[str],
+        config_api: CoreConfigAPI,
+        logger_api: CoreLoggerAPI,
+        hooks_manager
+    ):
+        """
+        Call ready on all modules after they have started.
+
+        Args:
+            modules: Dictionary of modules
+            system_module_names: List of system module names
+            app_module_names: List of application module names
+            config_api: Configuration API
+            logger_api: Logger API
+            hooks_manager: Hooks manager
+        """
+        log_internal(config_api, logger_api, "All modules started. Calling ready on modules...", level="CORE", tag="core")
+
+        # Call ready on system modules
+        for mod_name in system_module_names:
+            if mod_name in modules:
+                try:
+                    await modules[mod_name].ready(modules[mod_name]._context)
+                except Exception as e:
+                    log_internal(config_api, logger_api, f"Error calling ready on system module '{mod_name}': {e}", level="ERROR", tag="core")
+
+        # Call ready on application modules
+        for mod_name in app_module_names:
+            if mod_name in modules:
+                try:
+                    await modules[mod_name].ready(modules[mod_name]._context)
+                except Exception as e:
+                    log_internal(config_api, logger_api, f"Error calling ready on application module '{mod_name}': {e}", level="ERROR", tag="core")
+
+        # Dispatch hook after all modules are ready
+        await hooks_manager.dispatch(SystemHook.ON_ALL_MODULES_READY)
+        log_internal(config_api, logger_api, "All modules are ready.", level="CORE", tag="core")
+
     def resolve_order(self, modules_data: List[Dict], existing_provides: Dict[str, str] = None, force_execute: bool = False) -> List[Dict]:
         """
         Sort modules based on dependencies.

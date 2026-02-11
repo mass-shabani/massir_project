@@ -38,6 +38,20 @@ class AppModule(IModule):
         else:
             print("   [AppModule] Fallback to standard print because system logger is missing.")
 
+    async def ready(self, context):
+        """
+        Called when all modules have started and are ready.
+
+        Args:
+            context: The module context containing services and configuration.
+        """
+        logger = context.services.get("core_logger")
+
+        if logger:
+            logger.log("App Module is ready! All modules have started.", level_color='\033[94m')
+        else:
+            print("   [AppModule] Ready - Fallback to standard print because system logger is missing.")
+
     async def stop(self, context):
         """
         Stop the module and cleanup resources.

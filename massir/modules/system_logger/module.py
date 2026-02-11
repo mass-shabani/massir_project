@@ -155,6 +155,17 @@ class SystemLoggerModule(IModule):
 
         logger.log("System Logger Module Active.", tag="System")
 
+    async def ready(self, context):
+        """
+        Called when all modules have started and are ready.
+
+        Args:
+            context: Module context
+        """
+        logger = context.services.get("core_logger")
+        if logger:
+            logger.log("System Logger Module is ready. All modules have started.", tag="System")
+
     async def stop(self, context):
         """
         Stop the system logger module.

@@ -67,6 +67,18 @@ class IModule(ABC):
         pass
 
     @abstractmethod
+    async def ready(self, context: ModuleContext):
+        """
+        Called after all modules have started.
+        This method is invoked when all modules' start methods have completed,
+        allowing modules to perform initialization that depends on other modules being ready.
+
+        Args:
+            context: The module context
+        """
+        pass
+
+    @abstractmethod
     async def stop(self, context: ModuleContext):
         """
         Stop the module and cleanup resources.
