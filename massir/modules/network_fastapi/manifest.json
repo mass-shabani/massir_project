@@ -1,0 +1,14 @@
+{
+  "name": "network_fastapi",
+  "version": "1.0.0",
+  "enabled": true,
+  "type": "system",
+  "entrypoint": "NetworkFastAPIModule",
+  "provides": [
+    "http_api",
+    "router_api",
+    "net_api"
+  ],
+  "requires": ["core_logger"],
+  "forced_execute": false
+}

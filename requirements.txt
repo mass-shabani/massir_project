@@ -4,6 +4,10 @@
 # Note: The core framework uses only Python Standard Libraries.
 # No external packages are required to run the current code.
 
+# --- Network FastAPI Module ---
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
 # --- Development Tools (Optional) ---
 # If you want to run tests in the future, uncomment below:
 # pytest>=7.0.0

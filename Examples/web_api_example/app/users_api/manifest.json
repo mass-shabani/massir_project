@@ -1,0 +1,10 @@
+{
+  "name": "users_api",
+  "version": "1.0.0",
+  "enabled": true,
+  "type": "application",
+  "entrypoint": "UsersAPIModule",
+  "provides": ["users_service"],
+  "requires": ["http_api"],
+  "forced_execute": false
+}

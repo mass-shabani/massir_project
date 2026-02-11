@@ -1,0 +1,10 @@
+{
+  "name": "network_info",
+  "version": "1.0.0",
+  "enabled": true,
+  "type": "application",
+  "entrypoint": "NetworkInfoModule",
+  "provides": ["network_info_service"],
+  "requires": ["http_api", "net_api"],
+  "forced_execute": false
+}
