@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import TYPE_CHECKING
 
 from massir.core.registry import ModuleRegistry
@@ -43,11 +43,13 @@ class ModuleContext:
 class IModule(ABC):
     """
     Base interface for all modules.
+    
+    All lifecycle methods (load, start, ready, stop) are optional.
+    Subclasses can override only the methods they need.
     """
     name: str = ""
 
-    @abstractmethod
-    async def load(self, context: ModuleContext):
+    async def load(self, context: 'ModuleContext'):
         """
         Load the module and initialize resources.
 
@@ -56,8 +58,7 @@ class IModule(ABC):
         """
         pass
 
-    @abstractmethod
-    async def start(self, context: ModuleContext):
+    async def start(self, context: 'ModuleContext'):
         """
         Start the module and execute business logic.
 
@@ -66,8 +67,7 @@ class IModule(ABC):
         """
         pass
 
-    @abstractmethod
-    async def ready(self, context: ModuleContext):
+    async def ready(self, context: 'ModuleContext'):
         """
         Called after all modules have started.
         This method is invoked when all modules' start methods have completed,
@@ -78,8 +78,7 @@ class IModule(ABC):
         """
         pass
 
-    @abstractmethod
-    async def stop(self, context: ModuleContext):
+    async def stop(self, context: 'ModuleContext'):
         """
         Stop the module and cleanup resources.
 
