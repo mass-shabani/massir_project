@@ -1,9 +1,42 @@
 import datetime
 import os
+import re
 from typing import Optional
 from massir.core.interfaces import IModule
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.hook_types import SystemHook
+
+
+# ANSI Color Codes - Available for all modules
+class Colors:
+    """ANSI color codes for terminal output."""
+    RESET = '\033[0m'
+    
+    # Standard colors
+    BLACK = '\033[30m'
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+    
+    # Bright colors
+    BRIGHT_BLACK = '\033[90m'
+    BRIGHT_RED = '\033[91m'
+    BRIGHT_GREEN = '\033[92m'
+    BRIGHT_YELLOW = '\033[93m'
+    BRIGHT_BLUE = '\033[94m'
+    BRIGHT_MAGENTA = '\033[95m'
+    BRIGHT_CYAN = '\033[96m'
+    BRIGHT_WHITE = '\033[97m'
+    
+    # Background colors
+    BG_RED = '\033[41m'
+    BG_GREEN = '\033[42m'
+    BG_YELLOW = '\033[43m'
+    BG_BLUE = '\033[44m'
 
 
 class AdvancedLogger(CoreLoggerAPI):
@@ -69,6 +102,48 @@ class AdvancedLogger(CoreLoggerAPI):
 
         return True
 
+    def _format_http_request(self, message: str) -> str:
+        """
+        Format HTTP request log messages with enhanced styling.
+        
+        Args:
+            message: The log message
+            
+        Returns:
+            Formatted message with colors
+        """
+        # Pattern for HTTP access logs: IP:PORT - "METHOD PATH PROTOCOL" STATUS
+        http_pattern = r'^(\d+\.\d+\.\d+\.\d+):(\d+)\s+-\s+"(\w+)\s+([^\s]+)\s+([^"]+)"\s+(\d+)'
+        match = re.match(http_pattern, message)
+        
+        if match:
+            ip, port, method, path, protocol, status = match.groups()
+            status_code = int(status)
+            
+            # Determine status color
+            if status_code >= 500:
+                status_color = Colors.BRIGHT_RED
+            elif status_code >= 400:
+                status_color = Colors.BRIGHT_YELLOW
+            elif status_code >= 300:
+                status_color = Colors.BRIGHT_BLUE
+            else:
+                status_color = Colors.BRIGHT_GREEN
+            
+            # Format with method highlighting
+            method_colors = {
+                'GET': Colors.BRIGHT_GREEN,
+                'POST': Colors.BRIGHT_BLUE,
+                'PUT': Colors.BRIGHT_YELLOW,
+                'DELETE': Colors.BRIGHT_RED,
+                'PATCH': Colors.BRIGHT_MAGENTA,
+            }
+            method_color = method_colors.get(method, Colors.BRIGHT_WHITE)
+            
+            return f"{method_color}{method}{Colors.RESET} {path} {status_color}{status}{Colors.RESET}"
+        
+        return message
+
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None,
             level_color: Optional[str] = None, text_color: Optional[str] = None, bracket_color: Optional[str] = None):
         """
@@ -78,9 +153,9 @@ class AdvancedLogger(CoreLoggerAPI):
             message: The message to log
             level: Log level
             tag: Log tag for filtering
-            level_color: Custom color for level tag
-            text_color: Custom color for message text
-            bracket_color: Custom color for timestamp brackets
+            level_color: Custom color for level tag (use Colors class)
+            text_color: Custom color for message text (use Colors class)
+            bracket_color: Custom color for timestamp brackets (use Colors class)
         """
         # Check filtering
         if not self._should_log(level, tag):
@@ -90,26 +165,40 @@ class AdvancedLogger(CoreLoggerAPI):
             os.system('')
 
         # Default colors
-        _bracket_color = bracket_color if bracket_color else '\033[92m'
-        _text_color = text_color if text_color else '\033[97m'
-        _level_color = level_color if level_color else '\033[92m'
+        _bracket_color = bracket_color if bracket_color else Colors.BRIGHT_GREEN
+        _text_color = text_color if text_color else Colors.BRIGHT_WHITE
+        _level_color = level_color if level_color else Colors.BRIGHT_GREEN
 
-        RESET = '\033[0m'
-        COLOR_RED = '\033[91m'
+        # Set level colors based on level (if not provided)
+        if level_color is None:
+            level_colors = {
+                "ERROR": Colors.BRIGHT_RED,
+                "WARNING": Colors.BRIGHT_YELLOW,
+                "INFO": Colors.BRIGHT_GREEN,
+                "DEBUG": Colors.BRIGHT_BLACK,
+                "CORE": Colors.BRIGHT_CYAN,
+            }
+            _level_color = level_colors.get(level, Colors.BRIGHT_GREEN)
 
-        if level == "ERROR" and level_color is None:
-            _level_color = COLOR_RED
-            _text_color = COLOR_RED
+        if level == "ERROR" and text_color is None:
+            _text_color = Colors.BRIGHT_RED
 
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        str_time = f"{_bracket_color}[{timestamp}]{RESET} "
-        str_header = f"{_level_color}[{level}]{RESET} "
-
-        if level == "ERROR":
-            str_message = f"{_text_color}{message}{RESET}"
+        str_time = f"{_bracket_color}[{timestamp}]{Colors.RESET} "
+        str_header = f"{_level_color}[{level}]{Colors.RESET} "
+        
+        # Format HTTP requests specially (only if no custom colors)
+        if text_color is None and tag in ["http", "server"]:
+            formatted_message = self._format_http_request(message)
         else:
-            str_message = f"{_text_color}{message}{RESET}"
+            formatted_message = message
+        
+        # Add tag if present
+        if tag:
+            str_message = f"{_text_color}[{tag}]{Colors.RESET} {formatted_message}{Colors.RESET}"
+        else:
+            str_message = f"{_text_color}{formatted_message}{Colors.RESET}"
 
         print(f"{str_time}{str_header}\t{str_message}")
 
@@ -134,6 +223,9 @@ class SystemLoggerModule(IModule):
 
         my_logger = AdvancedLogger(config)
         context.services.set("core_logger", my_logger)
+        
+        # Register Colors class for use by other modules
+        context.services.set("log_colors", Colors)
 
         app = context.get_app()
         app.register_hook(SystemHook.ON_MODULE_LOADED, self._on_module_loaded)
