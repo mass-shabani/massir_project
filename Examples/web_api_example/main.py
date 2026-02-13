@@ -17,32 +17,8 @@ async def main():
     This example demonstrates using the network_fastapi module
     to create a simple web API with multiple endpoints.
     """
-    # Initial settings
-    initial_settings = {
-        "fastapi_provider": {
-            "title": "Massir Web API Example",
-            "version": "1.0.0",
-            "description": "Example web API using network_fastapi module",
-            "web": {
-                "host": "127.0.0.1",
-                "port": 8000,
-                "reload": False
-            },
-            "cors": {
-                "origins": ["*"],
-                "credentials": True,
-                "methods": ["*"],
-                "headers": ["*"]
-            },
-            "gzip": {
-                "enabled": True,
-                "minimum_size": 1000
-            }
-        }
-    }
 
     app = App(
-        initial_settings=initial_settings,
         settings_path="app_settings.json",
         app_dir=CURRENT_ROOT
     )
