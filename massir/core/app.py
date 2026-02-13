@@ -121,14 +121,22 @@ class App:
             loop: The asyncio event loop
         """
         def _shutdown_handler():
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nShutdown signal received. Initiating graceful shutdown...", level="CORE")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Shutdown signal received. Initiating graceful shutdown...", level="CORE")
             self._stop_event.set()
 
+        # Try Unix-style signal handlers first
         try:
             for sig in (signal.SIGINT, signal.SIGTERM):
                 loop.add_signal_handler(sig, _shutdown_handler)
         except NotImplementedError:
-            pass
+            # Windows fallback: use signal.signal() with wakeup fd
+            import sys
+            if sys.platform == 'win32':
+                # Use signal.signal for Windows
+                def _win_shutdown_handler(signum, frame):
+                    _shutdown_handler()
+                signal.signal(signal.SIGINT, _win_shutdown_handler)
+                signal.signal(signal.SIGTERM, _win_shutdown_handler)
 
     # --- Lifecycle ---
     async def run(self):
@@ -141,10 +149,19 @@ class App:
         try:
             await self._bootstrap_phases()
             log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="CORE")
-            await self._stop_event.wait()
+            
+            # Wait for stop event, but also handle KeyboardInterrupt on Windows
+            while not self._stop_event.is_set():
+                try:
+                    await asyncio.wait_for(self._stop_event.wait(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    # Continue waiting
+                    pass
 
         except asyncio.CancelledError:
             log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", level="CORE", tag="core")
+        except KeyboardInterrupt:
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nKeyboard interrupt received. Initiating graceful shutdown...", level="CORE")
         except Exception as e:
             log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Fatal Error in core execution: {e}", level="ERROR", tag="core")
         finally:
