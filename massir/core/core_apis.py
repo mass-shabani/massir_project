@@ -10,7 +10,7 @@ class CoreLoggerAPI(ABC):
     used throughout the framework.
     """
     @abstractmethod
-    def log(self, message: str, level: str = "INFO", tag: Optional[str] = None):
+    def log(self, message: str, level: str = "INFO", tag: Optional[str] = None, **kwargs):
         """
         Log a message.
 
@@ -18,6 +18,7 @@ class CoreLoggerAPI(ABC):
             message: The message to log
             level: Log level (INFO, WARNING, ERROR, etc.)
             tag: Optional tag for filtering
+            **kwargs: Additional keyword arguments (e.g., level_color, text_color)
         """
         pass
 
