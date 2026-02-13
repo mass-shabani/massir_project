@@ -17,9 +17,11 @@ class Module1(IModule):
         Args:
             context: The module context containing services and configuration.
         """
-        logger = context.services.get("core_logger")
-        if logger:
-            logger.log("...<m1>... Module1 Loading...", level_color='\033[93m', text_color='\033[96m')
+        self.logger = context.services.get("core_logger")
+        self.colors = context.services.get("log_colors")
+        
+        if self.logger and self.colors:
+            self.logger.log("...<m1>... Module1 Loading...", level_color=self.colors.BRIGHT_YELLOW, text_color=self.colors.BRIGHT_CYAN)
 
     async def start(self, context):
         """
@@ -28,10 +30,9 @@ class Module1(IModule):
         Args:
             context: The module context containing services and configuration.
         """
-        logger = context.services.get("core_logger")
-        if logger:
-            logger.log("...<m1>... Module1 started successfully!", level_color='\033[93m', text_color='\033[96m')
-            logger.log("...<m1>... Performing Module1 business logic...", level="CUST", level_color='\033[93m', text_color='\033[96m')
+        if self.logger and self.colors:
+            self.logger.log("...<m1>... Module1 started successfully!", level_color=self.colors.BRIGHT_YELLOW, text_color=self.colors.BRIGHT_CYAN)
+            self.logger.log("...<m1>... Performing Module1 business logic...", level="CUST", level_color=self.colors.BRIGHT_YELLOW, text_color=self.colors.BRIGHT_CYAN)
         else:
             print("   [Module1] Fallback to standard print because system logger is missing.")
 
@@ -42,9 +43,8 @@ class Module1(IModule):
         Args:
             context: The module context containing services and configuration.
         """
-        logger = context.services.get("core_logger")
-        if logger:
-            logger.log("...<m1>... Module1 is ready! All modules have started.", level_color='\033[93m', text_color='\033[96m')
+        if self.logger and self.colors:
+            self.logger.log("...<m1>... Module1 is ready! All modules have started.", level_color=self.colors.BRIGHT_YELLOW, text_color=self.colors.BRIGHT_CYAN)
         else:
             print("   [Module1] Ready - Fallback to standard print because system logger is missing.")
 
@@ -55,6 +55,5 @@ class Module1(IModule):
         Args:
             context: The module context containing services and configuration.
         """
-        logger = context.services.get("core_logger")
-        if logger:
-            logger.log("...<m1>... Module1 stopped.", level_color='\033[93m', text_color='\033[96m')
+        if self.logger and self.colors:
+            self.logger.log("...<m1>... Module1 stopped.", level_color=self.colors.BRIGHT_YELLOW, text_color=self.colors.BRIGHT_CYAN)
