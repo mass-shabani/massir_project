@@ -1,9 +1,10 @@
 """
 Network FastAPI Module - High-performance network provider.
 
-This module provides HTTP, router, and network APIs using FastAPI.
+This module provides HTTP, router, network, and server APIs using FastAPI.
+It does NOT start the server directly - consuming modules are responsible
+for starting the server using the provided ServerAPI.
 """
-import asyncio
 import logging
 from typing import Optional
 from fastapi import FastAPI, Request, Response
@@ -11,66 +12,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-import uvicorn
 from massir.core.interfaces import IModule
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from .api.http import HTTPAPI
 from .api.router import RouterAPI
 from .api.net import NetAPI
-
-
-class UvicornLogHandler(logging.Handler):
-    """
-    Custom log handler that forwards uvicorn logs to the Massir logger.
-    """
-    
-    def __init__(self, logger_api: CoreLoggerAPI):
-        super().__init__()
-        self.logger_api = logger_api
-    
-    def emit(self, record: logging.LogRecord):
-        """Emit a log record through the Massir logger."""
-        if not self.logger_api:
-            return
-        
-        message = self.format(record)
-        
-        # Map logging levels to Massir levels
-        level_map = {
-            logging.DEBUG: "DEBUG",
-            logging.INFO: "INFO",
-            logging.WARNING: "WARNING",
-            logging.ERROR: "ERROR",
-            logging.CRITICAL: "CRITICAL"
-        }
-        level = level_map.get(record.levelno, "INFO")
-        
-        # Determine tag based on logger name
-        if "access" in record.name:
-            tag = "http"
-        else:
-            tag = "server"
-        
-        self.logger_api.log(message, level=level, tag=tag)
+from .api.server import ServerAPI
 
 
 class NetworkFastAPIModule(IModule):
     """
     Network provider module using FastAPI.
     
-    Provides high-performance HTTP, router, and network APIs
+    Provides high-performance HTTP, router, network, and server APIs
     without requiring FastAPI imports in consuming modules.
+    
+    This module does NOT start the HTTP server. Consuming modules
+    should use the ServerAPI to start the server when needed.
     """
     
     name = "network_fastapi"
-    provides = ["http_api", "router_api", "net_api"]
+    provides = ["http_api", "router_api", "net_api", "server_api"]
     
     def __init__(self):
         self.app: Optional[FastAPI] = None
-        self.server: Optional[uvicorn.Server] = None
         self.http_api: Optional[HTTPAPI] = None
         self.router_api: Optional[RouterAPI] = None
         self.net_api: Optional[NetAPI] = None
+        self.server_api: Optional[ServerAPI] = None
         self.config_api: Optional[CoreConfigAPI] = None
         self.logger_api: Optional[CoreLoggerAPI] = None
     
@@ -79,6 +48,7 @@ class NetworkFastAPIModule(IModule):
         Initialize FastAPI application and APIs.
         
         Sets up the FastAPI app with middleware and default routes.
+        Does NOT start the server.
         """
         self.logger_api = context.services.get("core_logger")
         self.config_api = context.services.get("core_config")
@@ -97,6 +67,7 @@ class NetworkFastAPIModule(IModule):
         self.http_api = HTTPAPI(self.app)
         self.router_api = RouterAPI()
         self.net_api = NetAPI(self.config_api)
+        self.server_api = ServerAPI(self.app, self.config_api, self.logger_api)
         
         # Setup middleware
         self._setup_middleware()
@@ -111,9 +82,10 @@ class NetworkFastAPIModule(IModule):
         context.services.set("http_api", self.http_api)
         context.services.set("router_api", self.router_api)
         context.services.set("net_api", self.net_api)
+        context.services.set("server_api", self.server_api)
         
         if self.logger_api:
-            self.logger_api.log("NetworkFastAPI module loaded", tag="network")
+            self.logger_api.log("NetworkFastAPI module loaded (server not started)", tag="network")
     
     def _setup_middleware(self):
         """Setup middleware for FastAPI app."""
@@ -205,109 +177,22 @@ class NetworkFastAPIModule(IModule):
     
     async def start(self, context):
         """
-        Start the FastAPI server.
+        Start the network module.
         
-        Registers the server as a background task.
+        Note: This does NOT start the HTTP server.
+        The consuming module should use server_api to start the server.
         """
         if self.logger_api:
-            self.logger_api.log("Starting FastAPI server...", tag="network")
-        
-        # Get server configuration
-        host = self.config_api.get("fastapi_provider.web.host", "127.0.0.1")
-        port = self.config_api.get("fastapi_provider.web.port", 8000)
-        reload = self.config_api.get("fastapi_provider.web.reload", False)
-        workers = self.config_api.get("fastapi_provider.web.workers", 1)
-        log_level = self.config_api.get("fastapi_provider.web.log_level", "info")
-        
-        # Check if port is available
-        if not self.net_api.is_port_available(port, host):
-            if self.logger_api:
-                self.logger_api.log(
-                    f"Port {port} is already in use on {host}",
-                    level="ERROR",
-                    tag="network"
-                )
-            # Try to find an available port
-            available_port = self.net_api.find_available_port(port, port + 100, host)
-            if available_port:
-                port = available_port
-                if self.logger_api:
-                    self.logger_api.log(
-                        f"Using available port: {port}",
-                        level="WARNING",
-                        tag="network"
-                    )
-            else:
-                raise RuntimeError(f"No available ports in range {port}-{port + 100}")
-        
-        # Setup uvicorn logging to use Massir logger
-        self._setup_uvicorn_logging()
-        
-        # Create uvicorn config with custom logging
-        config = uvicorn.Config(
-            app=self.app,
-            host=host,
-            port=port,
-            reload=reload,
-            workers=workers,
-            log_level=log_level,
-            access_log=True,
-            log_config=None
-        )
-        
-        self.server = uvicorn.Server(config)
-        
-        # Register as background task
-        app = context.get_app()
-        app.register_background_task(self.server.serve)
-        
-        if self.logger_api:
-            self.logger_api.log(
-                f"FastAPI server started on http://{host}:{port}",
-                tag="network"
-            )
-            self.logger_api.log(
-                f"API documentation available at http://{host}:{port}/docs",
-                tag="network"
-            )
-    
-    def _setup_uvicorn_logging(self):
-        """Setup uvicorn logging to use Massir logger."""
-        if not self.logger_api:
-            return
-        
-        # Create custom handler
-        handler = UvicornLogHandler(self.logger_api)
-        
-        # Configure uvicorn loggers
-        for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
-            logger = logging.getLogger(logger_name)
-            logger.handlers.clear()
-            logger.addHandler(handler)
-            logger.setLevel(logging.INFO)
-            logger.propagate = False
+            self.logger_api.log("NetworkFastAPI module started (use server_api to start HTTP server)", tag="network")
     
     async def stop(self, context):
         """
-        Stop the FastAPI server.
+        Stop the network module.
         
-        Gracefully shuts down the server.
+        Stops the server if it's running.
         """
-        if self.server:
-            if self.logger_api:
-                self.logger_api.log("Stopping FastAPI server...", tag="network")
-            
-            self.server.should_exit = True
-            
-            try:
-                await self.server.shutdown()
-            except Exception as e:
-                if self.logger_api:
-                    self.logger_api.log(
-                        f"Error during shutdown: {e}",
-                        level="ERROR",
-                        tag="network"
-                    )
+        if self.server_api and self.server_api.is_running:
+            await self.server_api.stop_server()
         
         if self.logger_api:
             self.logger_api.log("NetworkFastAPI module stopped", tag="network")

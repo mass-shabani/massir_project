@@ -7,7 +7,8 @@
   "provides": [
     "http_api",
     "router_api",
-    "net_api"
+    "net_api",
+    "server_api"
   ],
   "requires": ["core_logger"],
   "forced_execute": false
