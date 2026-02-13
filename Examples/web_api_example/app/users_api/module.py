@@ -24,14 +24,16 @@ class UsersAPIModule(IModule):
     def __init__(self):
         self.http_api = None
         self.logger = None
+        self.colors = None
     
     async def load(self, context):
         """Get HTTP API from services."""
         self.http_api = context.services.get("http_api")
         self.logger = context.services.get("core_logger")
+        self.colors = context.services.get("log_colors")
         
-        if self.logger:
-            self.logger.log("UsersAPI module loaded", tag="users")
+        if self.logger and self.colors:
+            self.logger.log("UsersAPI module loaded", tag="users", text_color=self.colors.BRIGHT_BLUE)
     
     async def start(self, context):
         """Register user management routes."""

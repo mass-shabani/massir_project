@@ -4,6 +4,7 @@ Network FastAPI Module - High-performance network provider.
 This module provides HTTP, router, and network APIs using FastAPI.
 """
 import asyncio
+import logging
 from typing import Optional
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,41 @@ from .api.router import RouterAPI
 from .api.net import NetAPI
 
 
+class UvicornLogHandler(logging.Handler):
+    """
+    Custom log handler that forwards uvicorn logs to the Massir logger.
+    """
+    
+    def __init__(self, logger_api: CoreLoggerAPI):
+        super().__init__()
+        self.logger_api = logger_api
+    
+    def emit(self, record: logging.LogRecord):
+        """Emit a log record through the Massir logger."""
+        if not self.logger_api:
+            return
+        
+        message = self.format(record)
+        
+        # Map logging levels to Massir levels
+        level_map = {
+            logging.DEBUG: "DEBUG",
+            logging.INFO: "INFO",
+            logging.WARNING: "WARNING",
+            logging.ERROR: "ERROR",
+            logging.CRITICAL: "CRITICAL"
+        }
+        level = level_map.get(record.levelno, "INFO")
+        
+        # Determine tag based on logger name
+        if "access" in record.name:
+            tag = "http"
+        else:
+            tag = "server"
+        
+        self.logger_api.log(message, level=level, tag=tag)
+
+
 class NetworkFastAPIModule(IModule):
     """
     Network provider module using FastAPI.
@@ -27,6 +63,7 @@ class NetworkFastAPIModule(IModule):
     """
     
     name = "network_fastapi"
+    provides = ["http_api", "router_api", "net_api"]
     
     def __init__(self):
         self.app: Optional[FastAPI] = None
@@ -203,7 +240,10 @@ class NetworkFastAPIModule(IModule):
             else:
                 raise RuntimeError(f"No available ports in range {port}-{port + 100}")
         
-        # Create uvicorn config
+        # Setup uvicorn logging to use Massir logger
+        self._setup_uvicorn_logging()
+        
+        # Create uvicorn config with custom logging
         config = uvicorn.Config(
             app=self.app,
             host=host,
@@ -211,7 +251,8 @@ class NetworkFastAPIModule(IModule):
             reload=reload,
             workers=workers,
             log_level=log_level,
-            access_log=True
+            access_log=True,
+            log_config=None
         )
         
         self.server = uvicorn.Server(config)
@@ -229,6 +270,22 @@ class NetworkFastAPIModule(IModule):
                 f"API documentation available at http://{host}:{port}/docs",
                 tag="network"
             )
+    
+    def _setup_uvicorn_logging(self):
+        """Setup uvicorn logging to use Massir logger."""
+        if not self.logger_api:
+            return
+        
+        # Create custom handler
+        handler = UvicornLogHandler(self.logger_api)
+        
+        # Configure uvicorn loggers
+        for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
+            logger = logging.getLogger(logger_name)
+            logger.handlers.clear()
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+            logger.propagate = False
     
     async def stop(self, context):
         """
