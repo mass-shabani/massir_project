@@ -5,6 +5,6 @@
   "type": "application",
   "entrypoint": "UsersAPIModule",
   "provides": ["users_service"],
-  "requires": ["http_api"],
+  "requires": ["http_api", "core_logger"],
   "forced_execute": false
 }

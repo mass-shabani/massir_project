@@ -5,6 +5,6 @@
   "type": "application",
   "entrypoint": "NetworkInfoModule",
   "provides": ["network_info_service"],
-  "requires": ["http_api", "net_api"],
+  "requires": ["http_api", "net_api", "core_logger"],
   "forced_execute": false
 }

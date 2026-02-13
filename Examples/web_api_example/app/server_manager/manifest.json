@@ -4,6 +4,6 @@
     "type": "application",
     "entrypoint": "ServerManagerModule",
     "description": "Manages HTTP server lifecycle for the web API",
-    "requires": ["server_api", "http_api", "net_api"],
+    "requires": ["server_api", "http_api", "net_api", "core_logger", "core_config"],
     "provides": []
 }
