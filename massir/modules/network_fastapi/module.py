@@ -5,13 +5,14 @@ This module provides HTTP, router, network, and server APIs using FastAPI.
 It does NOT start the server directly - consuming modules are responsible
 for starting the server using the provided ServerAPI.
 """
-import logging
+import secrets
 from typing import Optional
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 from massir.core.interfaces import IModule
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from .api.http import HTTPAPI
@@ -89,6 +90,17 @@ class NetworkFastAPIModule(IModule):
     
     def _setup_middleware(self):
         """Setup middleware for FastAPI app."""
+        # Session middleware (must be added first for proper order)
+        secret_key = self.config_api.get("fastapi_provider.session.secret_key", secrets.token_hex(32))
+        session_cookie = self.config_api.get("fastapi_provider.session.cookie_name", "session")
+        max_age = self.config_api.get("fastapi_provider.session.max_age", 14 * 24 * 60 * 60)  # 14 days default
+        self.app.add_middleware(
+            SessionMiddleware,
+            secret_key=secret_key,
+            session_cookie=session_cookie,
+            max_age=max_age
+        )
+        
         # Trusted Host middleware
         trusted_hosts = self.config_api.get("fastapi_provider.trusted_hosts", ["*"])
         if trusted_hosts != ["*"]:

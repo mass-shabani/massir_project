@@ -8,6 +8,11 @@ from typing import Any, Callable, Dict, List, Optional, Union, TypeVar, Generic
 from functools import wraps
 from dataclasses import dataclass
 
+# Import FastAPI types to expose to consumers
+from fastapi import Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+
 
 T = TypeVar('T')
 
@@ -261,3 +266,11 @@ class HTTPAPI:
             FastAPI application instance
         """
         return self._app
+    
+    # Expose FastAPI types for consumers
+    Request = Request
+    HTMLResponse = HTMLResponse
+    JSONResponse = JSONResponse
+    RedirectResponse = RedirectResponse
+    PlainTextResponse = PlainTextResponse
+    StaticFiles = StaticFiles
