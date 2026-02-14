@@ -3,12 +3,12 @@
     {
       "path": "{massir_dir}/modules",
       "type": "systems",
-      "names": "{all}"
+      "names": "all"
     },
     {
       "path": "{app_dir}/app",
       "type": "all",
-      "names": "{all}"
+      "names": "all"
     }
   ],
   "template": {

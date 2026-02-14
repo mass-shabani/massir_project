@@ -13,15 +13,9 @@
             <a href="/">Basic Website</a>
         </div>
         <ul class="nav-links">
-            <li><a href="/">Home</a></li>
-            <li><a href="/about">About</a></li>
-            <li><a href="/contact">Contact</a></li>
-            {% if current_user %}
-            <li><a href="/panel">Panel</a></li>
-            <li><a href="/logout">Logout</a></li>
-            {% else %}
-            <li><a href="/login">Login</a></li>
-            {% endif %}
+            {% for item in menu_items %}
+            <li><a href="{{ item.url }}">{{ item.label }}</a></li>
+            {% endfor %}
         </ul>
     </nav>
     

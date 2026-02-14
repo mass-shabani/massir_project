@@ -6,5 +6,5 @@
     "description": "Login and user panel module",
     "requires": ["http_api", "template_service", "core_logger"],
     "provides": [],
-    "enabled": false
+    "enabled": true
 }

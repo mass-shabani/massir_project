@@ -42,7 +42,36 @@ class AuthPanelModule(IModule):
             self.logger.log("AuthPanel module loaded", tag="auth")
     
     async def start(self, context):
-        """Register auth routes."""
+        """Register auth routes and menu items."""
+        
+        # Register menu items with template service
+        if self.template_service:
+            # Login link - only visible when NOT logged in
+            self.template_service.register_menu_item(
+                label="Login",
+                url="/login",
+                order=900,  # Appears near the end
+                require_no_auth=True,
+                module_name=self.name
+            )
+            
+            # Panel link - only visible when logged in
+            self.template_service.register_menu_item(
+                label="Panel",
+                url="/panel",
+                order=500,
+                require_auth=True,
+                module_name=self.name
+            )
+            
+            # Logout link - only visible when logged in
+            self.template_service.register_menu_item(
+                label="Logout",
+                url="/logout",
+                order=999,  # Appears last
+                require_auth=True,
+                module_name=self.name
+            )
         
         # GET /login - Login page
         @self.http_api.get("/login", response_class=self.http_api.HTMLResponse)
@@ -130,6 +159,10 @@ class AuthPanelModule(IModule):
             self.logger.log("AuthPanel module is ready", tag="auth")
     
     async def stop(self, context):
-        """Cleanup resources."""
+        """Cleanup resources and unregister menu items."""
+        # Unregister menu items when module stops
+        if self.template_service:
+            self.template_service.unregister_menu_item(module_name=self.name)
+        
         if self.logger:
             self.logger.log("AuthPanel module stopped", tag="auth")

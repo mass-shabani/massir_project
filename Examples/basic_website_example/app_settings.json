@@ -8,7 +8,7 @@
     {
       "path": "{app_dir}/app",
       "type": "all",
-      "names": ["template_service", "main_app", "auth_panel", "server_manager"]
+      "names": "all"
     }
   ],
   "template": {

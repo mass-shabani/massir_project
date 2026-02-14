@@ -8,7 +8,7 @@
     {
       "path": "{app_dir}/app",
       "type": "all",
-      "names": "{all}"
+      "names": "all"
     }
   ],
   "template": {
