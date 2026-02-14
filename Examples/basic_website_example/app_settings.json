@@ -1,0 +1,59 @@
+{
+  "modules": [
+    {
+      "path": "{massir_dir}/modules",
+      "type": "systems",
+      "names": ["system_logger", "network_fastapi"]
+    },
+    {
+      "path": "{app_dir}/app",
+      "type": "all",
+      "names": ["template_service", "main_app", "auth_panel", "server_manager"]
+    }
+  ],
+  "template": {
+    "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
+    "system_log_template": "[{level}]\t{message}",
+    "banner_color_code": "32",
+    "system_log_color_code": "96"
+  },
+  "logs": {
+    "show_logs": true,
+    "show_banner": true,
+    "hide_log_tags": [],
+    "hide_log_levels": [],
+    "debug_mode": true
+  },
+  "information": {
+    "project_name": "Basic Website",
+    "project_version": "1.0.0",
+    "project_info": "A simple website built with Massir framework"
+  },
+  "fastapi_provider": {
+    "title": "Basic Website",
+    "version": "1.0.0",
+    "description": "A simple website built with Massir framework",
+    "docs_url": "/docs",
+    "redoc_url": "/redoc",
+    "openapi_url": "/openapi.json",
+    "debug": false,
+    "web": {
+      "host": "127.0.0.1",
+      "port": 8080,
+      "reload": false,
+      "workers": 1,
+      "log_level": "info"
+    },
+    "cors": {
+      "origins": ["*"],
+      "credentials": true,
+      "methods": ["*"],
+      "headers": ["*"]
+    },
+    "gzip": {
+      "enabled": true,
+      "minimum_size": 1000
+    },
+    "trusted_hosts": ["*"]
+  }
+}

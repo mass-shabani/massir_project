@@ -1,0 +1,10 @@
+{
+    "name": "auth_panel",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "AuthPanelModule",
+    "description": "Login and user panel module",
+    "requires": ["http_api", "template_service", "core_logger"],
+    "provides": [],
+    "enabled": false
+}

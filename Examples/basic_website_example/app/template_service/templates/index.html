@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Basic Website{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Welcome to Basic Website</h1>
+    <p>A simple website built with Massir Framework</p>
+</div>
+
+<div class="grid">
+    <div class="card feature">
+        <div class="feature-icon">🚀</div>
+        <h3>Fast & Modern</h3>
+        <p>Built with FastAPI for high performance and modern web standards.</p>
+    </div>
+    
+    <div class="card feature">
+        <div class="feature-icon">🧩</div>
+        <h3>Modular Design</h3>
+        <p>Massir framework enables clean, modular architecture for your applications.</p>
+    </div>
+    
+    <div class="card feature">
+        <div class="feature-icon">🎨</div>
+        <h3>Beautiful Templates</h3>
+        <p>Jinja2 templates with responsive CSS for a great user experience.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Get Started</h2>
+    <p>This is a basic website example demonstrating the Massir framework capabilities.</p>
+    <ul>
+        <li>Browse the <a href="/about">About</a> page to learn more</li>
+        <li>Use the <a href="/contact">Contact</a> form to send a message</li>
+        <li><a href="/login">Login</a> with admin/12345 to access the panel</li>
+    </ul>
+</div>
+{% endblock %}

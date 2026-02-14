@@ -1,0 +1,9 @@
+{
+    "name": "template_service",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "TemplateServiceModule",
+    "description": "Provides Jinja2 template rendering service with themes and CSS",
+    "requires": ["http_api", "core_logger", "core_config"],
+    "provides": ["template_service"]
+}

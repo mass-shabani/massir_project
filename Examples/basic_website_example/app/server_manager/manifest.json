@@ -1,0 +1,9 @@
+{
+    "name": "server_manager",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "ServerManagerModule",
+    "description": "Manages HTTP server lifecycle for the website",
+    "requires": ["server_api", "net_api", "core_logger", "core_config"],
+    "provides": []
+}

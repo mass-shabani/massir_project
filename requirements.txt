@@ -8,6 +8,12 @@
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 
+# --- Session Support ---
+itsdangerous>=2.0.0
+
+# --- Form Parsing ---
+python-multipart>=0.0.22
+
 # --- Development Tools (Optional) ---
 # If you want to run tests in the future, uncomment below:
 # pytest>=7.0.0

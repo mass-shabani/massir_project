@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Basic Website{% endblock %}
+
+{% block content %}
+<div class="card login-form">
+    <h1>Login</h1>
+    <p>Enter your credentials to access the panel.</p>
+    
+    {% if error %}
+    <div class="alert alert-error">
+        Invalid username or password. Please try again.
+    </div>
+    {% endif %}
+    
+    <form action="/login" method="post">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" class="form-control" required autofocus>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+    </form>
+    
+    <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
+        <p style="margin: 0; font-size: 0.9rem; color: #666;">
+            <strong>Demo Credentials:</strong><br>
+            Username: <code>admin</code><br>
+            Password: <code>12345</code>
+        </p>
+    </div>
+</div>
+{% endblock %}

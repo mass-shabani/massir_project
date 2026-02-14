@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}About - Basic Website{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>About Us</h1>
+    <p>Welcome to our basic website! This is a demonstration of the Massir framework's capabilities for building web applications.</p>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <h2>🎯 Our Mission</h2>
+        <p>To provide a simple, modular framework for building Python web applications with clean architecture and separation of concerns.</p>
+    </div>
+    
+    <div class="card">
+        <h2>💡 What is Massir?</h2>
+        <p>Massir is a modular application framework for Python that enables developers to build scalable and maintainable applications through a plugin-based architecture.</p>
+    </div>
+    
+    <div class="card">
+        <h2>🛠️ Technologies</h2>
+        <ul>
+            <li><strong>FastAPI</strong> - Modern, fast web framework</li>
+            <li><strong>Jinja2</strong> - Template engine</li>
+            <li><strong>Uvicorn</strong> - ASGI server</li>
+            <li><strong>Python 3.10+</strong> - Modern Python features</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Features</h2>
+    <div class="grid">
+        <div>
+            <h3>✅ Modular Architecture</h3>
+            <p>Each feature is a separate module that can be developed, tested, and deployed independently.</p>
+        </div>
+        <div>
+            <h3>✅ Dependency Injection</h3>
+            <p>Services are shared between modules through a clean dependency injection system.</p>
+        </div>
+        <div>
+            <h3>✅ Lifecycle Management</h3>
+            <p>Modules have clear lifecycle phases: load, start, ready, and stop.</p>
+        </div>
+        <div>
+            <h3>✅ Hot Configuration</h3>
+            <p>Configure your application through JSON files or code-based settings.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

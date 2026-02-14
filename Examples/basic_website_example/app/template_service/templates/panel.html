@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Panel - Basic Website{% endblock %}
+
+{% block content %}
+<div class="user-info">
+    <h2>Welcome, {{ current_user.name }}!</h2>
+    <p>You are logged in as <strong>{{ current_user.username }}</strong> with role <strong>{{ current_user.role }}</strong>.</p>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <h2>👤 Profile Information</h2>
+        <p><strong>Username:</strong> {{ current_user.username }}</p>
+        <p><strong>Name:</strong> {{ current_user.name }}</p>
+        <p><strong>Email:</strong> {{ current_user.email }}</p>
+        <p><strong>Role:</strong> {{ current_user.role }}</p>
+    </div>
+    
+    <div class="card">
+        <h2>🔐 Account Actions</h2>
+        <p>Manage your account settings and preferences.</p>
+        <ul style="margin-top: 1rem;">
+            <li>Change password</li>
+            <li>Update profile</li>
+            <li>Notification settings</li>
+        </ul>
+        <a href="/logout" class="btn btn-secondary" style="margin-top: 1rem; display: inline-block;">Logout</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2>📊 Dashboard</h2>
+    <p>Welcome to your personal dashboard. This is a simple demonstration of the user panel functionality.</p>
+    
+    <div class="grid" style="margin-top: 2rem;">
+        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">5</h3>
+            <p style="margin: 0; color: #666;">Messages</p>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">12</h3>
+            <p style="margin: 0; color: #666;">Notifications</p>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">3</h3>
+            <p style="margin: 0; color: #666;">Tasks</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>🚀 Quick Actions</h2>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="/" class="btn btn-primary">Go to Home</a>
+        <a href="/about" class="btn btn-secondary">About Us</a>
+        <a href="/contact" class="btn btn-secondary">Contact</a>
+    </div>
+</div>
+{% endblock %}

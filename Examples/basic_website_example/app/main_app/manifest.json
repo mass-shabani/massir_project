@@ -1,0 +1,9 @@
+{
+    "name": "main_app",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "MainAppModule",
+    "description": "Main website pages (index, about, contact)",
+    "requires": ["http_api", "template_service", "core_logger"],
+    "provides": []
+}
