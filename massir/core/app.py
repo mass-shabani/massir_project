@@ -184,13 +184,13 @@ class App:
         # Get module settings based on folder type
         # System phase: folders with type='systems' or type='all'
         system_modules_config = self._config_api_ref[0].get_modules_config_for_type("systems")
-        system_data = await self._discover_modules(system_modules_config, is_system=True)
-        await self._load_system_modules(system_data)
+        system_data, disabled_system, _ = await self._discover_modules(system_modules_config, is_system=True)
+        await self._load_system_modules(system_data, disabled_system)
 
         # Application phase: folders with type='applications' or type='all'
         app_modules_config = self._config_api_ref[0].get_modules_config_for_type("applications")
-        app_data = await self._discover_modules(app_modules_config, is_system=False)
-        await self._load_application_modules(app_data)
+        app_data, disabled_app, should_sort = await self._discover_modules(app_modules_config, is_system=False)
+        await self._load_application_modules(app_data, disabled_system, disabled_app, should_sort)
 
         # Phase 3 - Start modules in order
         await self._start_all_modules()
@@ -202,7 +202,7 @@ class App:
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework initialization complete.", level="CORE", tag="core")
 
-    async def _discover_modules(self, modules_config: List[Dict], is_system: bool) -> List[Dict]:
+    async def _discover_modules(self, modules_config: List[Dict], is_system: bool) -> tuple[List[Dict], Dict[str, List[str]], bool]:
         """
         Discover modules from settings.
 
@@ -211,7 +211,7 @@ class App:
             is_system: Are these system modules?
 
         Returns:
-            List of discovered modules
+            Tuple of (List of discovered modules, disabled modules dict, should_sort flag)
         """
         return await self.loader.discover_modules(
             modules_config,
@@ -220,12 +220,13 @@ class App:
             self._logger_api_ref[0]
         )
 
-    async def _load_system_modules(self, system_data: List[Dict]):
+    async def _load_system_modules(self, system_data: List[Dict], disabled_modules: Dict[str, List[str]] = None):
         """
         Load system modules.
 
         Args:
             system_data: List of system module information
+            disabled_modules: Dictionary of disabled modules and their capabilities
         """
         await self.loader.load_system_modules(
             system_data,
@@ -234,7 +235,8 @@ class App:
             self._logger_api_ref[0],
             self.context,
             self._logger_api_ref,
-            self._config_api_ref
+            self._config_api_ref,
+            disabled_modules or {}
         )
 
         # Collect system module names
@@ -243,13 +245,19 @@ class App:
             if mod_name in self.modules:
                 self._system_module_names.append(mod_name)
 
-    async def _load_application_modules(self, app_data: List[Dict]):
+    async def _load_application_modules(self, app_data: List[Dict], disabled_system: Dict[str, List[str]] = None, disabled_app: Dict[str, List[str]] = None, should_sort: bool = False):
         """
         Load application modules.
 
         Args:
             app_data: List of application module information
+            disabled_system: Dictionary of disabled system modules
+            disabled_app: Dictionary of disabled application modules
+            should_sort: Whether to sort modules by dependencies (True when names="all")
         """
+        # Combine disabled modules
+        all_disabled = {**(disabled_system or {}), **(disabled_app or {})}
+        
         await self.loader.load_application_modules(
             app_data,
             self.modules,
@@ -257,7 +265,9 @@ class App:
             self._logger_api_ref[0],
             self.context,
             self._logger_api_ref,
-            self._config_api_ref
+            self._config_api_ref,
+            all_disabled,
+            should_sort
         )
 
         # Collect application module names

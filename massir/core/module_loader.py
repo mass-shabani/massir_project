@@ -31,7 +31,7 @@ class ModuleLoader:
         is_system: bool,
         config_api: CoreConfigAPI,
         logger_api: CoreLoggerAPI
-    ) -> List[Dict]:
+    ) -> tuple[List[Dict], Dict[str, List[str]], bool]:
         """
         Discover modules from settings.
 
@@ -42,9 +42,13 @@ class ModuleLoader:
             logger_api: Logger API
 
         Returns:
-            List of discovered modules
+            Tuple of (List of discovered modules, Dict of disabled modules with their capabilities, should_sort bool)
+            disabled_modules format: {module_name: [list of capabilities it provides]}
+            should_sort: True if modules should be sorted by dependencies (when names="all")
         """
         discovered = []
+        disabled_modules = {}  # Track disabled modules and their capabilities
+        should_sort = False  # Default: don't sort, preserve list order
 
         for module_group in modules_config:
             path_template = module_group.get("path", "")
@@ -65,10 +69,14 @@ class ModuleLoader:
                 )
                 continue
 
-            # If names = "{all}", list all folders
-            if names == "{all}":
+            # Track if names was explicitly provided as a list (not "all")
+            explicit_names = isinstance(names, list)
+            
+            # If names = "all", list all folders and mark for sorting
+            if names == "all":
                 # Use resolved path (path), not template
                 names = [f.name for f in path.iterdir() if f.is_dir()]
+                should_sort = True  # When "all" is used, sort by dependencies
 
             # Discover each module
             for name in names:
@@ -90,6 +98,26 @@ class ModuleLoader:
                     if not is_system and is_module_system:
                         continue
 
+                    # Check if module is enabled (default: true)
+                    is_enabled = manifest.get("enabled", True)
+                    if not is_enabled:
+                        # Only warn if module name was explicitly requested in names list
+                        # (not when using "all" to auto-discover)
+                        if explicit_names:
+                            module_type = "System" if is_system else "Application"
+                            log_internal(
+                                config_api,
+                                logger_api,
+                                f"{module_type} module '{name}' is disabled in manifest but was requested in settings",
+                                level="WARNING",
+                                tag="core"
+                            )
+                        # Track disabled module and its capabilities
+                        provides = manifest.get("provides", [])
+                        if provides:
+                            disabled_modules[name] = provides
+                        continue
+
                     # Generate unique ID if doesn't exist
                     if "id" not in manifest:
                         import uuid
@@ -100,7 +128,7 @@ class ModuleLoader:
                         "manifest": manifest
                     })
 
-        return discovered
+        return discovered, disabled_modules, should_sort
 
     def _resolve_path(self, path_template: str) -> Path:
         """
@@ -128,7 +156,8 @@ class ModuleLoader:
         mod_info: Dict,
         system_provides: Dict,
         config_api: CoreConfigAPI,
-        logger_api: CoreLoggerAPI
+        logger_api: CoreLoggerAPI,
+        disabled_modules: Dict[str, List[str]] = None
     ) -> tuple[bool, List[str]]:
         """
         Check requirements of a module.
@@ -138,16 +167,30 @@ class ModuleLoader:
             system_provides: Dictionary of capabilities provided by system
             config_api: Configuration API
             logger_api: Logger API
+            disabled_modules: Dictionary of disabled modules and their capabilities
 
         Returns:
             (all_requirements_met: bool, missing_requirements: List[str])
         """
         requires = mod_info["manifest"].get("requires", [])
         missing = []
+        disabled_modules = disabled_modules or {}
 
         for req_cap in requires:
             if req_cap not in system_provides:
                 missing.append(req_cap)
+                # Check if this capability is provided by a disabled module
+                for disabled_name, disabled_caps in disabled_modules.items():
+                    if req_cap in disabled_caps:
+                        mod_name = mod_info["manifest"]["name"]
+                        log_internal(
+                            config_api,
+                            logger_api,
+                            f"Module '{mod_name}' requires '{req_cap}' which is provided by disabled module '{disabled_name}'",
+                            level="WARNING",
+                            tag="core"
+                        )
+                        break
 
         return (len(missing) == 0), missing
 
@@ -193,7 +236,8 @@ class ModuleLoader:
         logger_api: CoreLoggerAPI,
         context: 'ModuleContext',
         logger_ref: list[CoreLoggerAPI],
-        config_ref: list[CoreConfigAPI]
+        config_ref: list[CoreConfigAPI],
+        disabled_modules: Dict[str, List[str]] = None
     ):
         """
         Load system modules.
@@ -206,8 +250,10 @@ class ModuleLoader:
             context: Module context
             logger_ref: Reference to logger (for updating)
             config_ref: Reference to config (for updating)
+            disabled_modules: Dictionary of disabled modules and their capabilities
         """
         log_internal(config_api, logger_api, "Loading System Modules...", level="CORE", tag="core_init")
+        disabled_modules = disabled_modules or {}
 
         for mod_info in system_data:
             mod_name = mod_info["manifest"]["name"]
@@ -226,7 +272,7 @@ class ModuleLoader:
             system_provides["core_config"] = "App_Default"
 
             try:
-                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api)
+                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api, disabled_modules)
 
                 if not requirements_met:
                     log_internal(
@@ -262,7 +308,9 @@ class ModuleLoader:
         logger_api: CoreLoggerAPI,
         context: 'ModuleContext',
         logger_ref: list[CoreLoggerAPI],
-        config_ref: list[CoreConfigAPI]
+        config_ref: list[CoreConfigAPI],
+        disabled_modules: Dict[str, List[str]] = None,
+        should_sort: bool = False
     ):
         """
         Load application modules.
@@ -275,8 +323,11 @@ class ModuleLoader:
             context: Module context
             logger_ref: Reference to logger (for updating)
             config_ref: Reference to config (for updating)
+            disabled_modules: Dictionary of disabled modules and their capabilities
+            should_sort: Whether to sort modules by dependencies (True when names="all")
         """
         log_internal(config_api, logger_api, "Loading Application Modules...", level="CORE", tag="core")
+        disabled_modules = disabled_modules or {}
 
         # Extract capabilities from loaded systems (from actual instances, not manifest)
         system_provides = {}
@@ -294,12 +345,19 @@ class ModuleLoader:
         forced_app_data = [m for m in app_data if m["manifest"].get("forced_execute", False)]
         regular_app_data = [m for m in app_data if not m["manifest"].get("forced_execute", False)]
 
+        # Sort regular modules by dependency order only when should_sort is True
+        if should_sort:
+            try:
+                regular_app_data = self.resolve_order(regular_app_data, system_provides, force_execute=False)
+            except DependencyResolutionError as e:
+                log_internal(config_api, logger_api, f"Dependency resolution error: {e}", level="ERROR", tag="core")
+
         # --- Process forced ---
         for mod_info in forced_app_data:
             mod_name = mod_info["manifest"]["name"]
 
             try:
-                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api)
+                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api, disabled_modules)
 
                 if not requirements_met:
                     log_internal(
@@ -333,7 +391,7 @@ class ModuleLoader:
             mod_name = mod_info["manifest"]["name"]
 
             try:
-                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api)
+                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api, disabled_modules)
 
                 if not requirements_met:
                     log_internal(
