@@ -318,6 +318,12 @@ class ModuleLoader:
                 )
                 modules[mod_name] = mod_instance
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="CORE", tag="core")
+                
+                # Update system_provides with capabilities from this module
+                provides = getattr(mod_instance, 'provides', [])
+                if isinstance(provides, list):
+                    for cap in provides:
+                        system_provides[cap] = mod_name
 
             except Exception as e:
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
@@ -347,6 +353,12 @@ class ModuleLoader:
                 )
                 modules[mod_name] = mod_instance
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="CORE", tag="core")
+                
+                # Update system_provides with capabilities from this module
+                provides = getattr(mod_instance, 'provides', [])
+                if isinstance(provides, list):
+                    for cap in provides:
+                        system_provides[cap] = mod_name
 
             except Exception as e:
                 log_internal(config_api, logger_api, f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
