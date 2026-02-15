@@ -231,8 +231,6 @@ class App:
         await self.loader.load_system_modules(
             system_data,
             self.modules,
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
             self.context,
             self._logger_api_ref,
             self._config_api_ref,
@@ -261,8 +259,6 @@ class App:
         await self.loader.load_application_modules(
             app_data,
             self.modules,
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
             self.context,
             self._logger_api_ref,
             self._config_api_ref,
@@ -284,8 +280,8 @@ class App:
             self.modules,
             self._system_module_names,
             self._app_module_names,
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
+            self._logger_api_ref,
+            self._config_api_ref,
             self.hooks
         )
 
@@ -297,7 +293,7 @@ class App:
             self.modules,
             self._system_module_names,
             self._app_module_names,
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
+            self._logger_api_ref,
+            self._config_api_ref,
             self.hooks
         )

@@ -232,8 +232,6 @@ class ModuleLoader:
         self,
         system_data: List[Dict],
         modules: Dict[str, 'IModule'],
-        config_api: CoreConfigAPI,
-        logger_api: CoreLoggerAPI,
         context: 'ModuleContext',
         logger_ref: list[CoreLoggerAPI],
         config_ref: list[CoreConfigAPI],
@@ -245,14 +243,12 @@ class ModuleLoader:
         Args:
             system_data: List of system module information
             modules: Dictionary of loaded modules
-            config_api: Configuration API
-            logger_api: Logger API
             context: Module context
-            logger_ref: Reference to logger (for updating)
-            config_ref: Reference to config (for updating)
+            logger_ref: Reference to logger (mutable list for updating when system_logger loads)
+            config_ref: Reference to config (mutable list for updating)
             disabled_modules: Dictionary of disabled modules and their capabilities
         """
-        log_internal(config_api, logger_api, "Loading System Modules...", level="CORE", tag="core_init")
+        log_internal(config_ref[0], logger_ref[0], "Loading System Modules...", level="CORE", tag="core_init")
         disabled_modules = disabled_modules or {}
 
         for mod_info in system_data:
@@ -272,20 +268,20 @@ class ModuleLoader:
             system_provides["core_config"] = "App_Default"
 
             try:
-                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api, disabled_modules)
+                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_ref[0], logger_ref[0], disabled_modules)
 
                 if not requirements_met:
                     log_internal(
-                        config_api, logger_api,
+                        config_ref[0], logger_ref[0],
                         f"System module '{mod_name}' requires: {', '.join(missing)} (not found)",
                         level="WARNING", tag="core"
                     )
 
                     if not is_forced:
-                        log_internal(config_api, logger_api, f"Skipping module '{mod_name}' (not forced)", level="CORE", tag="core")
+                        log_internal(config_ref[0], logger_ref[0], f"Skipping module '{mod_name}' (not forced)", level="CORE", tag="core")
                         continue
                     else:
-                        log_internal(config_api, logger_api, f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
+                        log_internal(config_ref[0], logger_ref[0], f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
 
                 mod_instance = await self.instantiate_and_load(
                     mod_info,
@@ -295,17 +291,15 @@ class ModuleLoader:
                     config_ref=config_ref
                 )
                 modules[mod_name] = mod_instance
-                log_internal(config_api, logger_api, f"System module '{mod_name}' loaded", level="CORE", tag="core")
+                log_internal(config_ref[0], logger_ref[0], f"System module '{mod_name}' loaded", level="CORE", tag="core")
 
             except Exception as e:
-                log_internal(config_api, logger_api, f"System module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
+                log_internal(config_ref[0], logger_ref[0], f"System module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
 
     async def load_application_modules(
         self,
         app_data: List[Dict],
         modules: Dict[str, 'IModule'],
-        config_api: CoreConfigAPI,
-        logger_api: CoreLoggerAPI,
         context: 'ModuleContext',
         logger_ref: list[CoreLoggerAPI],
         config_ref: list[CoreConfigAPI],
@@ -318,15 +312,13 @@ class ModuleLoader:
         Args:
             app_data: List of application module information
             modules: Dictionary of loaded modules
-            config_api: Configuration API
-            logger_api: Logger API
             context: Module context
-            logger_ref: Reference to logger (for updating)
-            config_ref: Reference to config (for updating)
+            logger_ref: Reference to logger (mutable list for updating)
+            config_ref: Reference to config (mutable list for updating)
             disabled_modules: Dictionary of disabled modules and their capabilities
             should_sort: Whether to sort modules by dependencies (True when names="all")
         """
-        log_internal(config_api, logger_api, "Loading Application Modules...", level="CORE", tag="core")
+        log_internal(config_ref[0], logger_ref[0], "Loading Application Modules...", level="CORE", tag="core")
         disabled_modules = disabled_modules or {}
 
         # Extract capabilities from loaded systems (from actual instances, not manifest)
@@ -350,22 +342,22 @@ class ModuleLoader:
             try:
                 regular_app_data = self.resolve_order(regular_app_data, system_provides, force_execute=False)
             except DependencyResolutionError as e:
-                log_internal(config_api, logger_api, f"Dependency resolution error: {e}", level="ERROR", tag="core")
+                log_internal(config_ref[0], logger_ref[0], f"Dependency resolution error: {e}", level="ERROR", tag="core")
 
         # --- Process forced ---
         for mod_info in forced_app_data:
             mod_name = mod_info["manifest"]["name"]
 
             try:
-                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api, disabled_modules)
+                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_ref[0], logger_ref[0], disabled_modules)
 
                 if not requirements_met:
                     log_internal(
-                        config_api, logger_api,
+                        config_ref[0], logger_ref[0],
                         f"Application module '{mod_name}' requires: {', '.join(missing)} (not found)",
                         level="WARNING", tag="core"
                     )
-                    log_internal(config_api, logger_api, f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
+                    log_internal(config_ref[0], logger_ref[0], f"Forced execution of '{mod_name}'", level="WARNING", tag="core")
 
                 mod_instance = await self.instantiate_and_load(
                     mod_info,
@@ -375,7 +367,7 @@ class ModuleLoader:
                     config_ref=config_ref
                 )
                 modules[mod_name] = mod_instance
-                log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="CORE", tag="core")
+                log_internal(config_ref[0], logger_ref[0], f"Application module '{mod_name}' loaded", level="CORE", tag="core")
                 
                 # Update system_provides with capabilities from this module
                 provides = getattr(mod_instance, 'provides', [])
@@ -384,22 +376,22 @@ class ModuleLoader:
                         system_provides[cap] = mod_name
 
             except Exception as e:
-                log_internal(config_api, logger_api, f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
+                log_internal(config_ref[0], logger_ref[0], f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
 
         # --- Process regular ---
         for mod_info in regular_app_data:
             mod_name = mod_info["manifest"]["name"]
 
             try:
-                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_api, logger_api, disabled_modules)
+                requirements_met, missing = await self.check_requirements(mod_info, system_provides, config_ref[0], logger_ref[0], disabled_modules)
 
                 if not requirements_met:
                     log_internal(
-                        config_api, logger_api,
+                        config_ref[0], logger_ref[0],
                         f"Application module '{mod_name}' requires: {', '.join(missing)} (not found)",
                         level="WARNING", tag="core"
                     )
-                    log_internal(config_api, logger_api, f"Skipping module '{mod_name}' (not forced)", level="CORE", tag="core")
+                    log_internal(config_ref[0], logger_ref[0], f"Skipping module '{mod_name}' (not forced)", level="CORE", tag="core")
                     continue
 
                 mod_instance = await self.instantiate_and_load(
@@ -410,7 +402,7 @@ class ModuleLoader:
                     config_ref=config_ref
                 )
                 modules[mod_name] = mod_instance
-                log_internal(config_api, logger_api, f"Application module '{mod_name}' loaded", level="CORE", tag="core")
+                log_internal(config_ref[0], logger_ref[0], f"Application module '{mod_name}' loaded", level="CORE", tag="core")
                 
                 # Update system_provides with capabilities from this module
                 provides = getattr(mod_instance, 'provides', [])
@@ -419,15 +411,15 @@ class ModuleLoader:
                         system_provides[cap] = mod_name
 
             except Exception as e:
-                log_internal(config_api, logger_api, f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
+                log_internal(config_ref[0], logger_ref[0], f"Application module '{mod_name}' failed to load: {e}", level="ERROR", tag="core")
 
     async def start_all_modules(
         self,
         modules: Dict[str, 'IModule'],
         system_module_names: List[str],
         app_module_names: List[str],
-        config_api: CoreConfigAPI,
-        logger_api: CoreLoggerAPI,
+        logger_ref: list[CoreLoggerAPI],
+        config_ref: list[CoreConfigAPI],
         hooks_manager
     ):
         """
@@ -437,11 +429,11 @@ class ModuleLoader:
             modules: Dictionary of modules
             system_module_names: List of system module names
             app_module_names: List of application module names
-            config_api: Configuration API
-            logger_api: Logger API
+            logger_ref: Reference to logger (mutable list)
+            config_ref: Reference to config (mutable list)
             hooks_manager: Hooks manager
         """
-        log_internal(config_api, logger_api, "Starting Modules...", level="CORE", tag="core")
+        log_internal(config_ref[0], logger_ref[0], "Starting Modules...", level="CORE", tag="core")
 
         # Start system modules
         for mod_name in system_module_names:
@@ -450,7 +442,7 @@ class ModuleLoader:
                     await modules[mod_name].start(modules[mod_name]._context)
                     await hooks_manager.dispatch(SystemHook.ON_MODULE_LOADED, modules[mod_name])
                 except Exception as e:
-                    log_internal(config_api, logger_api, f"Error starting system module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(config_ref[0], logger_ref[0], f"Error starting system module '{mod_name}': {e}", level="ERROR", tag="core")
 
         # Start application modules
         for mod_name in app_module_names:
@@ -459,15 +451,15 @@ class ModuleLoader:
                     await modules[mod_name].start(modules[mod_name]._context)
                     await hooks_manager.dispatch(SystemHook.ON_MODULE_LOADED, modules[mod_name])
                 except Exception as e:
-                    log_internal(config_api, logger_api, f"Error starting application module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(config_ref[0], logger_ref[0], f"Error starting application module '{mod_name}': {e}", level="ERROR", tag="core")
 
     async def ready_all_modules(
         self,
         modules: Dict[str, 'IModule'],
         system_module_names: List[str],
         app_module_names: List[str],
-        config_api: CoreConfigAPI,
-        logger_api: CoreLoggerAPI,
+        logger_ref: list[CoreLoggerAPI],
+        config_ref: list[CoreConfigAPI],
         hooks_manager
     ):
         """
@@ -477,11 +469,11 @@ class ModuleLoader:
             modules: Dictionary of modules
             system_module_names: List of system module names
             app_module_names: List of application module names
-            config_api: Configuration API
-            logger_api: Logger API
+            logger_ref: Reference to logger (mutable list)
+            config_ref: Reference to config (mutable list)
             hooks_manager: Hooks manager
         """
-        log_internal(config_api, logger_api, "All modules started. Calling ready on modules...", level="CORE", tag="core")
+        log_internal(config_ref[0], logger_ref[0], "All modules started. Calling ready on modules...", level="CORE", tag="core")
 
         # Call ready on system modules
         for mod_name in system_module_names:
@@ -489,7 +481,7 @@ class ModuleLoader:
                 try:
                     await modules[mod_name].ready(modules[mod_name]._context)
                 except Exception as e:
-                    log_internal(config_api, logger_api, f"Error calling ready on system module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(config_ref[0], logger_ref[0], f"Error calling ready on system module '{mod_name}': {e}", level="ERROR", tag="core")
 
         # Call ready on application modules
         for mod_name in app_module_names:
@@ -497,11 +489,11 @@ class ModuleLoader:
                 try:
                     await modules[mod_name].ready(modules[mod_name]._context)
                 except Exception as e:
-                    log_internal(config_api, logger_api, f"Error calling ready on application module '{mod_name}': {e}", level="ERROR", tag="core")
+                    log_internal(config_ref[0], logger_ref[0], f"Error calling ready on application module '{mod_name}': {e}", level="ERROR", tag="core")
 
         # Dispatch hook after all modules are ready
         await hooks_manager.dispatch(SystemHook.ON_ALL_MODULES_READY)
-        log_internal(config_api, logger_api, "All modules are ready.", level="CORE", tag="core")
+        log_internal(config_ref[0], logger_ref[0], "All modules are ready.", level="CORE", tag="core")
 
     def resolve_order(self, modules_data: List[Dict], existing_provides: Dict[str, str] = None, force_execute: bool = False) -> List[Dict]:
         """

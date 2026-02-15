@@ -23,7 +23,7 @@ async def inject_system_apis(module_instance: IModule, registry: ModuleRegistry,
     logger_service = registry.get("core_logger")
     if logger_service and isinstance(logger_service, CoreLoggerAPI):
         if logger_service != logger_ref[0]:
-            log_internal(config_ref[0], logger_ref[0], f"🔄 Overriding Core Logger with module: {module_instance.name}", level="CORE", tag="core_init")
+            log_internal(config_ref[0], logger_ref[0], f"Overriding Core Logger with module: {module_instance.name}", level="CORE", tag="core_init")
             logger_ref[0] = logger_service
             registry.set("core_logger", logger_service)
 
@@ -31,7 +31,7 @@ async def inject_system_apis(module_instance: IModule, registry: ModuleRegistry,
     config_service = registry.get("core_config")
     if config_service and isinstance(config_service, CoreConfigAPI):
         if config_service != config_ref[0]:
-            log_internal(config_ref[0], logger_ref[0], f"🔄 Overriding Core Config with module: {module_instance.name}", level="CORE", tag="core_init")
+            log_internal(config_ref[0], logger_ref[0], f"Overriding Core Config with module: {module_instance.name}", level="CORE", tag="core_init")
             config_ref[0] = config_service
             registry.set("core_config", config_service)
 
