@@ -119,11 +119,6 @@ class MainAppModule(IModule):
         if self.logger:
             self.logger.log("Main app routes registered", tag="main_app")
     
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log("MainApp module is ready", tag="main_app")
-    
     async def stop(self, context):
         """Cleanup resources and unregister menu items."""
         # Unregister menu items when module stops

@@ -329,12 +329,3 @@ class TemplateServiceModule(IModule):
         if self.logger:
             self.logger.log("TemplateService module started", tag="template")
     
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log("TemplateService module is ready", tag="template")
-    
-    async def stop(self, context):
-        """Stop template service."""
-        if self.logger:
-            self.logger.log("TemplateService module stopped", tag="template")

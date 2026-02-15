@@ -153,11 +153,6 @@ class AuthPanelModule(IModule):
         if self.logger:
             self.logger.log("Auth panel routes registered", tag="auth")
     
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log("AuthPanel module is ready", tag="auth")
-    
     async def stop(self, context):
         """Cleanup resources and unregister menu items."""
         # Unregister menu items when module stops
