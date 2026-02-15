@@ -1,0 +1,9 @@
+{
+    "name": "user_manager",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "UserManagerModule",
+    "description": "Example module demonstrating database operations",
+    "requires": ["database_service", "http_api", "core_logger"],
+    "provides": ["user_manager"]
+}

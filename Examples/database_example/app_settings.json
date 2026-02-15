@@ -1,0 +1,39 @@
+{
+    "app_name": "Database Example",
+    "version": "1.0.0",
+    
+    "modules": [
+        {
+            "path": "{massir_dir}/modules",
+            "names": ["system_logger", "network_fastapi", "system_database"],
+            "type": "all"
+        },
+        {
+            "path": "{app_dir}/app",
+            "names": "all",
+            "type": "all"
+        }
+    ],
+    
+    "database": {
+        "connections": [
+            {
+                "name": "default",
+                "driver": "sqlite",
+                "path": "data/example.db",
+                "cache_enabled": true,
+                "cache_ttl": 300
+            }
+        ],
+        "cache": {
+            "enabled": true,
+            "ttl": 300,
+            "max_size": 1000
+        }
+    },
+    
+    "network": {
+        "host": "127.0.0.1",
+        "port": 8080
+    }
+}
