@@ -2,7 +2,7 @@
 Template Service - Menu and template management.
 
 This module provides services for:
-- Menu registration and management
+- Menu registration and management with grouping support
 - Template rendering with unified theme
 - Static file serving
 """
@@ -19,6 +19,7 @@ class MenuItem:
     icon: str = ""
     order: int = 100
     parent_id: Optional[str] = None
+    group: Optional[str] = None  # Group name: 'sqlite', 'postgresql', 'mysql', None for main
     children: List['MenuItem'] = field(default_factory=list)
     
     def to_dict(self) -> dict:
@@ -30,26 +31,54 @@ class MenuItem:
             "icon": self.icon,
             "order": self.order,
             "parent_id": self.parent_id,
+            "group": self.group,
             "children": [c.to_dict() for c in self.children]
         }
 
 
 class MenuManager:
-    """Manages menu items for the application."""
+    """Manages menu items for the application with grouping support."""
     
     def __init__(self):
         self._items: Dict[str, MenuItem] = {}
+        self._groups: Dict[str, Dict[str, Any]] = {
+            # Define database groups with their styling
+            'sqlite': {'label': 'SQLite', 'icon': '🗄️', 'class': 'sqlite', 'order': 10},
+            'postgresql': {'label': 'PostgreSQL', 'icon': '🐘', 'class': 'postgresql', 'order': 20},
+            'mysql': {'label': 'MySQL', 'icon': '🐬', 'class': 'mysql', 'order': 30},
+        }
+    
+    def register_group(self, group_id: str, label: str, icon: str = "", css_class: str = "", order: int = 100):
+        """Register a new menu group."""
+        self._groups[group_id] = {
+            'label': label,
+            'icon': icon,
+            'class': css_class or group_id,
+            'order': order
+        }
     
     def register_menu(self, id: str, label: str, url: str, 
-                      icon: str = "", order: int = 100, parent_id: Optional[str] = None):
-        """Register a menu item."""
+                      icon: str = "", order: int = 100, parent_id: Optional[str] = None,
+                      group: Optional[str] = None):
+        """Register a menu item.
+        
+        Args:
+            id: Unique identifier for the menu item
+            label: Display label
+            url: Link URL
+            icon: Optional icon (emoji or icon class)
+            order: Sort order within its group
+            parent_id: Parent menu item ID for nested menus
+            group: Group name ('sqlite', 'postgresql', 'mysql', or None for main menu)
+        """
         item = MenuItem(
             id=id,
             label=label,
             url=url,
             icon=icon,
             order=order,
-            parent_id=parent_id
+            parent_id=parent_id,
+            group=group
         )
         self._items[id] = item
     
@@ -82,6 +111,37 @@ class MenuManager:
     def get_menu_dict(self) -> List[dict]:
         """Get menu as list of dictionaries."""
         return [item.to_dict() for item in self.get_menu()]
+    
+    def get_grouped_menu(self) -> Dict[str, List[dict]]:
+        """Get menu items grouped by their group attribute."""
+        grouped = {
+            'main': [],  # Items without a group
+        }
+        
+        # Initialize groups
+        for group_id in self._groups:
+            grouped[group_id] = []
+        
+        # Categorize items
+        for item in self._items.values():
+            if item.parent_id is None:  # Only root items
+                item_dict = item.to_dict()
+                item_dict['children'] = [c.to_dict() for c in self._get_children(item.id)]
+                
+                if item.group and item.group in grouped:
+                    grouped[item.group].append(item_dict)
+                else:
+                    grouped['main'].append(item_dict)
+        
+        # Sort items within each group
+        for group_id in grouped:
+            grouped[group_id].sort(key=lambda x: x['order'])
+        
+        return grouped
+    
+    def get_groups(self) -> Dict[str, Dict[str, Any]]:
+        """Get all registered groups."""
+        return self._groups.copy()
 
 
 class TemplateRenderer:
@@ -100,8 +160,6 @@ class TemplateRenderer:
     def render(self, content: str, title: str = "", active_menu: str = "", 
                additional_css: str = "", additional_js: str = "") -> str:
         """Render a page with the base template."""
-        menu = self.menu_manager.get_menu_dict()
-        
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,7 +175,7 @@ class TemplateRenderer:
             <a href="/" class="logo">{self._site_name}</a>
             <nav class="nav">
                 <ul class="nav-list">
-                    {self._render_menu(menu, active_menu)}
+                    {self._render_menu(active_menu)}
                 </ul>
             </nav>
         </div>
@@ -139,29 +197,80 @@ class TemplateRenderer:
 </body>
 </html>"""
     
-    def _render_menu(self, menu: List[dict], active_menu: str) -> str:
-        """Render menu HTML."""
-        if not menu:
-            return ""
+    def _render_menu(self, active_menu: str) -> str:
+        """Render menu HTML with grouping support."""
+        grouped_menu = self.menu_manager.get_grouped_menu()
+        groups = self.menu_manager.get_groups()
         
         items = []
-        for item in menu:
-            active_class = "active" if item['id'] == active_menu else ""
-            icon = f"<span class='icon'>{item['icon']}</span>" if item['icon'] else ""
-            children = self._render_menu(item['children'], active_menu)
-            
-            if children:
-                items.append(f"""
-                <li class="has-children {active_class}">
-                    <a href="{item['url']}">{icon}{item['label']}</a>
-                    <ul class="submenu">{children}</ul>
-                </li>""")
-            else:
-                items.append(f"""
-                <li class="{active_class}">
-                    <a href="{item['url']}">{icon}{item['label']}</a>
-                </li>""")
         
+        # Render main menu items first (no group)
+        for item in grouped_menu.get('main', []):
+            items.append(self._render_menu_item(item, active_menu))
+        
+        # Render grouped items as dropdowns
+        for group_id, group_info in sorted(groups.items(), key=lambda x: x[1]['order']):
+            group_items = grouped_menu.get(group_id, [])
+            if group_items:
+                items.append(self._render_group_dropdown(group_id, group_info, group_items, active_menu))
+        
+        return "".join(items)
+    
+    def _render_menu_item(self, item: dict, active_menu: str) -> str:
+        """Render a single menu item."""
+        active_class = "active" if item['id'] == active_menu else ""
+        icon = f"<span class='icon'>{item['icon']}</span>" if item['icon'] else ""
+        
+        if item.get('children'):
+            children_html = self._render_submenu(item['children'], active_menu)
+            return f"""
+            <li class="menu-group {active_class}">
+                <a href="{item['url']}">{icon}{item['label']}</a>
+                <ul class="submenu">{children_html}</ul>
+            </li>"""
+        else:
+            return f"""
+            <li class="{active_class}">
+                <a href="{item['url']}">{icon}{item['label']}</a>
+            </li>"""
+    
+    def _render_group_dropdown(self, group_id: str, group_info: dict, items: List[dict], active_menu: str) -> str:
+        """Render a group as a dropdown menu."""
+        icon = f"<span class='icon'>{group_info['icon']}</span>" if group_info.get('icon') else ""
+        
+        # Check if any item in group is active
+        is_active = any(item['id'] == active_menu for item in items)
+        active_class = "active" if is_active else ""
+        
+        # Render group header
+        header_class = f"menu-group-header {group_info.get('class', '')}"
+        
+        # Render items
+        items_html = f'<li class="{header_class}">{group_info["label"]}</li>'
+        for item in items:
+            item_active = "active" if item['id'] == active_menu else ""
+            item_icon = f"<span class='icon'>{item['icon']}</span>" if item.get('icon') else ""
+            items_html += f"""
+            <li class="{item_active}">
+                <a href="{item['url']}">{item_icon}{item['label']}</a>
+            </li>"""
+        
+        return f"""
+        <li class="menu-group {active_class}">
+            <a href="#">{icon}{group_info['label']}</a>
+            <ul class="submenu">{items_html}</ul>
+        </li>"""
+    
+    def _render_submenu(self, children: List[dict], active_menu: str) -> str:
+        """Render submenu items."""
+        items = []
+        for child in children:
+            active_class = "active" if child['id'] == active_menu else ""
+            icon = f"<span class='icon'>{child['icon']}</span>" if child.get('icon') else ""
+            items.append(f"""
+            <li class="{active_class}">
+                <a href="{child['url']}">{icon}{child['label']}</a>
+            </li>""")
         return "".join(items)
     
     def render_card(self, title: str, content: str, actions: str = "") -> str:
@@ -175,9 +284,9 @@ class TemplateRenderer:
     
     def render_table(self, headers: List[str], rows: List[dict], 
                      empty_message: str = "No data available.") -> str:
-        """Render a data table."""
+        """Render a data table with improved styling."""
         if not rows:
-            return f'<p class="text-muted">{empty_message}</p>'
+            return f'<div class="table-empty"><p class="text-muted">{empty_message}</p></div>'
         
         header_html = "".join(f"<th>{col}</th>" for col in headers)
         

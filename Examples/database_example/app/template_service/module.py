@@ -72,9 +72,20 @@ class TemplateServiceModule(IModule):
             )
     
     def register_menu(self, id: str, label: str, url: str,
-                      icon: str = "", order: int = 100, parent_id: str = None):
-        """Register a menu item."""
-        self.menu_manager.register_menu(id, label, url, icon, order, parent_id)
+                      icon: str = "", order: int = 100, parent_id: str = None,
+                      group: str = None):
+        """Register a menu item.
+        
+        Args:
+            id: Unique identifier for the menu item
+            label: Display label
+            url: Link URL
+            icon: Optional icon (emoji or icon class)
+            order: Sort order within its group
+            parent_id: Parent menu item ID for nested menus
+            group: Group name ('sqlite', 'postgresql', 'mysql', or None for main menu)
+        """
+        self.menu_manager.register_menu(id, label, url, icon, order, parent_id, group)
     
     def unregister_menu(self, id: str):
         """Remove a menu item by ID."""

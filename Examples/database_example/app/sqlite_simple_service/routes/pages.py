@@ -137,7 +137,10 @@ def register_page_routes(http_api, template, db, logger, services):
                     "Full Name": u.get("full_name") or "-",
                     "Active": "✅" if u.get("is_active") else "❌",
                     "Created": str(u.get("created_at", ""))[:10] if u.get("created_at") else "-",
-                    "Actions": f'<a href="/db/users/{u.get("id")}/edit" class="btn btn-sm">Edit</a> <a href="/db/users/{u.get("id")}/delete" class="btn btn-sm btn-danger">Delete</a>'
+                    "Actions": f'''<div class="action-icons">
+                        <a href="/db/users/{u.get("id")}/edit" class="action-icon edit" title="Edit">✏️</a>
+                        <a href="/db/users/{u.get("id")}/delete" class="action-icon delete" title="Delete">🗑️</a>
+                    </div>'''
                 })
             table_html = template.render_table(headers=headers, rows=rows)
         else:
@@ -363,11 +366,14 @@ def register_page_routes(http_api, template, db, logger, services):
                     "Price": f"${p.get('price', 0):.2f}",
                     "Stock": p.get("stock", 0),
                     "Available": "✅" if p.get("is_available") else "❌",
-                    "Actions": f'<a href="/db/products/{p.get("id")}/edit" class="btn btn-sm">Edit</a>'
+                    "Actions": f'''<div class="action-icons">
+                        <a href="/db/products/{p.get("id")}/edit" class="action-icon edit" title="Edit">✏️</a>
+                        <a href="/db/products/{p.get("id")}/delete" class="action-icon delete" title="Delete">🗑️</a>
+                    </div>'''
                 })
             table_html = template.render_table(headers=headers, rows=rows)
         else:
-            table_html = '<p class="text-muted">No products found.</p>'
+            table_html = '<p class="text-muted">No products found. <a href="/db/products/add">Add the first product</a></p>'
         
         content = f"""
         <div class="card">
@@ -390,6 +396,197 @@ def register_page_routes(http_api, template, db, logger, services):
         html = template.render(content, title="Product Management", active_menu="db_products")
         return http_api.HTMLResponse(content=html)
     
+    @http_api.get("/db/products/add")
+    async def add_product_form(request: http_api.Request):
+        """Add product form page."""
+        form_html = template.render_form(
+            action="/db/products/add",
+            method="POST",
+            fields=[
+                {"name": "name", "label": "Product Name", "type": "text", "required": True},
+                {"name": "description", "label": "Description", "type": "textarea", "required": False},
+                {"name": "price", "label": "Price ($)", "type": "number", "required": True},
+                {"name": "stock", "label": "Stock Quantity", "type": "number", "required": True},
+                {"name": "is_available", "label": "Available for Sale", "type": "checkbox", "checked": True},
+            ],
+            submit_text="Create Product"
+        )
+        
+        content = f"""
+        <div class="card">
+            <h1>Add New Product</h1>
+            <p class="text-muted">Create a new product in the database.</p>
+        </div>
+        
+        <div class="card">
+            {form_html}
+        </div>
+        
+        <div class="card">
+            <a href="/db/products" class="btn">Cancel</a>
+        </div>
+        """
+        html = template.render(content, title="Add Product", active_menu="db_products")
+        return http_api.HTMLResponse(content=html)
+    
+    @http_api.post("/db/products/add")
+    async def add_product_submit(request: http_api.Request):
+        """Handle add product form submission."""
+        form = await request.form()
+        
+        price_val = form.get("price", "0")
+        stock_val = form.get("stock", "0")
+        
+        result = await db.insert(
+            "products",
+            {
+                "name": form.get("name"),
+                "description": form.get("description"),
+                "price": float(price_val) if price_val else 0.0,
+                "stock": int(stock_val) if stock_val else 0,
+                "is_available": form.get("is_available") == "on"
+            }
+        )
+        
+        if result.success:
+            return http_api.RedirectResponse(url="/db/products", status_code=303)
+        else:
+            content = f"""
+            <div class="card">
+                <h1>Error</h1>
+                <p class="text-danger">Failed to create product: {result.error}</p>
+                <a href="/db/products/add" class="btn">Try Again</a>
+            </div>
+            """
+            html = template.render(content, title="Error", active_menu="db_products")
+            return http_api.HTMLResponse(content=html, status_code=400)
+    
+    @http_api.get("/db/products/{product_id:int}/edit")
+    async def edit_product_form(request: http_api.Request):
+        """Edit product form page."""
+        product_id = request.path_params["product_id"]
+        product = await db.find_one("products", where={"id": product_id})
+        
+        if not product:
+            content = '<div class="card"><h1>Product not found</h1></div>'
+            html = template.render(content, title="Not Found", active_menu="db_products")
+            return http_api.HTMLResponse(content=html, status_code=404)
+        
+        form_html = template.render_form(
+            action=f"/db/products/{product_id}/edit",
+            method="POST",
+            fields=[
+                {"name": "name", "label": "Product Name", "type": "text", "value": product.get("name", ""), "required": True},
+                {"name": "description", "label": "Description", "type": "textarea", "value": product.get("description", ""), "required": False},
+                {"name": "price", "label": "Price ($)", "type": "number", "value": str(product.get("price", 0)), "required": True},
+                {"name": "stock", "label": "Stock Quantity", "type": "number", "value": str(product.get("stock", 0)), "required": True},
+                {"name": "is_available", "label": "Available for Sale", "type": "checkbox", "checked": product.get("is_available", True)},
+            ],
+            submit_text="Update Product"
+        )
+        
+        content = f"""
+        <div class="card">
+            <h1>Edit Product: {product.get('name')}</h1>
+        </div>
+        
+        <div class="card">
+            {form_html}
+        </div>
+        
+        <div class="card">
+            <a href="/db/products" class="btn">Cancel</a>
+        </div>
+        """
+        html = template.render(content, title="Edit Product", active_menu="db_products")
+        return http_api.HTMLResponse(content=html)
+    
+    @http_api.post("/db/products/{product_id:int}/edit")
+    async def edit_product_submit(request: http_api.Request):
+        """Handle edit product form submission."""
+        product_id = request.path_params["product_id"]
+        form = await request.form()
+        
+        price_val = form.get("price", "0")
+        stock_val = form.get("stock", "0")
+        
+        result = await db.update(
+            "products",
+            {
+                "name": form.get("name"),
+                "description": form.get("description"),
+                "price": float(price_val) if price_val else 0.0,
+                "stock": int(stock_val) if stock_val else 0,
+                "is_available": form.get("is_available") == "on"
+            },
+            where={"id": product_id}
+        )
+        
+        if result.success:
+            return http_api.RedirectResponse(url="/db/products", status_code=303)
+        else:
+            content = f"""
+            <div class="card">
+                <h1>Error</h1>
+                <p class="text-danger">Failed to update product: {result.error}</p>
+            </div>
+            """
+            html = template.render(content, title="Error", active_menu="db_products")
+            return http_api.HTMLResponse(content=html, status_code=400)
+    
+    @http_api.get("/db/products/{product_id:int}/delete")
+    async def delete_product_confirm(request: http_api.Request):
+        """Delete product confirmation page."""
+        product_id = request.path_params["product_id"]
+        product = await db.find_one("products", where={"id": product_id})
+        
+        if not product:
+            content = '<div class="card"><h1>Product not found</h1></div>'
+            html = template.render(content, title="Not Found", active_menu="db_products")
+            return http_api.HTMLResponse(content=html, status_code=404)
+        
+        content = f"""
+        <div class="card">
+            <h1>Delete Product</h1>
+            <p class="text-muted">Are you sure you want to delete this product?</p>
+        </div>
+        
+        <div class="card">
+            <p><strong>Name:</strong> {product.get('name')}</p>
+            <p><strong>Price:</strong> ${product.get('price', 0):.2f}</p>
+            <p><strong>Stock:</strong> {product.get('stock', 0)}</p>
+            <p><strong>Description:</strong> {product.get('description', '-')}</p>
+        </div>
+        
+        <div class="card">
+            <form action="/db/products/{product_id}/delete" method="POST">
+                <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                <a href="/db/products" class="btn">Cancel</a>
+            </form>
+        </div>
+        """
+        html = template.render(content, title="Delete Product", active_menu="db_products")
+        return http_api.HTMLResponse(content=html)
+    
+    @http_api.post("/db/products/{product_id:int}/delete")
+    async def delete_product_submit(request: http_api.Request):
+        """Handle delete product form submission."""
+        product_id = request.path_params["product_id"]
+        
+        result = await db.delete("products", where={"id": product_id})
+        
+        if result.success:
+            return http_api.RedirectResponse(url="/db/products", status_code=303)
+        else:
+            content = f"""
+            <div class="card">
+                <h1>Error</h1>
+                <p class="text-danger">Failed to delete product: {result.error}</p>
+            </div>
+            """
+            html = template.render(content, title="Error", active_menu="db_products")
+            return http_api.HTMLResponse(content=html, status_code=400)
+    
     @http_api.get("/db/query")
     async def query_form(request: http_api.Request):
         """SQL query execution page."""
@@ -400,13 +597,13 @@ def register_page_routes(http_api, template, db, logger, services):
         </div>
         
         <div class="card">
-            <form action="/db/query" method="POST">
+            <form action="/db/query" method="POST" class="form">
                 <div class="form-group">
                     <label for="query">SQL Query:</label>
-                    <textarea id="query" name="query" rows="6" class="form-control" 
+                    <textarea id="query" name="query" rows="6" 
                         placeholder="SELECT * FROM users LIMIT 10"></textarea>
                 </div>
-                <div class="card-actions">
+                <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Execute</button>
                     <a href="/db" class="btn">Cancel</a>
                 </div>

@@ -52,38 +52,42 @@ class SqliteSimpleServiceModule(IModule):
         }
         register_page_routes(self.http_api, self.template, self.db, self.logger, services)
         
-        # Register menu items
+        # Register menu items under 'sqlite' group
         if self.menu_manager:
             self.menu_manager.register_menu(
                 id="db_dashboard",
-                label="Database",
+                label="Dashboard",
                 url="/db",
-                icon="🗄️",
-                order=10
+                icon="📊",
+                order=1,
+                group="sqlite"
             )
             self.menu_manager.register_menu(
                 id="db_users",
                 label="Users",
                 url="/db/users",
                 icon="👥",
-                order=11
+                order=2,
+                group="sqlite"
             )
             self.menu_manager.register_menu(
                 id="db_products",
                 label="Products",
                 url="/db/products",
                 icon="📦",
-                order=12
+                order=3,
+                group="sqlite"
             )
             self.menu_manager.register_menu(
                 id="db_query",
                 label="SQL Query",
                 url="/db/query",
                 icon="🔍",
-                order=13
+                order=4,
+                group="sqlite"
             )
             if self.logger:
-                self.logger.log("Database menus registered", tag="sqlite_simple")
+                self.logger.log("SQLite menus registered", tag="sqlite_simple")
         
         if self.logger:
             self.logger.log("SqliteSimpleService module started", tag="sqlite_simple")
