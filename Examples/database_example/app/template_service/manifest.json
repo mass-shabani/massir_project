@@ -1,0 +1,9 @@
+{
+    "name": "template_service",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "TemplateServiceModule",
+    "description": "Unified theme and template service for web modules",
+    "requires": ["http_api", "core_logger"],
+    "provides": ["template_service"]
+}

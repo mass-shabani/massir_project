@@ -1,0 +1,9 @@
+{
+    "name": "sqlite_simple_service",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "SqliteSimpleServiceModule",
+    "description": "SQLite database service with web UI for table management",
+    "requires": ["http_api", "core_logger", "template_service", "database_service"],
+    "provides": ["sqlite_simple_service"]
+}
