@@ -113,12 +113,3 @@ class TemplateServiceModule(IModule):
         """Render a form."""
         return self.renderer.render_form(action, fields, submit_text, method)
     
-    async def ready(self, context: ModuleContext):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log("TemplateService module is ready", tag="template")
-    
-    async def stop(self, context: ModuleContext):
-        """Cleanup resources."""
-        if self.logger:
-            self.logger.log("TemplateService module stopped", tag="template")

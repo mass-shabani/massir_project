@@ -50,11 +50,6 @@ class MainAppModule(IModule):
             if self._logger:
                 self._logger.log("Main app menus registered", tag="main_app")
     
-    async def ready(self, context: ModuleContext):
-        """Module is ready."""
-        if self._logger:
-            self._logger.log("Main app module ready", tag="main_app")
-    
     async def stop(self, context: ModuleContext):
         """Stop the main app module."""
         # Unregister menu items

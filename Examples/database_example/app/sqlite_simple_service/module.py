@@ -92,11 +92,6 @@ class SqliteSimpleServiceModule(IModule):
         if self.logger:
             self.logger.log("SqliteSimpleService module started", tag="sqlite_simple")
     
-    async def ready(self, context: ModuleContext):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log("SqliteSimpleService module is ready", tag="sqlite_simple")
-    
     async def stop(self, context: ModuleContext):
         """Cleanup resources."""
         # Unregister menu items

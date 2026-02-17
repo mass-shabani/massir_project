@@ -77,20 +77,14 @@ class ServerManagerModule(IModule):
         app = context.get_app()
         server_runner = self.server_api.get_server_runner(server_config)
         app.register_background_task(server_runner)
-        
-        if self.logger:
-            self.logger.log(
-                f"HTTP server starting and Database Example API available at http://{server_config.host}:{server_config.port}",
-                tag="server"
-            )
-    
+      
     async def ready(self, context):
         """Called when all modules are ready."""
         if self.logger:
             status = self.server_api.status if self.server_api else None
             if status and status.is_running:
                 self.logger.log(
-                    f"Server is running at {status.url}",
+                    f"HTTP Server is running and Database Example API available at {status.url}",
                     tag="server"
                 )
             else:
