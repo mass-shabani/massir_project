@@ -24,3 +24,7 @@ class SystemHook(Enum):
     """Triggered when all modules have started and are ready."""
     ON_ERROR = "on_error"
     """Triggered when an error occurs."""
+    ON_SHUTDOWN_REQUEST = "on_shutdown_request"
+    """Triggered when a shutdown is requested via request_shutdown()."""
+    ON_RESTART_REQUEST = "on_restart_request"
+    """Triggered when a restart is requested via request_restart()."""

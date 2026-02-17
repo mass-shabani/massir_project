@@ -25,7 +25,7 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
         system_module_names: List of system module names (optional)
         app_module_names: List of application module names (optional)
     """
-    log_internal(config_api, logger_api, "🛑 Shutting down framework...", level="CORE")
+    log_internal(config_api, logger_api, "Shutting down framework [🛑]...", level="CORE")
 
     # Cancel background tasks
     for task in background_tasks:

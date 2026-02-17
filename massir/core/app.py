@@ -56,10 +56,15 @@ class App:
         self._config_api_ref = [None]
         self._background_tasks: List[asyncio.Task] = []
         self._stop_event = asyncio.Event()
+        self._restart_event = asyncio.Event()
 
         # Module name management variables
         self._system_module_names: List[str] = []
         self._app_module_names: List[str] = []
+        
+        # Store initial settings for restart
+        self._initial_settings = initial_settings
+        self._settings_path = settings_path
 
         # Initialize services
         self._bootstrap_system(initial_settings, settings_path)
@@ -111,6 +116,56 @@ class App:
         else:
             task = asyncio.create_task(asyncio.to_thread(coroutine))
             self._background_tasks.append(task)
+    
+    # --- Shutdown and Restart ---
+    def request_shutdown(self):
+        """
+        Request a graceful shutdown of the application.
+        
+        This method can be called from any module to initiate
+        a clean shutdown sequence. The application will stop
+        all modules and background tasks in the correct order.
+        """
+        log_internal(
+            self._config_api_ref[0], 
+            self._logger_api_ref[0], 
+            "Shutdown requested programmatically [🛑]...", 
+            level="CORE"
+        )
+        # Dispatch shutdown hook (synchronously since we're not in async context)
+        asyncio.create_task(self.hooks.dispatch(SystemHook.ON_SHUTDOWN_REQUEST))
+        self._stop_event.set()
+    
+    def request_restart(self):
+        """
+        Request a restart of the application.
+        
+        This method initiates a full restart cycle:
+        1. Stop all modules and background tasks
+        2. Clear all loaded modules
+        3. Re-bootstrap the application from scratch
+        
+        Useful for hot-reloading configuration or modules.
+        """
+        log_internal(
+            self._config_api_ref[0], 
+            self._logger_api_ref[0], 
+            "Restart requested programmatically [🔄]...", 
+            level="CORE"
+        )
+        # Dispatch restart hook (synchronously since we're not in async context)
+        asyncio.create_task(self.hooks.dispatch(SystemHook.ON_RESTART_REQUEST))
+        self._restart_event.set()
+        self._stop_event.set()
+    
+    def is_restart_requested(self) -> bool:
+        """
+        Check if a restart has been requested.
+        
+        Returns:
+            True if restart was requested, False otherwise
+        """
+        return self._restart_event.is_set()
 
     # --- Signal handling ---
     def _setup_signal_handlers(self, loop: asyncio.AbstractEventLoop):
@@ -121,7 +176,7 @@ class App:
             loop: The asyncio event loop
         """
         def _shutdown_handler():
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Shutdown signal received. Initiating graceful shutdown...", level="CORE")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Shutdown signal received.[🛑] Initiating graceful shutdown...", level="CORE")
             self._stop_event.set()
 
         # Try Unix-style signal handlers first
@@ -142,65 +197,116 @@ class App:
     async def run(self):
         """
         Main entry point for the application.
+        
+        Supports restart functionality - if request_restart() was called,
+        the application will shutdown and then re-bootstrap from scratch.
         """
         loop = asyncio.get_running_loop()
         self._setup_signal_handlers(loop)
 
-        try:
-            await self._bootstrap_phases()
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="CORE")
-            
-            # Wait for stop event, but also handle KeyboardInterrupt on Windows
-            while not self._stop_event.is_set():
-                try:
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=0.5)
-                except asyncio.TimeoutError:
-                    # Continue waiting
-                    pass
+        while True:
+            try:
+                await self._bootstrap_phases()
+                
+                # Ready phase - called after bootstrap is complete
+                # This ensures all modules are started and background tasks are running
+                await self._ready_all_modules()
+                await self.hooks.dispatch(SystemHook.ON_ALL_MODULES_READY)
+                
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="CORE")
+                
+                # Wait for stop event, but also handle KeyboardInterrupt on Windows
+                while not self._stop_event.is_set():
+                    try:
+                        await asyncio.wait_for(self._stop_event.wait(), timeout=0.5)
+                    except asyncio.TimeoutError:
+                        # Continue waiting
+                        pass
 
-        except asyncio.CancelledError:
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", level="CORE", tag="core")
-        except KeyboardInterrupt:
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nKeyboard interrupt received. Initiating graceful shutdown...", level="CORE")
-        except Exception as e:
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Fatal Error in core execution: {e}", level="ERROR", tag="core")
-        finally:
-            await shutdown(self.modules, self._background_tasks,
-                          self._config_api_ref[0], self._logger_api_ref[0],
-                          self._system_module_names, self._app_module_names)
+            except asyncio.CancelledError:
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", level="CORE")
+            except KeyboardInterrupt:
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nKeyboard interrupt received. Initiating graceful shutdown...", level="CORE")
+            except Exception as e:
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Fatal Error in core execution: {e}", level="ERROR")
+            finally:
+                await shutdown(self.modules, self._background_tasks,
+                              self._config_api_ref[0], self._logger_api_ref[0],
+                              self._system_module_names, self._app_module_names)
+            
+            # Check if restart was requested
+            if self._restart_event.is_set():
+                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Restarting application...", level="CORE")
+                await self._reset_for_restart()
+                # Continue the while loop to re-bootstrap
+            else:
+                # Normal shutdown, exit the loop
+                break
+    
+    async def _reset_for_restart(self):
+        """
+        Reset application state for restart.
+        
+        Clears all modules, tasks, and events to prepare for a fresh start.
+        """
+        # Clear modules
+        self.modules.clear()
+        
+        # Clear module name lists
+        self._system_module_names.clear()
+        self._app_module_names.clear()
+        
+        # Clear background tasks
+        self._background_tasks.clear()
+        
+        # Reset events
+        self._stop_event.clear()
+        self._restart_event.clear()
+        
+        # Re-initialize context and hooks
+        self.context = ModuleContext()
+        self.hooks = HooksManager()
+        
+        # Re-bootstrap system services
+        self._bootstrap_system(self._initial_settings, self._settings_path)
+        
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application state reset complete.", level="CORE")
 
     async def _bootstrap_phases(self):
         """
         Manage module bootstrap phases.
+        
+        This method handles:
+        - Loading settings
+        - Discovering and loading modules
+        - Starting modules
+        
+        The ready phase is called separately after this completes.
         """
-        # Phase 0
+        # Phase 0 - Settings loaded
         await self.hooks.dispatch(SystemHook.ON_SETTINGS_LOADED)
         print_banner(self._config_api_ref[0])
 
-        # Phase 1
+        # Phase 1 - Bootstrap start
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_START)
         log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Starting Massir Framework...", level="CORE", tag="core_init")
 
-        # Get module settings based on folder type
-        # System phase: folders with type='systems' or type='all'
+        # Phase 2 - Discover and load system modules
         system_modules_config = self._config_api_ref[0].get_modules_config_for_type("systems")
         system_data, disabled_system, _ = await self._discover_modules(system_modules_config, is_system=True)
         await self._load_system_modules(system_data, disabled_system)
 
-        # Application phase: folders with type='applications' or type='all'
+        # Phase 3 - Discover and load application modules
         app_modules_config = self._config_api_ref[0].get_modules_config_for_type("applications")
         app_data, disabled_app, should_sort = await self._discover_modules(app_modules_config, is_system=False)
         await self._load_application_modules(app_data, disabled_system, disabled_app, should_sort)
 
-        # Phase 3 - Start modules in order
+        # Phase 4 - Start all modules
         await self._start_all_modules()
 
-        # Phase 4 - Call ready on all modules
-        await self._ready_all_modules()
-
-        # Final phase
+        # Phase 5 - Bootstrap end
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework initialization complete.", level="CORE", tag="core")
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework bootstrap complete.", level="CORE")
 
     async def _discover_modules(self, modules_config: List[Dict], is_system: bool) -> tuple[List[Dict], Dict[str, List[str]], bool]:
         """
@@ -287,8 +393,14 @@ class App:
 
     async def _ready_all_modules(self):
         """
-        Call ready on all modules after they have started.
+        Call ready on all modules after bootstrap is complete.
+        
+        This method is called after _bootstrap_phases() finishes,
+        ensuring all modules are loaded, started, and background tasks
+        (like servers) are running.
         """
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Calling ready on all modules...", level="CORE")
+        
         await self.loader.ready_all_modules(
             self.modules,
             self._system_module_names,
@@ -297,3 +409,5 @@ class App:
             self._config_api_ref,
             self.hooks
         )
+        
+        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "All modules ready. Application initialization complete.", level="CORE")
