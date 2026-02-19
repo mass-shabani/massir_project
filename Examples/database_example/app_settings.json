@@ -1,20 +1,21 @@
 {
     "app_name": "Database Example",
     "version": "1.0.0",
-    
     "modules": [
-        {
-            "path": "{massir_dir}/modules",
-            "names": ["system_logger", "network_fastapi", "system_database"],
-            "type": "all"
-        },
-        {
-            "path": "{app_dir}/app",
-            "names": "all",
-            "type": "all"
-        }
-    ],
-    
+            {
+                "path": "{massir_dir}/modules",
+                "names": ["system_logger", "network_fastapi", "system_database"],
+                "type": "all"
+            },
+            {
+                "path": "{app_dir}/app",
+                "names": "all",
+                "type": "all"
+            }
+        ],
+    "system": {
+        "auto_shutdown": false
+    },
     "database": {
         "connections": [
             {
@@ -31,9 +32,8 @@
             "max_size": 1000
         }
     },
-    
     "network": {
         "host": "127.0.0.1",
-        "port": 8080
+        "port": 8000
     }
 }

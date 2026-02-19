@@ -27,12 +27,5 @@
   "information": {
     "project_name": "Massir Project",
     "project_info": "Simple example of defining a module and using it."
-  },
-  "fastapi_provider": {
-    "web": {
-      "host": "127.0.0.1",
-      "port": 8000,
-      "reload": false
-    }
   }
 }

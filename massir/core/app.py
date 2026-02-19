@@ -213,7 +213,24 @@ class App:
                 await self._ready_all_modules()
                 await self.hooks.dispatch(SystemHook.ON_ALL_MODULES_READY)
                 
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="CORE")
+                # Check for auto_shutdown setting
+                auto_shutdown = self._config_api_ref[0].get("system.auto_shutdown", False)
+                if auto_shutdown:
+                    # Get configurable delay (default 0.5 seconds)
+                    shutdown_delay = self._config_api_ref[0].get("system.auto_shutdown_delay", 0.0)
+                    
+                    if shutdown_delay > 0:
+                        await asyncio.sleep(shutdown_delay)
+
+                    log_internal(
+                        self._config_api_ref[0], 
+                        self._logger_api_ref[0], 
+                        "Auto-shutdown is enabled. Initiating shutdown...", 
+                        level="CORE"
+                    )
+                    self._stop_event.set()
+                else:
+                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="CORE")
                 
                 # Wait for stop event, but also handle KeyboardInterrupt on Windows
                 while not self._stop_event.is_set():
@@ -399,8 +416,6 @@ class App:
         ensuring all modules are loaded, started, and background tasks
         (like servers) are running.
         """
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Calling ready on all modules...", level="CORE")
-        
         await self.loader.ready_all_modules(
             self.modules,
             self._system_module_names,

@@ -6,10 +6,12 @@ from massir.core.core_apis import CoreConfigAPI
 
 # Default settings values
 DEFAULT_SETTINGS = {
+    "modules": [
+        {"path": "{massir_dir}/modules", "names": []}
+    ],
     "system": {
-        "modules": [
-            {"path": "{massir_dir}", "names": []}
-        ]
+        "auto_shutdown": False,
+        "auto_shutdown_delay": 0.0
     },
     "logs": {
         "show_logs": True,

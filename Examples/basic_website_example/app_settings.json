@@ -1,16 +1,20 @@
 {
-  "modules": [
-    {
-      "path": "{massir_dir}/modules",
-      "type": "systems",
-      "names": ["system_logger", "network_fastapi"]
+    "modules": [
+      {
+        "path": "{massir_dir}/modules",
+        "type": "systems",
+        "names": ["system_logger", "network_fastapi"]
+      },
+      {
+        "path": "{app_dir}/app",
+        "type": "all",
+        "names": "all"
+      }
+    ],
+    "system": {
+      "auto_shutdown": true,
+      "auto_shutdown_delay": 10
     },
-    {
-      "path": "{app_dir}/app",
-      "type": "all",
-      "names": "all"
-    }
-  ],
   "template": {
     "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
     "system_log_template": "[{level}]\t{message}",
