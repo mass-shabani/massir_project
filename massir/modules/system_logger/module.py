@@ -254,9 +254,7 @@ class SystemLoggerModule(IModule):
         Args:
             context: Module context
         """
-        logger = context.services.get("core_logger")
-        if logger:
-            logger.log("System Logger Module is ready. All modules have started.", tag="System")
+        pass
 
     async def stop(self, context):
         """
@@ -278,5 +276,6 @@ class SystemLoggerModule(IModule):
         Args:
             module_instance: The loaded module instance
         """
-        logger = self.context.services.get("core_logger")
-        logger.log(f"Detected loaded module: {module_instance.name}", level="CORE", tag="Detailed")
+        # logger = self.context.services.get("core_logger")
+        # logger.log(f"Detected loaded module: {module_instance.name}", level="CORE", tag="detailed")
+        pass

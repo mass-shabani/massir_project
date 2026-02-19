@@ -493,7 +493,6 @@ class ModuleLoader:
 
         # Dispatch hook after all modules are ready
         await hooks_manager.dispatch(SystemHook.ON_ALL_MODULES_READY)
-        log_internal(config_ref[0], logger_ref[0], "All modules are ready.", level="CORE", tag="core")
 
     def resolve_order(self, modules_data: List[Dict], existing_provides: Dict[str, str] = None, force_execute: bool = False) -> List[Dict]:
         """
