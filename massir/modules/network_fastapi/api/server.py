@@ -48,6 +48,10 @@ class UvicornLogHandler(logging.Handler):
         
         message = self.format(record)
         
+        # Suppress CancelledError traceback during shutdown (normal behavior)
+        if "CancelledError" in message:
+            return
+        
         # Map logging levels
         level_map = {
             logging.DEBUG: "DEBUG",
@@ -62,7 +66,7 @@ class UvicornLogHandler(logging.Handler):
         if "access" in record.name:
             tag = "http"
         else:
-            tag = "server"
+            tag = "server_Uvicorn"
         
         self.log_callback(message, level, tag)
 
@@ -75,6 +79,8 @@ class ServerAPI:
     without directly starting them. The consuming module decides
     when to start the server.
     """
+    
+    _logging_setup = False  # Class-level flag to prevent duplicate setup
     
     def __init__(self, fastapi_app, config_api=None, logger_api=None):
         """
@@ -176,6 +182,12 @@ class ServerAPI:
         if not self._logger_api:
             return
         
+        # Only setup once at class level
+        if ServerAPI._logging_setup:
+            return
+        
+        ServerAPI._logging_setup = True
+        
         def log_callback(message: str, level: str, tag: Optional[str] = None):
             self._logger_api.log(message, level=level, tag=tag)
         
@@ -248,19 +260,18 @@ class ServerAPI:
         Stop the server gracefully.
         """
         if self._server:
+            # Signal the server to exit
             self._server.should_exit = True
-            try:
-                await self._server.shutdown()
-            except Exception as e:
-                if self._logger_api:
-                    self._logger_api.log(
-                        f"Error during server shutdown: {e}",
-                        level="ERROR",
-                        tag="server"
-                    )
-            finally:
-                self._server = None
-                self._status = ServerStatus(is_running=False)
+            
+            # Give the server a moment to complete its own shutdown
+            # uvicorn's serve() handles shutdown internally when should_exit is True
+            for _ in range(10):  # Wait up to 1 second
+                if self._server is None or not hasattr(self._server, 'servers'):
+                    break
+                await asyncio.sleep(0.1)
+            
+            self._server = None
+            self._status = ServerStatus(is_running=False)
     
     @property
     def status(self) -> ServerStatus:
