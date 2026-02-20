@@ -1,0 +1,10 @@
+{
+    "name": "multi_database_service",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "MultiDatabaseServiceModule",
+    "description": "Multi-database service with web UI for dynamic database connections",
+    "requires": ["http_api", "core_logger", "template_service"],
+    "provides": ["multi_database_service"],
+    "enabled": true
+}

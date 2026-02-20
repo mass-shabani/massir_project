@@ -2,10 +2,15 @@
 
 /* CSS Variables */
 :root {
-    --primary-color: #4f46e5;
+    --primary-color: #625dc6;
     --primary-dark: #4338ca;
     --primary-light: #818cf8;
+    --special-color: #176e05;
+    --special-dark: #0c4501;
+    --listless-color: #848ab2;
+    --listless-dark: #525252;
     --secondary-color: #1e293b;
+    --secondary-light: #0c326f;
     --success-color: #10b981;
     --warning-color: #f59e0b;
     --danger-color: #ef4444;
@@ -305,18 +310,30 @@ body {
 .btn-primary {
     background-color: var(--primary-color);
     color: var(--white);
+    min-width: 180px;
 }
 
 .btn-primary:hover {
-    background-color: var(--primary-dark);
+    background-color: var(--secondary-light);
+}
+
+.btn-listless {
+    background-color: var(--listless-color);
+    color: var(--white);
+    min-width: 180px;
+}
+
+.btn-listless:hover {
+    background-color: var(--listless-dark);
 }
 
 .btn-success {
-    background-color: var(--success-color);
+    background-color: var(--special-color);
+    min-width: 180px;
 }
 
 .btn-success:hover {
-    background-color: #059669;
+    background-color: var(--special-dark);
 }
 
 .btn-warning {
@@ -813,5 +830,233 @@ code {
     
     .form-actions .btn {
         width: 100%;
+    }
+}
+
+/* Multi-Database Module Styles */
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 20px;
+    background-color: var(--light-bg);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.badge-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.badge-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.badge-warning {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.badge-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* Status indicators */
+.status-connected {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.status-disconnected {
+    color: var(--danger-color);
+    font-weight: 500;
+}
+
+/* Log container */
+.log-container {
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #1e293b;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+    font-size: 0.8rem;
+}
+
+.log-entry {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.log-entry:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.log-time {
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.log-level {
+    font-weight: 600;
+    flex-shrink: 0;
+    min-width: 60px;
+}
+
+.log-message {
+    color: #e2e8f0;
+    word-break: break-word;
+}
+
+.log-info .log-level { color: #38bdf8; }
+.log-warning .log-level { color: #fbbf24; }
+.log-error .log-level { color: #f87171; }
+
+/* Form row for inline fields */
+.form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* Form section */
+.form-section {
+    background-color: var(--light-bg);
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+}
+
+/* Inline form */
+.form-inline {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.form-inline select {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xs);
+    font-size: 0.9rem;
+    min-width: 200px;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xs);
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 0.875rem;
+    transition: var(--transition);
+}
+
+.page-link:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.page-current {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: var(--radius-xs);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Info grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* Menu group header for multi-db */
+.menu-group-header.multi-db {
+    color: #8b5cf6;
+}
+
+/* Additional responsive styles */
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .form-row .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .form-inline select {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
     }
 }
