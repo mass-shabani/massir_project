@@ -79,13 +79,17 @@ celerybeat.pid
 .env
 .venv
 env/
+.env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Virtual Environment
-.env/
+# data temporary
+data
+Data
+data/
+Data/
 
 # Spyder project settings
 .spyproject
