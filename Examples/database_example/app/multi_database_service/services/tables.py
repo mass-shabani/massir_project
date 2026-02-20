@@ -200,6 +200,7 @@ class TableManager:
     
     async def create_sample_tables(self, name: str = None) -> Dict[str, Any]:
         """Create sample tables with test data."""
+        from datetime import datetime, timedelta
         results = []
         
         # Create customers table
@@ -208,7 +209,7 @@ class TableManager:
             {"name": "name", "type": "TEXT", "nullable": False},
             {"name": "email", "type": "TEXT", "nullable": False},
             {"name": "phone", "type": "TEXT"},
-            {"name": "created_at", "type": "TEXT", "default": "CURRENT_TIMESTAMP"}
+            {"name": "created_at", "type": "TEXT"}
         ]
         
         result = await self.create_table("customers", customers_columns, name)
@@ -221,7 +222,7 @@ class TableManager:
             {"name": "product_name", "type": "TEXT", "nullable": False},
             {"name": "quantity", "type": "INTEGER", "nullable": False},
             {"name": "price", "type": "REAL", "nullable": False},
-            {"name": "order_date", "type": "TEXT", "default": "CURRENT_TIMESTAMP"}
+            {"name": "order_date", "type": "TEXT"}
         ]
         
         result = await self.create_table("orders", orders_columns, name)
@@ -229,22 +230,37 @@ class TableManager:
         
         # Insert sample data
         if results[0]["success"]:
-            names = ["Ali", "Reza", "Sara", "Mona", "Hassan", "Zahra", "Mohammad", "Fateme"]
+            # European names
+            names = [
+                "James", "Emma", "Liam", "Olivia", "Noah", "Sophia", 
+                "William", "Isabella", "Oliver", "Mia", "Lucas", "Charlotte",
+                "Henry", "Amelia", "Alexander"
+            ]
+            # European phone formats
+            phone_prefixes = ["+44", "+33", "+49", "+39", "+34", "+31", "+46", "+32"]
             products = ["Laptop", "Phone", "Tablet", "Monitor", "Keyboard", "Mouse", "Headset"]
             
+            base_date = datetime.now()
+            
             for i in range(30):
+                prefix = random.choice(phone_prefixes)
+                phone = f"{prefix} {random.randint(100, 999)} {random.randint(1000000, 9999999)}"
+                created_date = base_date - timedelta(days=random.randint(0, 365))
                 await self._insert_record("customers", {
                     "name": random.choice(names),
                     "email": f"user{i+1}@example.com",
-                    "phone": f"0912{random.randint(1000000, 9999999)}"
+                    "phone": phone,
+                    "created_at": created_date.strftime("%Y-%m-%d %H:%M:%S")
                 }, name)
             
             for i in range(30):
+                order_date = base_date - timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))
                 await self._insert_record("orders", {
                     "customer_id": random.randint(1, 30),
                     "product_name": random.choice(products),
                     "quantity": random.randint(1, 5),
-                    "price": random.uniform(100, 1000)
+                    "price": round(random.uniform(100, 1000), 2),
+                    "order_date": order_date.strftime("%Y-%m-%d %H:%M:%S")
                 }, name)
         
         self._log("Sample tables created with 30 records each", "INFO")
