@@ -3,5 +3,8 @@ asyncpg>=0.29.0
 aiomysql>=0.2.0
 aiosqlite>=0.19.0
 
+# Required for MySQL 8+ authentication (sha256_password, caching_sha2_password)
+cryptography>=42.0.0
+
 # Optional: Connection pooling enhancements
 # No additional packages needed - using built-in pool implementations

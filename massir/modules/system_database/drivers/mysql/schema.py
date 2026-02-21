@@ -162,7 +162,7 @@ class MySQLSchemaManager(BaseSchemaManager):
         """Check if table exists."""
         sql = """
             SELECT COUNT(*) FROM information_schema.tables 
-            WHERE table_schema = DATABASE() AND table_name = %s
+            WHERE table_schema = DATABASE() AND TABLE_NAME = %s
         """
         result = await self._pool.fetch_one(sql, (name,))
         return result and list(result.values())[0] > 0
@@ -174,12 +174,12 @@ class MySQLSchemaManager(BaseSchemaManager):
         
         # Get column info
         sql = """
-            SELECT column_name, data_type, is_nullable, column_default,
-                   character_maximum_length, numeric_precision, numeric_scale,
-                   column_key, extra, column_comment
+            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT,
+                   CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE,
+                   COLUMN_KEY, EXTRA, COLUMN_COMMENT
             FROM information_schema.columns
-            WHERE table_schema = DATABASE() AND table_name = %s
-            ORDER BY ordinal_position
+            WHERE table_schema = DATABASE() AND TABLE_NAME = %s
+            ORDER BY ORDINAL_POSITION
         """
         rows = await self._pool.fetch_all(sql, (name,))
         
@@ -187,25 +187,25 @@ class MySQLSchemaManager(BaseSchemaManager):
         primary_key = []
         
         for row in rows:
-            col_type = row["data_type"].upper()
-            if row["character_maximum_length"]:
-                col_type = f"VARCHAR({row['character_maximum_length']})"
+            col_type = row["DATA_TYPE"].upper()
+            if row["CHARACTER_MAXIMUM_LENGTH"]:
+                col_type = f"VARCHAR({row['CHARACTER_MAXIMUM_LENGTH']})"
             
-            is_pk = row["column_key"] == "PRI"
-            is_auto = "auto_increment" in (row["extra"] or "").lower()
+            is_pk = row["COLUMN_KEY"] == "PRI"
+            is_auto = "auto_increment" in (row["EXTRA"] or "").lower()
             
             col = ColumnDef(
-                name=row["column_name"],
+                name=row["COLUMN_NAME"],
                 type=col_type,
-                nullable=row["is_nullable"] == "YES",
-                default=row["column_default"],
+                nullable=row["IS_NULLABLE"] == "YES",
+                default=row["COLUMN_DEFAULT"],
                 primary_key=is_pk,
                 auto_increment=is_auto,
-                comment=row["column_comment"]
+                comment=row["COLUMN_COMMENT"]
             )
             columns.append(col)
             if is_pk:
-                primary_key.append(row["column_name"])
+                primary_key.append(row["COLUMN_NAME"])
         
         return TableDef(
             name=name,
@@ -216,13 +216,13 @@ class MySQLSchemaManager(BaseSchemaManager):
     async def list_tables(self) -> List[str]:
         """List all tables."""
         sql = """
-            SELECT table_name 
+            SELECT TABLE_NAME 
             FROM information_schema.tables 
             WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
-            ORDER BY table_name
+            ORDER BY TABLE_NAME
         """
         rows = await self._pool.fetch_all(sql)
-        return [row["table_name"] for row in rows]
+        return [row["TABLE_NAME"] for row in rows]
     
     async def create_index(
         self, 
@@ -254,11 +254,11 @@ class MySQLSchemaManager(BaseSchemaManager):
         """Check if index exists."""
         sql = """
             SELECT COUNT(*) FROM information_schema.statistics 
-            WHERE table_schema = DATABASE() AND index_name = %s
+            WHERE table_schema = DATABASE() AND INDEX_NAME = %s
         """
         params = (name,)
         if table:
-            sql += " AND table_name = %s"
+            sql += " AND TABLE_NAME = %s"
             params = (name, table)
         
         result = await self._pool.fetch_one(sql, params)

@@ -639,3 +639,227 @@ class DatabaseService:
     ) -> List[Dict[str, Any]]:
         """Execute SQL and fetch all rows."""
         return await self.get_connection(connection).fetch_all(query, params)
+    
+    # --- Dynamic Connection Testing and Creation ---
+    
+    async def test_connection(
+        self, 
+        config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Test a database connection without persisting it.
+        
+        Args:
+            config: Connection configuration dictionary with keys:
+                - driver: Database type (sqlite, postgresql, mysql)
+                - host, port, database, user, password: For PostgreSQL/MySQL
+                - path: For SQLite
+                
+        Returns:
+            Dict with 'success' and 'message' keys
+        """
+        driver = config.get("driver", "sqlite").lower()
+        
+        try:
+            if driver == "sqlite":
+                return await self._test_sqlite_connection(config)
+            elif driver in ("postgresql", "postgres", "psql"):
+                return await self._test_postgresql_connection(config)
+            elif driver == "mysql":
+                return await self._test_mysql_connection(config)
+            else:
+                return {
+                    "success": False,
+                    "message": f"Unsupported database driver: {driver}"
+                }
+        except Exception as e:
+            error_msg = str(e)
+            self._log(f"Connection test failed: {error_msg}", "ERROR")
+            return {
+                "success": False,
+                "message": error_msg
+            }
+    
+    async def _test_sqlite_connection(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Test SQLite connection."""
+        from pathlib import Path
+        import aiosqlite
+        
+        path = config.get("path", "data/test.db")
+        db_path = Path(path)
+        
+        # Check if file exists
+        if not db_path.exists():
+            return {
+                "success": False,
+                "message": f"Database file not found: {db_path}",
+                "file_exists": False
+            }
+        
+        # Test connection
+        async with aiosqlite.connect(str(db_path)) as conn:
+            await conn.execute("SELECT 1")
+        
+        return {
+            "success": True,
+            "message": f"Successfully connected to SQLite database: {db_path}",
+            "file_exists": True,
+            "resolved_path": str(db_path.resolve())
+        }
+    
+    async def _test_postgresql_connection(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Test PostgreSQL connection."""
+        import asyncpg
+        
+        host = config.get("host", "localhost")
+        port = config.get("port", 5432)
+        database = config.get("database", "postgres")
+        user = config.get("user", "postgres")
+        password = config.get("password", "")
+        
+        conn = await asyncpg.connect(
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+            timeout=10
+        )
+        await conn.execute("SELECT 1")
+        await conn.close()
+        
+        return {
+            "success": True,
+            "message": f"Successfully connected to PostgreSQL: {host}:{port}/{database}"
+        }
+    
+    async def _test_mysql_connection(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Test MySQL connection."""
+        import aiomysql
+        
+        host = config.get("host", "localhost")
+        port = config.get("port", 3306)
+        database = config.get("database", "mysql")
+        user = config.get("user", "root")
+        password = config.get("password", "")
+        
+        conn = await aiomysql.connect(
+            host=host,
+            port=port,
+            db=database,
+            user=user,
+            password=password,
+            connect_timeout=10
+        )
+        async with conn.cursor() as cur:
+            await cur.execute("SELECT 1")
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": f"Successfully connected to MySQL: {host}:{port}/{database}"
+        }
+    
+    async def create_database(
+        self, 
+        config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Create a new database (SQLite only).
+        
+        Args:
+            config: Connection configuration with 'path' key
+            
+        Returns:
+            Dict with 'success' and 'message' keys
+        """
+        from pathlib import Path
+        import aiosqlite
+        
+        driver = config.get("driver", "sqlite").lower()
+        
+        if driver != "sqlite":
+            return {
+                "success": False,
+                "message": "create_database is only supported for SQLite"
+            }
+        
+        path = config.get("path", "data/new.db")
+        db_path = Path(path)
+        
+        # Check if file already exists
+        if db_path.exists():
+            return {
+                "success": False,
+                "message": f"Database file already exists: {db_path}"
+            }
+        
+        # Create directory if needed
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Create the database file
+        async with aiosqlite.connect(str(db_path)) as conn:
+            await conn.execute("CREATE TABLE IF NOT EXISTS _init (id INTEGER PRIMARY KEY)")
+            await conn.commit()
+        
+        self._log(f"Created new SQLite database: {db_path}")
+        
+        return {
+            "success": True,
+            "message": f"Successfully created new SQLite database: {db_path}",
+            "resolved_path": str(db_path.resolve())
+        }
+    
+    async def get_table_schema(
+        self, 
+        table_name: str,
+        connection: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get the schema of a table.
+        
+        Args:
+            table_name: Name of the table
+            connection: Connection name (uses default if None)
+            
+        Returns:
+            List of column definitions as dictionaries
+        """
+        conn = self.get_connection(connection)
+        table_def = await conn._schema.get_table_schema(table_name)
+        
+        if table_def is None:
+            return []
+        
+        return [col.to_dict() for col in table_def.columns]
+    
+    async def add_dynamic_connection(
+        self, 
+        config: Dict[str, Any]
+    ) -> DatabaseConnection:
+        """
+        Add a dynamic database connection from configuration dictionary.
+        
+        This method allows adding connections at runtime without
+        pre-defining them in the initialization config.
+        
+        Args:
+            config: Connection configuration dictionary
+            
+        Returns:
+            DatabaseConnection instance
+        """
+        db_config = DatabaseConfig.from_dict(config)
+        return await self.add_connection(db_config)
+    
+    def has_connection(self, name: str) -> bool:
+        """Check if a connection exists."""
+        return name in self._connections
+    
+    def is_connected(self, name: Optional[str] = None) -> bool:
+        """Check if a connection is active."""
+        try:
+            conn = self.get_connection(name)
+            return conn is not None
+        except DatabaseError:
+            return False
