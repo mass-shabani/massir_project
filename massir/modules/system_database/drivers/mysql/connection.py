@@ -161,7 +161,8 @@ class MySQLPool(BasePool):
                 minsize=self.config.pool_min_size,
                 maxsize=self.config.pool_max_size,
                 connect_timeout=self.config.connect_timeout,
-                autocommit=False
+                autocommit=False,
+                pool_recycle=3600  # Recycle connections after 1 hour to avoid timeout
             )
             self._is_initialized = True
             return True
@@ -195,8 +196,11 @@ class MySQLPool(BasePool):
     ) -> QueryResult:
         """Execute query using a connection from the pool."""
         start_time = time.time()
-        conn = await self.acquire()
+        conn = None
         try:
+            conn = await self.acquire()
+            # Ping to check connection, reconnect if needed
+            await conn.ping(reconnect=True)
             async with conn.cursor() as cursor:
                 await cursor.execute(query, params or ())
                 await conn.commit()
@@ -209,14 +213,19 @@ class MySQLPool(BasePool):
                     execution_time=time.time() - start_time
                 )
         except Exception as e:
-            await conn.rollback()
+            if conn:
+                try:
+                    await conn.rollback()
+                except:
+                    pass
             return QueryResult(
                 success=False,
                 error=str(e),
                 execution_time=time.time() - start_time
             )
         finally:
-            await self.release(conn)
+            if conn:
+                await self.release(conn)
     
     async def fetch_one(
         self, 
@@ -226,6 +235,7 @@ class MySQLPool(BasePool):
         """Fetch single row using a connection from the pool."""
         conn = await self.acquire()
         try:
+            await conn.ping(reconnect=True)
             async with conn.cursor(aiomysql.DictCursor) as cursor:
                 await cursor.execute(query, params or ())
                 row = await cursor.fetchone()
@@ -241,6 +251,7 @@ class MySQLPool(BasePool):
         """Fetch all rows using a connection from the pool."""
         conn = await self.acquire()
         try:
+            await conn.ping(reconnect=True)
             async with conn.cursor(aiomysql.DictCursor) as cursor:
                 await cursor.execute(query, params or ())
                 rows = await cursor.fetchall()
@@ -256,6 +267,7 @@ class MySQLPool(BasePool):
         """Fetch single value using a connection from the pool."""
         conn = await self.acquire()
         try:
+            await conn.ping(reconnect=True)
             async with conn.cursor() as cursor:
                 await cursor.execute(query, params or ())
                 row = await cursor.fetchone()
