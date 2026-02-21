@@ -35,7 +35,7 @@ class MultiDatabaseServiceModule(IModule):
         self.logger = context.services.get("core_logger")
         self.template = context.services.get("template_service")
         self.menu_manager = context.services.get("menu_manager")
-        self.path_manager = context.services.get("path_manager")
+        self.path_manager = context.services.get("core_path")  # Registered as "core_path" in registry
         
         # Create a LogManager instance for the database manager
         self.log_manager = LogManager(self.logger)
