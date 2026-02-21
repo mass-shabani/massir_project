@@ -9,6 +9,7 @@ This module provides:
 """
 from massir.core.interfaces import IModule, ModuleContext
 from .services.database import MultiDatabaseManager
+from .services.models import LogManager
 from .routes.pages import register_page_routes
 
 
@@ -26,6 +27,7 @@ class MultiDatabaseServiceModule(IModule):
         self.template = None
         self.menu_manager = None
         self.db_manager = None
+        self.log_manager = None
     
     async def load(self, context: ModuleContext):
         """Get services."""
@@ -35,8 +37,11 @@ class MultiDatabaseServiceModule(IModule):
         self.menu_manager = context.services.get("menu_manager")
         self.path_manager = context.services.get("path_manager")
         
+        # Create a LogManager instance for the database manager
+        self.log_manager = LogManager(self.logger)
+        
         # Initialize database manager with path_manager for proper path resolution
-        self.db_manager = MultiDatabaseManager(self.logger, self.path_manager)
+        self.db_manager = MultiDatabaseManager(self.log_manager, self.path_manager)
         
         if self.logger:
             self.logger.log("MultiDatabaseService module loaded", tag="multi_db")
@@ -105,7 +110,9 @@ class MultiDatabaseServiceModule(IModule):
         """Cleanup resources."""
         # Disconnect all connections
         if self.db_manager:
-            await self.db_manager.disconnect_all()
+            # Disconnect all active connections
+            for conn_name in list(self.db_manager._connection_info.keys()):
+                await self.db_manager.disconnect(conn_name)
         
         # Unregister menu items
         if self.menu_manager:

@@ -509,7 +509,7 @@ td.actions .btn:last-child {
     border: 1px solid #fde68a;
 }
 
-.alert-danger {
+.alert-error {
     background-color: #fee2e2;
     color: #991b1b;
     border: 1px solid #fecaca;

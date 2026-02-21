@@ -71,14 +71,21 @@ def register_data_routes(http_api, template, db_manager, logger):
                             pk_col = col["name"]
                             break
                     
-                    if pk_col and pk_col in row:
-                        pk_val = row[pk_col]
-                        row_data["Actions"] = f'''
-                        <div class="action-icons">
-                            <a href="/multi-db/data/{selected_table}/edit?pk={pk_val}" class="action-icon edit" title="Edit">✏️</a>
-                            <a href="/multi-db/data/{selected_table}/delete?pk={pk_val}" class="action-icon delete" title="Delete">🗑️</a>
-                        </div>
-                        '''
+                    # Check if primary key exists and has a value
+                    if pk_col:
+                        pk_val = row.get(pk_col)
+                        # Only show actions if pk_val is not None and not empty
+                        if pk_val is not None and str(pk_val).strip() != "":
+                            row_data["Actions"] = f'''
+                            <div class="action-icons">
+                                <a href="/multi-db/data/{selected_table}/edit?pk={pk_val}" class="action-icon edit" title="Edit">✏️</a>
+                                <a href="/multi-db/data/{selected_table}/delete?pk={pk_val}" class="action-icon delete" title="Delete">🗑️</a>
+                            </div>
+                            '''
+                        else:
+                            row_data["Actions"] = '<span class="text-muted">-</span>'
+                    else:
+                        row_data["Actions"] = '<span class="text-muted">No PK</span>'
                     rows.append(row_data)
                 
                 headers.append("Actions")
@@ -197,6 +204,8 @@ def register_data_routes(http_api, template, db_manager, logger):
     @http_api.post("/multi-db/data/{table_name}/add")
     async def add_record_submit(request: http_api.Request):
         """Handle add record form submission."""
+        from datetime import datetime
+        
         table_name = request.path_params["table_name"]
         form = await request.form()
         
@@ -213,10 +222,22 @@ def register_data_routes(http_api, template, db_manager, logger):
             if value:
                 # Convert type if needed
                 col_type = col["type"].upper()
-                if "INT" in col_type:
+                if "INT" in col_type and "DATETIME" not in col_type and "TIMESTAMP" not in col_type:
                     data[col_name] = int(value)
-                elif "REAL" in col_type or "FLOAT" in col_type:
+                elif "REAL" in col_type or "FLOAT" in col_type or "DOUBLE" in col_type:
                     data[col_name] = float(value)
+                elif "DATETIME" in col_type or "TIMESTAMP" in col_type:
+                    # Convert string to datetime object
+                    try:
+                        data[col_name] = datetime.fromisoformat(str(value).replace(' ', 'T'))
+                    except (ValueError, AttributeError):
+                        data[col_name] = value
+                elif "DATE" in col_type:
+                    # Convert string to date object
+                    try:
+                        data[col_name] = datetime.fromisoformat(str(value)).date()
+                    except (ValueError, AttributeError):
+                        data[col_name] = value
                 else:
                     data[col_name] = value
         
@@ -331,6 +352,8 @@ def register_data_routes(http_api, template, db_manager, logger):
     @http_api.post("/multi-db/data/{table_name}/edit")
     async def edit_record_submit(request: http_api.Request):
         """Handle edit record form submission."""
+        from datetime import datetime
+        
         table_name = request.path_params["table_name"]
         form = await request.form()
         
@@ -348,10 +371,22 @@ def register_data_routes(http_api, template, db_manager, logger):
             value = form.get(col_name)
             if value:
                 col_type = col["type"].upper()
-                if "INT" in col_type:
+                if "INT" in col_type and "DATETIME" not in col_type and "TIMESTAMP" not in col_type:
                     data[col_name] = int(value)
-                elif "REAL" in col_type or "FLOAT" in col_type:
+                elif "REAL" in col_type or "FLOAT" in col_type or "DOUBLE" in col_type:
                     data[col_name] = float(value)
+                elif "DATETIME" in col_type or "TIMESTAMP" in col_type:
+                    # Convert string to datetime object
+                    try:
+                        data[col_name] = datetime.fromisoformat(str(value).replace(' ', 'T'))
+                    except (ValueError, AttributeError):
+                        data[col_name] = value
+                elif "DATE" in col_type:
+                    # Convert string to date object
+                    try:
+                        data[col_name] = datetime.fromisoformat(str(value)).date()
+                    except (ValueError, AttributeError):
+                        data[col_name] = value
                 else:
                     data[col_name] = value
         

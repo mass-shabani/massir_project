@@ -239,7 +239,7 @@ def register_connection_routes(http_api, template, db_manager, logger):
                     url="/multi-db/connection?message=Create database is only available for SQLite&type=error",
                     status_code=303
                 )
-            result = await db_manager.connections.create_database(config)
+            result = await db_manager.create_database(config)
             if result["success"]:
                 return http_api.RedirectResponse(
                     url=f"/multi-db/connection?message={result['message']}&type=success",

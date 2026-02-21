@@ -1,324 +1,186 @@
 """
 Data operations for Multi-Database Manager.
 
-This module provides:
-- Table data retrieval with pagination
-- Record CRUD operations (insert, update, delete)
-- Database information and statistics
+This module provides data-related operations:
+- Get table data with pagination
+- Insert record
+- Update record
+- Delete record
+- Execute raw SQL
+- Get database info
 """
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
-
-from .models import LogManager
-from .connection import ConnectionManager
-
-if TYPE_CHECKING:
-    from .tables import TableManager
+from typing import Any, Dict, List
 
 
-class DataManager:
-    """Manages data operations for multiple database types."""
+class DataMixin:
+    """
+    Mixin class for data management operations.
     
-    def __init__(
-        self, 
-        connection_manager: ConnectionManager, 
-        log_manager: LogManager,
-        table_manager: 'TableManager' = None
-    ):
-        self._connections = connection_manager
-        self._log = log_manager.log
-        self._table_manager = table_manager
-    
-    def set_table_manager(self, table_manager: 'TableManager'):
-        """Set the table manager (to avoid circular import)."""
-        self._table_manager = table_manager
+    Requires the following attributes:
+    - _db_service: DatabaseService instance
+    - _log: Logging function
+    - _active_connection: Name of active connection
+    - _connection_info: Dict of ConnectionInfo objects
+    """
     
     async def get_table_data(
-        self, 
+        self: "DataMixin", 
         table_name: str, 
         name: str = None,
         limit: int = 100,
         offset: int = 0
     ) -> Dict[str, Any]:
         """Get data from a table with pagination."""
-        conn_info = self._connections.get_connection(name)
-        if not conn_info or not conn_info.connected:
+        conn_name = name or self._active_connection
+        if not conn_name or not self._db_service.has_connection(conn_name):
             return {"rows": [], "total": 0, "error": "No connection"}
         
-        driver = conn_info.driver.lower()
-        
         try:
-            if driver == "sqlite":
-                conn = await self._connections.get_connection_object(name)
-                try:
-                    # Get total count (without row_factory for simple tuple access)
-                    cursor = await conn.execute(f"SELECT COUNT(*) FROM {table_name}")
-                    row = await cursor.fetchone()
-                    total = row[0] if row else 0
-                    
-                    # Set row_factory for dict results
-                    conn.row_factory = lambda c, r: dict(zip([d[0] for d in c.description], r))
-                    
-                    # Get data
-                    cursor = await conn.execute(
-                        f"SELECT * FROM {table_name} LIMIT ? OFFSET ?",
-                        (limit, offset)
-                    )
-                    rows = await cursor.fetchall()
-                    
-                    return {"rows": rows, "total": total, "error": None}
-                finally:
-                    await conn.close()
+            conn = self._db_service.get_connection(conn_name)
             
-            elif driver in ("postgresql", "postgres", "psql"):
-                conn = await self._connections.get_connection_object(name)
-                try:
-                    # Get total count
-                    total = await conn.fetchval(f"SELECT COUNT(*) FROM {table_name}")
-                    
-                    # Get data
-                    rows = await conn.fetch(
-                        f"SELECT * FROM {table_name} LIMIT $1 OFFSET $2",
-                        limit, offset
-                    )
-                    
-                    return {"rows": [dict(r) for r in rows], "total": total, "error": None}
-                finally:
-                    await conn.close()
+            # Get total count
+            total = await conn.count(table_name)
             
-            elif driver == "mysql":
-                import aiomysql
-                conn = await self._connections.get_connection_object(name)
-                try:
-                    async with conn.cursor(aiomysql.DictCursor) as cur:
-                        # Get total count
-                        await cur.execute(f"SELECT COUNT(*) as cnt FROM {table_name}")
-                        total = (await cur.fetchone())["cnt"]
-                        
-                        # Get data
-                        await cur.execute(
-                            f"SELECT * FROM {table_name} LIMIT %s OFFSET %s",
-                            (limit, offset)
-                        )
-                        rows = await cur.fetchall()
-                    
-                    return {"rows": rows, "total": total, "error": None}
-                finally:
-                    conn.close()
+            # Get data
+            rows = await conn.find_many(table_name, limit=limit, offset=offset)
             
+            return {"rows": rows, "total": total, "error": None}
         except Exception as e:
             error_msg = str(e)
             self._log(f"Error getting table data: {error_msg}", "ERROR", table_name)
             return {"rows": [], "total": 0, "error": error_msg}
     
+    async def insert_record(
+        self: "DataMixin", 
+        table_name: str, 
+        data: dict,
+        name: str = None
+    ) -> Dict[str, Any]:
+        """Insert a record."""
+        conn_name = name or self._active_connection
+        if not conn_name or not self._db_service.has_connection(conn_name):
+            return {"success": False, "error": "No connection"}
+        
+        try:
+            result = await self._db_service.get_connection(conn_name).insert(table_name, data)
+            
+            if result.success:
+                self._log(f"Record inserted into {table_name}", "INFO")
+                return {"success": True}
+            else:
+                self._log(f"Insert failed: {result.error}", "ERROR", table_name)
+                return {"success": False, "error": result.error}
+        except Exception as e:
+            error_msg = str(e)
+            self._log(f"Insert failed: {error_msg}", "ERROR", table_name)
+            return {"success": False, "error": error_msg}
+    
+    async def update_record(
+        self: "DataMixin", 
+        table_name: str, 
+        data: dict,
+        where: dict,
+        name: str = None
+    ) -> Dict[str, Any]:
+        """Update records."""
+        conn_name = name or self._active_connection
+        if not conn_name or not self._db_service.has_connection(conn_name):
+            return {"success": False, "error": "No connection"}
+        
+        try:
+            result = await self._db_service.get_connection(conn_name).update(table_name, data, where)
+            
+            if result.success:
+                self._log(f"Record updated in {table_name}", "INFO")
+                return {"success": True}
+            else:
+                self._log(f"Update failed: {result.error}", "ERROR", table_name)
+                return {"success": False, "error": result.error}
+        except Exception as e:
+            error_msg = str(e)
+            self._log(f"Update failed: {error_msg}", "ERROR", table_name)
+            return {"success": False, "error": error_msg}
+    
+    async def delete_record(
+        self: "DataMixin", 
+        table_name: str, 
+        where: dict,
+        name: str = None
+    ) -> Dict[str, Any]:
+        """Delete records."""
+        conn_name = name or self._active_connection
+        if not conn_name or not self._db_service.has_connection(conn_name):
+            return {"success": False, "error": "No connection"}
+        
+        try:
+            result = await self._db_service.get_connection(conn_name).delete(table_name, where)
+            
+            if result.success:
+                self._log(f"Record deleted from {table_name}", "INFO")
+                return {"success": True}
+            else:
+                self._log(f"Delete failed: {result.error}", "ERROR", table_name)
+                return {"success": False, "error": result.error}
+        except Exception as e:
+            error_msg = str(e)
+            self._log(f"Delete failed: {error_msg}", "ERROR", table_name)
+            return {"success": False, "error": error_msg}
+    
     async def execute_sql(
-        self, 
+        self: "DataMixin", 
         sql: str, 
         params: tuple = None,
         name: str = None
     ) -> Dict[str, Any]:
-        """Execute raw SQL and return results."""
-        conn_info = self._connections.get_connection(name)
-        if not conn_info or not conn_info.connected:
+        """Execute raw SQL."""
+        conn_name = name or self._active_connection
+        if not conn_name or not self._db_service.has_connection(conn_name):
             return {"success": False, "error": "No connection", "rows": []}
         
-        driver = conn_info.driver.lower()
-        
         try:
-            if driver == "sqlite":
-                conn = await self._connections.get_connection_object(name)
-                try:
-                    conn.row_factory = lambda c, r: dict(zip([d[0] for d in c.description], r))
-                    
-                    cursor = await conn.execute(sql, params or ())
-                    if sql.strip().upper().startswith(("SELECT", "PRAGMA", "EXPLAIN")):
-                        rows = await cursor.fetchall()
-                        return {"success": True, "rows": rows, "affected": 0}
-                    else:
-                        await conn.commit()
-                        return {"success": True, "rows": [], "affected": cursor.rowcount}
-                finally:
-                    await conn.close()
+            result = await self._db_service.get_connection(conn_name).execute(sql, params)
             
-            elif driver in ("postgresql", "postgres", "psql"):
-                conn = await self._connections.get_connection_object(name)
-                try:
-                    if sql.strip().upper().startswith("SELECT"):
-                        rows = await conn.fetch(sql, *(params or ()))
-                        return {"success": True, "rows": [dict(r) for r in rows], "affected": 0}
-                    else:
-                        result = await conn.execute(sql, *(params or ()))
-                        return {"success": True, "rows": [], "affected": result.split()[-1] if result else 0}
-                finally:
-                    await conn.close()
-            
-            elif driver == "mysql":
-                import aiomysql
-                conn = await self._connections.get_connection_object(name)
-                try:
-                    async with conn.cursor(aiomysql.DictCursor) as cur:
-                        await cur.execute(sql, params)
-                        if sql.strip().upper().startswith("SELECT"):
-                            rows = await cur.fetchall()
-                            return {"success": True, "rows": rows, "affected": 0}
-                        else:
-                            await conn.commit()
-                            return {"success": True, "rows": [], "affected": cur.rowcount}
-                finally:
-                    conn.close()
-            
+            if result.success:
+                return {
+                    "success": True, 
+                    "rows": result.rows, 
+                    "affected": result.affected_rows
+                }
+            else:
+                self._log(f"SQL execution error: {result.error}", "ERROR", sql[:100])
+                return {"success": False, "error": result.error, "rows": []}
         except Exception as e:
             error_msg = str(e)
             self._log(f"SQL execution error: {error_msg}", "ERROR", sql[:100])
             return {"success": False, "error": error_msg, "rows": []}
     
-    async def insert_record(
-        self, 
-        table_name: str, 
-        data: dict,
-        name: str = None
-    ) -> Dict[str, Any]:
-        """Insert a record into a table."""
-        conn_info = self._connections.get_connection(name)
-        if not conn_info:
-            return {"success": False, "error": "No connection"}
-        
-        driver = conn_info.driver.lower()
-        columns = list(data.keys())
-        
-        if driver == "sqlite":
-            placeholders = ", ".join(["?"] * len(columns))
-        elif driver in ("postgresql", "postgres", "psql"):
-            placeholders = ", ".join([f"${i+1}" for i in range(len(columns))])
-        else:
-            placeholders = ", ".join(["%s"] * len(columns))
-        
-        sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
-        result = await self.execute_sql(sql, tuple(data.values()), name)
-        
-        if result["success"]:
-            self._log(f"Record inserted into {table_name}", "INFO")
-        else:
-            self._log(f"Insert failed: {result['error']}", "ERROR", table_name)
-        
-        return result
-    
-    async def update_record(
-        self, 
-        table_name: str, 
-        data: dict,
-        where: dict,
-        name: str = None
-    ) -> Dict[str, Any]:
-        """Update records in a table."""
-        conn_info = self._connections.get_connection(name)
-        if not conn_info:
-            return {"success": False, "error": "No connection"}
-        
-        driver = conn_info.driver.lower()
-        
-        set_clauses = []
-        values = []
-        
-        if driver == "sqlite":
-            for col, val in data.items():
-                set_clauses.append(f"{col} = ?")
-                values.append(val)
-            where_clauses = []
-            for col, val in where.items():
-                where_clauses.append(f"{col} = ?")
-                values.append(val)
-        
-        elif driver in ("postgresql", "postgres", "psql"):
-            # Use $1, $2, etc. for PostgreSQL
-            set_clauses = [f"{col} = ${i+1}" for i, col in enumerate(data.keys())]
-            where_clauses = [f"{col} = ${i+len(data)+1}" for i, col in enumerate(where.keys())]
-            values = list(data.values()) + list(where.values())
-        
-        else:  # MySQL
-            for col, val in data.items():
-                set_clauses.append(f"{col} = %s")
-                values.append(val)
-            where_clauses = []
-            for col, val in where.items():
-                where_clauses.append(f"{col} = %s")
-                values.append(val)
-        
-        sql = f"UPDATE {table_name} SET {', '.join(set_clauses)} WHERE {' AND '.join(where_clauses)}"
-        result = await self.execute_sql(sql, tuple(values), name)
-        
-        if result["success"]:
-            self._log(f"Record updated in {table_name}", "INFO")
-        else:
-            self._log(f"Update failed: {result['error']}", "ERROR", table_name)
-        
-        return result
-    
-    async def delete_record(
-        self, 
-        table_name: str, 
-        where: dict,
-        name: str = None
-    ) -> Dict[str, Any]:
-        """Delete records from a table."""
-        conn_info = self._connections.get_connection(name)
-        if not conn_info:
-            return {"success": False, "error": "No connection"}
-        
-        driver = conn_info.driver.lower()
-        
-        where_clauses = []
-        values = []
-        
-        if driver == "sqlite":
-            for col, val in where.items():
-                where_clauses.append(f"{col} = ?")
-                values.append(val)
-        
-        elif driver in ("postgresql", "postgres", "psql"):
-            where_clauses = [f"{col} = ${i+1}" for i, col in enumerate(where.keys())]
-            values = list(where.values())
-        
-        else:  # MySQL
-            for col, val in where.items():
-                where_clauses.append(f"{col} = %s")
-                values.append(val)
-        
-        sql = f"DELETE FROM {table_name} WHERE {' AND '.join(where_clauses)}"
-        result = await self.execute_sql(sql, tuple(values), name)
-        
-        if result["success"]:
-            self._log(f"Record deleted from {table_name}", "INFO")
-        else:
-            self._log(f"Delete failed: {result['error']}", "ERROR", table_name)
-        
-        return result
-    
-    async def get_database_info(self, name: str = None) -> Dict[str, Any]:
+    async def get_database_info(self: "DataMixin", name: str = None) -> Dict[str, Any]:
         """Get database information and statistics."""
-        conn_info = self._connections.get_connection(name)
-        if not conn_info or not conn_info.connected:
+        conn_name = name or self._active_connection
+        if not conn_name or not self._db_service.has_connection(conn_name):
             return {"error": "No connection"}
         
-        # Use injected table_manager
-        if self._table_manager is None:
-            return {"error": "Table manager not initialized"}
-        
-        tables = await self._table_manager.list_tables(name)
-        table_stats = []
-        total_rows = 0
-        
-        for table in tables:
-            data = await self.get_table_data(table, name, limit=1)
-            count = data.get("total", 0)
-            total_rows += count
-            table_stats.append({
-                "name": table,
-                "rows": count
-            })
-        
-        return {
-            "connection": conn_info.to_dict(),
-            "tables": table_stats,
-            "total_tables": len(tables),
-            "total_rows": total_rows
-        }
+        try:
+            tables = await self.list_tables(conn_name)
+            table_stats = []
+            total_rows = 0
+            
+            for table in tables:
+                count = await self._db_service.get_connection(conn_name).count(table)
+                total_rows += count
+                table_stats.append({
+                    "name": table,
+                    "rows": count
+                })
+            
+            conn_info = self._connection_info.get(conn_name)
+            
+            return {
+                "connection": conn_info.to_dict() if conn_info else {},
+                "tables": table_stats,
+                "total_tables": len(tables),
+                "total_rows": total_rows
+            }
+        except Exception as e:
+            self._log(f"Error getting database info: {e}", "ERROR")
+            return {"error": str(e)}
