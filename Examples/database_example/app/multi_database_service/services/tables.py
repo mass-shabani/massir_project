@@ -12,8 +12,6 @@ from typing import Any, Dict, List
 from datetime import datetime, timedelta
 import random
 
-from massir.modules.system_database.core.types import TableDef, ColumnDef, ColumnType
-
 
 class TableMixin:
     """
@@ -21,6 +19,7 @@ class TableMixin:
     
     Requires the following attributes:
     - _db_service: DatabaseService instance
+    - _db_types: Dictionary of database types from context
     - _log: Logging function
     - _active_connection: Name of active connection
     """
@@ -64,6 +63,14 @@ class TableMixin:
             return {"success": False, "error": "No connection"}
         
         try:
+            # Get types from context
+            TableDef = self._db_types.get("TableDef")
+            ColumnDef = self._db_types.get("ColumnDef")
+            ColumnType = self._db_types.get("ColumnType")
+            
+            if not TableDef or not ColumnDef or not ColumnType:
+                return {"success": False, "error": "Database types not available from context"}
+            
             # Convert dict columns to ColumnDef
             col_defs = []
             for col in columns:

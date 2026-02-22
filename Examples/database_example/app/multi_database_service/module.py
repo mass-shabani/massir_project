@@ -20,6 +20,7 @@ class MultiDatabaseServiceModule(IModule):
     
     name = "multi_database_service"
     provides = ["multi_database_service"]
+    requires = ["database_service"]  # Requires system_database module
     
     def __init__(self):
         self.http_api = None
@@ -28,6 +29,7 @@ class MultiDatabaseServiceModule(IModule):
         self.menu_manager = None
         self.db_manager = None
         self.log_manager = None
+        self.database_service = None
     
     async def load(self, context: ModuleContext):
         """Get services."""
@@ -37,11 +39,22 @@ class MultiDatabaseServiceModule(IModule):
         self.menu_manager = context.services.get("menu_manager")
         self.path_manager = context.services.get("core_path")  # Registered as "core_path" in registry
         
+        # Get database_service from system_database module (provided via context)
+        self.database_service = context.services.get("database_service")
+        
+        # Get database_types from system_database module (provided via context)
+        self.database_types = context.services.get("database_types")
+        
         # Create a LogManager instance for the database manager
         self.log_manager = LogManager(self.logger)
         
-        # Initialize database manager with path_manager for proper path resolution
-        self.db_manager = MultiDatabaseManager(self.log_manager, self.path_manager)
+        # Initialize database manager with services from context
+        self.db_manager = MultiDatabaseManager(
+            log_manager=self.log_manager,
+            path_manager=self.path_manager,
+            database_service=self.database_service,
+            database_types=self.database_types
+        )
         
         if self.logger:
             self.logger.log("MultiDatabaseService module loaded", tag="multi_db")
@@ -92,11 +105,27 @@ class MultiDatabaseServiceModule(IModule):
                 group="multi_db"
             )
             self.menu_manager.register_menu(
+                id="multi_db_transactions",
+                label="Transactions",
+                url="/multi-db/transactions",
+                icon="🔄",
+                order=4,
+                group="multi_db"
+            )
+            self.menu_manager.register_menu(
+                id="multi_db_schema",
+                label="Schema",
+                url="/multi-db/schema",
+                icon="🔧",
+                order=5,
+                group="multi_db"
+            )
+            self.menu_manager.register_menu(
                 id="multi_db_dashboard",
                 label="Dashboard",
                 url="/multi-db/dashboard",
                 icon="📊",
-                order=4,
+                order=6,
                 group="multi_db"
             )
             
@@ -119,6 +148,8 @@ class MultiDatabaseServiceModule(IModule):
             self.menu_manager.unregister_menu("multi_db_connection")
             self.menu_manager.unregister_menu("multi_db_tables")
             self.menu_manager.unregister_menu("multi_db_data")
+            self.menu_manager.unregister_menu("multi_db_transactions")
+            self.menu_manager.unregister_menu("multi_db_schema")
             self.menu_manager.unregister_menu("multi_db_dashboard")
         
         if self.logger:

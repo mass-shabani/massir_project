@@ -11,7 +11,6 @@ from typing import Any, Dict, Optional
 from datetime import datetime
 from pathlib import Path
 
-from massir.modules.system_database import DatabaseConfig
 from .models import ConnectionInfo, LogManager
 
 
@@ -21,6 +20,7 @@ class ConnectionMixin:
     
     Requires the following attributes:
     - _db_service: DatabaseService instance
+    - _db_types: Dictionary of database types from context
     - _log: Logging function
     - _log_manager: LogManager instance
     - _path_manager: Path manager for resolving paths
@@ -108,8 +108,37 @@ class ConnectionMixin:
             return test_result
         
         try:
+            # Build config with pool settings
+            db_config_dict = {
+                "name": name,
+                "driver": driver,
+                "host": config.get("host", "localhost"),
+                "port": config.get("port"),
+                "database": config.get("database"),
+                "user": config.get("user"),
+                "password": config.get("password"),
+                "path": config.get("path"),
+                # Pool settings
+                "pool_min_size": config.get("pool_min_size", 5),
+                "pool_max_size": config.get("pool_max_size", 20),
+                "pool_timeout": config.get("pool_timeout", 30.0),
+                "connect_timeout": config.get("connect_timeout", 10.0),
+                # Cache settings
+                "cache_enabled": config.get("cache_enabled", True),
+                "cache_ttl": config.get("cache_ttl", 300)
+            }
+            
+            # Get DatabaseConfig type from context
+            DatabaseConfig = self._db_types.get("DatabaseConfig")
+            
+            if not DatabaseConfig:
+                return {
+                    "success": False,
+                    "message": "Database types not available from context"
+                }
+            
             # Add connection to database service
-            db_config = DatabaseConfig.from_dict(config)
+            db_config = DatabaseConfig.from_dict(db_config_dict)
             await self._db_service.add_connection(db_config)
             
             # Store connection info

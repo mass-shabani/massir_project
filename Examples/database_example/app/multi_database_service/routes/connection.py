@@ -40,8 +40,14 @@ def register_connection_routes(http_api, template, db_manager, logger):
                 status_text = "✅ Connected" if conn["connected"] else "❌ Disconnected"
                 active_badge = ' <span class="badge badge-primary">Active</span>' if conn["name"] == active_name else ""
                 
-                # Show resolved path for SQLite
-                display_path = conn.get('resolved_path') or conn['path'] or conn['host'] or '-'
+                # Show appropriate path/host based on driver
+                if conn['driver'] == 'sqlite':
+                    display_path = conn.get('resolved_path') or conn.get('path') or '-'
+                else:
+                    # For PostgreSQL/MySQL, show host:port
+                    host = conn.get('host', 'localhost')
+                    port = conn.get('port')
+                    display_path = f"{host}:{port}" if port else host
                 
                 conn_rows += f"""
                 <tr>
@@ -135,7 +141,7 @@ def register_connection_routes(http_api, template, db_manager, logger):
                 <div id="sqlite-fields" class="form-section">
                     <div class="form-group">
                         <label for="path">Database Path</label>
-                        <input type="text" id="path" name="path" value="data/multi_db.db" placeholder="data/mydb.db or {{app_dir}}/data/mydb.db">
+                        <input type="text" id="path" name="path" placeholder="e.g., data/mydb.db or {{app_dir}}/data/mydb.db">
                         <small class="text-muted">
                             Supports: relative paths, <code>{{app_dir}}</code>, <code>{{massir_dir}}</code>, and absolute paths
                         </small>
@@ -168,6 +174,48 @@ def register_connection_routes(http_api, template, db_manager, logger):
                         <input type="password" id="password" name="password">
                     </div>
                 </div>
+                
+                <!-- Advanced Settings (Pool Configuration) -->
+                <details class="advanced-settings">
+                    <summary>Advanced Settings (Pool Configuration)</summary>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pool_min_size">Pool Min Size</label>
+                            <input type="number" id="pool_min_size" name="pool_min_size" value="5" min="1" max="100">
+                            <small class="text-muted">Minimum connections in pool</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="pool_max_size">Pool Max Size</label>
+                            <input type="number" id="pool_max_size" name="pool_max_size" value="20" min="1" max="100">
+                            <small class="text-muted">Maximum connections in pool</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pool_timeout">Pool Timeout (sec)</label>
+                            <input type="number" id="pool_timeout" name="pool_timeout" value="30" min="1" max="300">
+                            <small class="text-muted">Timeout for getting connection from pool</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="connect_timeout">Connect Timeout (sec)</label>
+                            <input type="number" id="connect_timeout" name="connect_timeout" value="10" min="1" max="60">
+                            <small class="text-muted">Timeout for establishing connection</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cache_ttl">Cache TTL (sec)</label>
+                            <input type="number" id="cache_ttl" name="cache_ttl" value="300" min="0" max="3600">
+                            <small class="text-muted">Query cache time-to-live (0 to disable)</small>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="cache_enabled" name="cache_enabled" checked>
+                                Enable Query Cache
+                            </label>
+                        </div>
+                    </div>
+                </details>
                 
                 <div class="form-actions">
                     <button type="button" onclick="testConnection()" class="btn btn-listless">Test Connection</button>
@@ -283,7 +331,14 @@ def register_connection_routes(http_api, template, db_manager, logger):
                 port: document.getElementById('port').value ? parseInt(document.getElementById('port').value) : null,
                 database: document.getElementById('database').value,
                 user: document.getElementById('user').value,
-                password: document.getElementById('password').value
+                password: document.getElementById('password').value,
+                // Pool settings
+                pool_min_size: parseInt(document.getElementById('pool_min_size').value) || 5,
+                pool_max_size: parseInt(document.getElementById('pool_max_size').value) || 20,
+                pool_timeout: parseFloat(document.getElementById('pool_timeout').value) || 30,
+                connect_timeout: parseFloat(document.getElementById('connect_timeout').value) || 10,
+                cache_ttl: parseInt(document.getElementById('cache_ttl').value) || 300,
+                cache_enabled: document.getElementById('cache_enabled').checked
             }};
         }}
         
@@ -466,7 +521,17 @@ def register_connection_routes(http_api, template, db_manager, logger):
                         const statusClass = conn.connected ? 'status-connected' : 'status-disconnected';
                         const statusText = conn.connected ? '✅ Connected' : '❌ Disconnected';
                         const activeBadge = conn.active ? ' <span class="badge badge-primary">Active</span>' : '';
-                        const displayPath = conn.resolved_path || conn.path || conn.host || '-';
+                        
+                        // Show appropriate path/host based on driver
+                        let displayPath;
+                        if (conn.driver === 'sqlite') {{
+                            displayPath = conn.resolved_path || conn.path || '-';
+                        }} else {{
+                            // For PostgreSQL/MySQL, show host:port
+                            const host = conn.host || 'localhost';
+                            const port = conn.port;
+                            displayPath = port ? `${{host}}:${{port}}` : host;
+                        }}
                         
                         html += `<tr>
                             <td>${{conn.name}}${{activeBadge}}</td>
@@ -526,6 +591,28 @@ def register_connection_routes(http_api, template, db_manager, logger):
             }}, 5000);
         }}
         </script>
+        
+        <style>
+        .advanced-settings {{
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+        }}
+        .advanced-settings summary {{
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-muted);
+            padding: 0.5rem 0;
+        }}
+        .advanced-settings summary:hover {{
+            color: var(--text-color);
+        }}
+        .advanced-settings[open] summary {{
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }}
+        </style>
         """
         
         html = template.render(content, title="Database Connection", active_menu="multi_db_connection")
