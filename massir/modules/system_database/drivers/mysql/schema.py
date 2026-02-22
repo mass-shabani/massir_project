@@ -329,3 +329,95 @@ class MySQLSchemaManager(BaseSchemaManager):
         """Drop a foreign key constraint."""
         sql = f"ALTER TABLE {table} DROP FOREIGN KEY {fk_name}"
         return await self._pool.execute(sql)
+    
+    async def list_indexes(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List indexes for a table or all tables."""
+        if table:
+            query = """
+            SELECT INDEX_NAME, TABLE_NAME, COLUMN_NAME, NON_UNIQUE
+            FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
+            ORDER BY INDEX_NAME, SEQ_IN_INDEX
+            """
+            rows = await self._pool.fetch_all(query, (table,))
+        else:
+            query = """
+            SELECT INDEX_NAME, TABLE_NAME, COLUMN_NAME, NON_UNIQUE
+            FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE()
+            ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX
+            """
+            rows = await self._pool.fetch_all(query)
+        
+        # Group by index name
+        indexes_dict = {}
+        for row in rows:
+            idx_name = row["INDEX_NAME"]
+            # Skip primary key
+            if idx_name == "PRIMARY":
+                continue
+            
+            if idx_name not in indexes_dict:
+                indexes_dict[idx_name] = {
+                    "name": idx_name,
+                    "table": row["TABLE_NAME"],
+                    "columns": [],
+                    "unique": row["NON_UNIQUE"] == 0
+                }
+            indexes_dict[idx_name]["columns"].append(row["COLUMN_NAME"])
+        
+        return list(indexes_dict.values())
+    
+    async def list_foreign_keys(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List foreign keys for a table or all tables."""
+        if table:
+            query = """
+            SELECT
+                CONSTRAINT_NAME,
+                TABLE_NAME,
+                COLUMN_NAME,
+                REFERENCED_TABLE_NAME,
+                REFERENCED_COLUMN_NAME,
+                DELETE_RULE,
+                UPDATE_RULE
+            FROM information_schema.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = DATABASE()
+                AND REFERENCED_TABLE_NAME IS NOT NULL
+                AND TABLE_NAME = %s
+            """
+            rows = await self._pool.fetch_all(query, (table,))
+        else:
+            query = """
+            SELECT
+                CONSTRAINT_NAME,
+                TABLE_NAME,
+                COLUMN_NAME,
+                REFERENCED_TABLE_NAME,
+                REFERENCED_COLUMN_NAME,
+                DELETE_RULE,
+                UPDATE_RULE
+            FROM information_schema.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = DATABASE()
+                AND REFERENCED_TABLE_NAME IS NOT NULL
+            """
+            rows = await self._pool.fetch_all(query)
+        
+        fks = []
+        for row in rows:
+            fks.append({
+                "name": row["CONSTRAINT_NAME"],
+                "table": row["TABLE_NAME"],
+                "columns": [row["COLUMN_NAME"]],
+                "ref_table": row["REFERENCED_TABLE_NAME"],
+                "ref_columns": [row["REFERENCED_COLUMN_NAME"]],
+                "on_delete": row["DELETE_RULE"],
+                "on_update": row["UPDATE_RULE"]
+            })
+        
+        return fks

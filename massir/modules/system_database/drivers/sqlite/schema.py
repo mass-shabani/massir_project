@@ -267,3 +267,81 @@ class SQLiteSchemaManager(BaseSchemaManager):
         raise UnsupportedFeatureError(
             "SQLite requires table recreation to drop foreign keys."
         )
+    
+    async def list_indexes(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List indexes for a table or all tables."""
+        indexes = []
+        
+        if table:
+            query = "SELECT name, tbl_name FROM sqlite_master WHERE type='index' AND tbl_name = ?"
+            rows = await self._pool.fetch_all(query, (table,))
+        else:
+            query = "SELECT name, tbl_name FROM sqlite_master WHERE type='index'"
+            rows = await self._pool.fetch_all(query)
+        
+        for row in rows:
+            # Skip internal SQLite indexes
+            if row["name"].startswith("sqlite_"):
+                continue
+            
+            # Get index info
+            try:
+                info = await self._pool.fetch_all(f"PRAGMA index_info({row['name']})")
+                columns = [i["name"] for i in info]
+                
+                # Check if unique
+                index_info = await self._pool.fetch_one(f"PRAGMA index_info({row['name']})")
+                unique = False
+                # Get unique info from sql
+                sql_row = await self._pool.fetch_one(
+                    "SELECT sql FROM sqlite_master WHERE type='index' AND name = ?",
+                    (row["name"],)
+                )
+                if sql_row and sql_row.get("sql"):
+                    unique = "UNIQUE" in sql_row["sql"]
+                
+                indexes.append({
+                    "name": row["name"],
+                    "table": row["tbl_name"],
+                    "columns": columns,
+                    "unique": unique
+                })
+            except Exception:
+                # Skip indexes we can't get info for
+                pass
+        
+        return indexes
+    
+    async def list_foreign_keys(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List foreign keys for a table or all tables."""
+        fks = []
+        
+        # Get list of tables to check
+        if table:
+            tables = [table]
+        else:
+            tables = await self.list_tables()
+        
+        for tbl in tables:
+            try:
+                rows = await self._pool.fetch_all(f"PRAGMA foreign_key_list({tbl})")
+                for row in rows:
+                    fks.append({
+                        "name": f"fk_{tbl}_{row['from']}",
+                        "table": tbl,
+                        "columns": [row["from"]],
+                        "ref_table": row["table"],
+                        "ref_columns": [row["to"]],
+                        "on_delete": row.get("on_delete", "NO ACTION"),
+                        "on_update": row.get("on_update", "NO ACTION")
+                    })
+            except Exception:
+                pass
+        
+        return fks

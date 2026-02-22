@@ -369,3 +369,106 @@ class PostgreSQLSchemaManager(BaseSchemaManager):
         """Drop a foreign key constraint."""
         sql = f"ALTER TABLE {table} DROP CONSTRAINT {fk_name}"
         return await self._pool.execute(sql)
+    
+    async def list_indexes(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List indexes for a table or all tables."""
+        if table:
+            query = """
+            SELECT indexname, tablename, indexdef 
+            FROM pg_indexes 
+            WHERE schemaname = 'public' AND tablename = $1
+            """
+            rows = await self._pool.fetch_all(query, (table,))
+        else:
+            query = """
+            SELECT indexname, tablename, indexdef 
+            FROM pg_indexes 
+            WHERE schemaname = 'public'
+            """
+            rows = await self._pool.fetch_all(query)
+        
+        indexes = []
+        for row in rows:
+            # Parse columns from indexdef
+            indexdef = row.get("indexdef", "")
+            columns = []
+            
+            # Extract columns from index definition
+            if "(" in indexdef and ")" in indexdef:
+                cols_part = indexdef[indexdef.find("(") + 1:indexdef.rfind(")")]
+                columns = [c.strip() for c in cols_part.split(",")]
+            
+            indexes.append({
+                "name": row["indexname"],
+                "table": row["tablename"],
+                "columns": columns,
+                "unique": "UNIQUE" in indexdef
+            })
+        
+        return indexes
+    
+    async def list_foreign_keys(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List foreign keys for a table or all tables."""
+        if table:
+            query = """
+            SELECT
+                tc.constraint_name,
+                tc.table_name,
+                kcu.column_name,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name,
+                rc.delete_rule,
+                rc.update_rule
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.constraint_column_usage AS ccu
+                ON ccu.constraint_name = tc.constraint_name
+            JOIN information_schema.referential_constraints AS rc
+                ON rc.constraint_name = tc.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY' 
+                AND tc.table_schema = 'public'
+                AND tc.table_name = $1
+            """
+            rows = await self._pool.fetch_all(query, (table,))
+        else:
+            query = """
+            SELECT
+                tc.constraint_name,
+                tc.table_name,
+                kcu.column_name,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name,
+                rc.delete_rule,
+                rc.update_rule
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.constraint_column_usage AS ccu
+                ON ccu.constraint_name = tc.constraint_name
+            JOIN information_schema.referential_constraints AS rc
+                ON rc.constraint_name = tc.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY' 
+                AND tc.table_schema = 'public'
+            """
+            rows = await self._pool.fetch_all(query)
+        
+        fks = []
+        for row in rows:
+            fks.append({
+                "name": row["constraint_name"],
+                "table": row["table_name"],
+                "columns": [row["column_name"]],
+                "ref_table": row["foreign_table_name"],
+                "ref_columns": [row["foreign_column_name"]],
+                "on_delete": row["delete_rule"],
+                "on_update": row["update_rule"]
+            })
+        
+        return fks

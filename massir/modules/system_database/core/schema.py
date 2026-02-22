@@ -146,3 +146,46 @@ class BaseSchemaManager(ABC):
     ) -> QueryResult:
         """Drop a foreign key constraint."""
         pass
+    
+    @abstractmethod
+    async def list_indexes(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        List indexes for a table or all tables.
+        
+        Args:
+            table: Table name (lists all indexes if None)
+            
+        Returns:
+            List of index information dictionaries with keys:
+            - name: Index name
+            - table: Table name
+            - columns: List of column names
+            - unique: Whether index is unique
+        """
+        pass
+    
+    @abstractmethod
+    async def list_foreign_keys(
+        self, 
+        table: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        List foreign keys for a table or all tables.
+        
+        Args:
+            table: Table name (lists all FKs if None)
+            
+        Returns:
+            List of foreign key information dictionaries with keys:
+            - name: Constraint name
+            - table: Table name
+            - columns: List of column names
+            - ref_table: Referenced table name
+            - ref_columns: List of referenced column names
+            - on_delete: ON DELETE action
+            - on_update: ON UPDATE action
+        """
+        pass

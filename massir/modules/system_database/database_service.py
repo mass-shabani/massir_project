@@ -833,6 +833,42 @@ class DatabaseService:
         
         return [col.to_dict() for col in table_def.columns]
     
+    async def list_indexes(
+        self,
+        table_name: Optional[str] = None,
+        connection: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        List indexes for a table or all tables.
+        
+        Args:
+            table_name: Table name (lists all indexes if None)
+            connection: Connection name (uses default if None)
+            
+        Returns:
+            List of index information dictionaries
+        """
+        conn = self.get_connection(connection)
+        return await conn._schema.list_indexes(table_name)
+    
+    async def list_foreign_keys(
+        self,
+        table_name: Optional[str] = None,
+        connection: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        List foreign keys for a table or all tables.
+        
+        Args:
+            table_name: Table name (lists all FKs if None)
+            connection: Connection name (uses default if None)
+            
+        Returns:
+            List of foreign key information dictionaries
+        """
+        conn = self.get_connection(connection)
+        return await conn._schema.list_foreign_keys(table_name)
+    
     async def add_dynamic_connection(
         self, 
         config: Dict[str, Any]

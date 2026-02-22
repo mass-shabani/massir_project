@@ -42,6 +42,17 @@ class DatabaseModule(IModule):
         # Register service
         context.services.set("database_service", self._service)
         
+        # Register types for other modules to use
+        context.services.set("database_types", {
+            "DatabaseConfig": DatabaseConfig,
+            "TableDef": TableDef,
+            "ColumnDef": ColumnDef,
+            "IndexDef": IndexDef,
+            "ForeignKeyDef": ForeignKeyDef,
+            "QueryResult": QueryResult,
+            "ColumnType": ColumnType
+        })
+        
         if self._logger:
             self._logger.log("DatabaseModule loaded", tag="database")
     
