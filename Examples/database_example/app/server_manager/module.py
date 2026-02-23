@@ -28,9 +28,6 @@ class ServerManagerModule(IModule):
         self.net_api = context.services.get("net_api")
         self.logger = context.services.get("core_logger")
         self.config = context.services.get("core_config")
-        
-        if self.logger:
-            self.logger.log("ServerManager module loaded", tag="server")
     
     async def start(self, context):
         """Start the HTTP server."""
@@ -94,6 +91,3 @@ class ServerManagerModule(IModule):
         """Stop the HTTP server."""
         if self.server_api:
             await self.server_api.stop_server()
-        
-        if self.logger:
-            self.logger.log("ServerManager module stopped", tag="server")

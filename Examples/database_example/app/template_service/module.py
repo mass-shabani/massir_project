@@ -36,16 +36,10 @@ class TemplateServiceModule(IModule):
         # Register services
         context.services.set("template_service", self)
         context.services.set("menu_manager", self.menu_manager)
-        
-        if self.logger:
-            self.logger.log("TemplateService module loaded", tag="template")
     
     async def start(self, context: ModuleContext):
         """Register routes and static files."""
         self._register_static_routes()
-        
-        if self.logger:
-            self.logger.log("TemplateService module started", tag="template")
     
     def _register_static_routes(self):
         """Register static file routes."""

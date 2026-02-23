@@ -139,6 +139,3 @@ def register_routes(http_api, template, logger):
         """
         html = template.render(content, title="About", active_menu="main_app_about")
         return http_api.HTMLResponse(content=html)
-    
-    if logger:
-        logger.log("Main app routes registered", tag="main_app")

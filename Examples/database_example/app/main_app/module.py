@@ -19,15 +19,9 @@ class MainAppModule(IModule):
         self._http_api = context.services.get("http_api")
         self._template = context.services.get("template_service")
         self._menu_manager = context.services.get("menu_manager")
-        
-        if self._logger:
-            self._logger.log("Main app module loading", tag="main_app")
     
     async def start(self, context: ModuleContext):
         """Start the main app module - register routes and menus."""
-        if self._logger:
-            self._logger.log("Main app module starting", tag="main_app")
-        
         # Register routes
         register_routes(self._http_api, self._template, self._logger)
         
@@ -47,8 +41,6 @@ class MainAppModule(IModule):
                 icon="ℹ️",
                 order=100
             )
-            if self._logger:
-                self._logger.log("Main app menus registered", tag="main_app")
     
     async def stop(self, context: ModuleContext):
         """Stop the main app module."""
@@ -56,6 +48,3 @@ class MainAppModule(IModule):
         if self._menu_manager:
             self._menu_manager.unregister_menu("main_app_home")
             self._menu_manager.unregister_menu("main_app_about")
-        
-        if self._logger:
-            self._logger.log("Main app module stopped", tag="main_app")

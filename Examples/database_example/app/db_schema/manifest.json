@@ -1,0 +1,10 @@
+{
+    "name": "db_schema",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "DbSchemaModule",
+    "description": "Database schema management - manage indexes and foreign keys",
+    "enabled": true,
+    "provides": [],
+    "requires": ["db_connection_service"]
+}
