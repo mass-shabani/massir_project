@@ -379,32 +379,38 @@ class MySQLSchemaManager(BaseSchemaManager):
         if table:
             query = """
             SELECT
-                CONSTRAINT_NAME,
-                TABLE_NAME,
-                COLUMN_NAME,
-                REFERENCED_TABLE_NAME,
-                REFERENCED_COLUMN_NAME,
-                DELETE_RULE,
-                UPDATE_RULE
-            FROM information_schema.KEY_COLUMN_USAGE
-            WHERE TABLE_SCHEMA = DATABASE()
-                AND REFERENCED_TABLE_NAME IS NOT NULL
-                AND TABLE_NAME = %s
+                kcu.CONSTRAINT_NAME,
+                kcu.TABLE_NAME,
+                kcu.COLUMN_NAME,
+                kcu.REFERENCED_TABLE_NAME,
+                kcu.REFERENCED_COLUMN_NAME,
+                rc.DELETE_RULE,
+                rc.UPDATE_RULE
+            FROM information_schema.KEY_COLUMN_USAGE kcu
+            JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
+                ON kcu.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+                AND kcu.TABLE_SCHEMA = rc.CONSTRAINT_SCHEMA
+            WHERE kcu.TABLE_SCHEMA = DATABASE()
+                AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
+                AND kcu.TABLE_NAME = %s
             """
             rows = await self._pool.fetch_all(query, (table,))
         else:
             query = """
             SELECT
-                CONSTRAINT_NAME,
-                TABLE_NAME,
-                COLUMN_NAME,
-                REFERENCED_TABLE_NAME,
-                REFERENCED_COLUMN_NAME,
-                DELETE_RULE,
-                UPDATE_RULE
-            FROM information_schema.KEY_COLUMN_USAGE
-            WHERE TABLE_SCHEMA = DATABASE()
-                AND REFERENCED_TABLE_NAME IS NOT NULL
+                kcu.CONSTRAINT_NAME,
+                kcu.TABLE_NAME,
+                kcu.COLUMN_NAME,
+                kcu.REFERENCED_TABLE_NAME,
+                kcu.REFERENCED_COLUMN_NAME,
+                rc.DELETE_RULE,
+                rc.UPDATE_RULE
+            FROM information_schema.KEY_COLUMN_USAGE kcu
+            JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
+                ON kcu.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+                AND kcu.TABLE_SCHEMA = rc.CONSTRAINT_SCHEMA
+            WHERE kcu.TABLE_SCHEMA = DATABASE()
+                AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
             """
             rows = await self._pool.fetch_all(query)
         
