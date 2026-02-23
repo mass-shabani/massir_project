@@ -82,7 +82,8 @@ def register_routes(http_api, template, transaction_service, connection_service,
             try {{
                 const response = await fetch('/db/api/transactions/begin', {{ method: 'POST' }});
                 const result = await response.json();
-                showMessage(result.message, result.success ? 'success' : 'error');
+                const message = result.message || result.error || 'Unknown response';
+                showMessage(message, result.success ? 'success' : 'error');
                 if (result.success) location.reload();
             }} catch (error) {{
                 showMessage('Error: ' + error.message, 'error');
@@ -93,7 +94,8 @@ def register_routes(http_api, template, transaction_service, connection_service,
             try {{
                 const response = await fetch('/db/api/transactions/commit', {{ method: 'POST' }});
                 const result = await response.json();
-                showMessage(result.message, result.success ? 'success' : 'error');
+                const message = result.message || result.error || 'Unknown response';
+                showMessage(message, result.success ? 'success' : 'error');
                 if (result.success) location.reload();
             }} catch (error) {{
                 showMessage('Error: ' + error.message, 'error');
@@ -104,7 +106,8 @@ def register_routes(http_api, template, transaction_service, connection_service,
             try {{
                 const response = await fetch('/db/api/transactions/rollback', {{ method: 'POST' }});
                 const result = await response.json();
-                showMessage(result.message, result.success ? 'success' : 'error');
+                const message = result.message || result.error || 'Unknown response';
+                showMessage(message, result.success ? 'success' : 'error');
                 if (result.success) location.reload();
             }} catch (error) {{
                 showMessage('Error: ' + error.message, 'error');
@@ -149,7 +152,7 @@ def register_routes(http_api, template, transaction_service, connection_service,
                     
                     document.getElementById('sql-result').innerHTML = html;
                 }} else {{
-                    document.getElementById('sql-result').innerHTML = `<div class="alert alert-error">${{result.error}}</div>`;
+                    document.getElementById('sql-result').innerHTML = `<div class="alert alert-error">${{result.error || 'Unknown error'}}</div>`;
                 }}
             }} catch (error) {{
                 document.getElementById('sql-result').innerHTML = `<div class="alert alert-error">Error: ${{error.message}}</div>`;

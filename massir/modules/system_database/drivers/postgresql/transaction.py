@@ -32,11 +32,21 @@ class PostgreSQLTransaction(BaseTransaction):
         if not self._is_active:
             return False
         
-        await self._transaction.commit()
-        self._is_active = False
-        await self._pool.release(self._connection)
-        self._connection = None
-        self._transaction = None
+        try:
+            await self._transaction.commit()
+        except Exception as e:
+            # If commit fails, try to rollback
+            try:
+                await self._transaction.rollback()
+            except:
+                pass
+            raise TransactionError(f"Failed to commit transaction: {e}")
+        finally:
+            self._is_active = False
+            if self._connection:
+                await self._pool.release(self._connection)
+                self._connection = None
+                self._transaction = None
         return True
     
     async def rollback(self) -> bool:
@@ -44,11 +54,16 @@ class PostgreSQLTransaction(BaseTransaction):
         if not self._is_active:
             return False
         
-        await self._transaction.rollback()
-        self._is_active = False
-        await self._pool.release(self._connection)
-        self._connection = None
-        self._transaction = None
+        try:
+            await self._transaction.rollback()
+        except Exception as e:
+            raise TransactionError(f"Failed to rollback transaction: {e}")
+        finally:
+            self._is_active = False
+            if self._connection:
+                await self._pool.release(self._connection)
+                self._connection = None
+                self._transaction = None
         return True
     
     async def savepoint(self, name: Optional[str] = None) -> str:

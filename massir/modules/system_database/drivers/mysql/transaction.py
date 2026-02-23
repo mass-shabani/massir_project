@@ -21,6 +21,8 @@ class MySQLTransaction(BaseTransaction):
             return True
         
         self._connection = await self._pool.acquire()
+        # Ping to ensure connection is alive
+        await self._connection.ping(reconnect=True)
         await self._connection.begin()
         self._is_active = True
         return True
@@ -30,10 +32,22 @@ class MySQLTransaction(BaseTransaction):
         if not self._is_active:
             return False
         
-        await self._connection.commit()
-        self._is_active = False
-        await self._pool.release(self._connection)
-        self._connection = None
+        try:
+            # Ping to ensure connection is alive before commit
+            await self._connection.ping(reconnect=True)
+            await self._connection.commit()
+        except Exception as e:
+            # If commit fails, try to rollback
+            try:
+                await self._connection.rollback()
+            except:
+                pass
+            raise TransactionError(f"Failed to commit transaction: {e}")
+        finally:
+            self._is_active = False
+            if self._connection:
+                await self._pool.release(self._connection)
+                self._connection = None
         return True
     
     async def rollback(self) -> bool:
@@ -41,10 +55,17 @@ class MySQLTransaction(BaseTransaction):
         if not self._is_active:
             return False
         
-        await self._connection.rollback()
-        self._is_active = False
-        await self._pool.release(self._connection)
-        self._connection = None
+        try:
+            # Ping to ensure connection is alive before rollback
+            await self._connection.ping(reconnect=True)
+            await self._connection.rollback()
+        except Exception as e:
+            raise TransactionError(f"Failed to rollback transaction: {e}")
+        finally:
+            self._is_active = False
+            if self._connection:
+                await self._pool.release(self._connection)
+                self._connection = None
         return True
     
     async def savepoint(self, name: Optional[str] = None) -> str:
