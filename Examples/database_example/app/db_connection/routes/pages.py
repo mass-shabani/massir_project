@@ -111,14 +111,15 @@ def register_routes(http_api, template, connection_service, logger):
         <div class="card">
             <h2 class="card-title">New Connection</h2>
             
-            <!-- Saved Connections Dropdown -->
-            <div class="form-group" id="saved-connections-section" style="display: none;">
+            <!-- Saved Connections Section - Always Visible -->
+            <div class="form-group" id="saved-connections-section">
                 <label for="saved-connection">Saved Connections</label>
-                <div class="form-row">
+                <div class="form-row-inline">
                     <select id="saved-connection" name="saved_connection" onchange="loadSavedConnection()">
                         {saved_connections_options}
                     </select>
-                    <button type="button" onclick="deleteSavedConnection()" class="btn btn-sm btn-danger">Delete</button>
+                    <button type="button" onclick="saveConnection()" class="btn btn-sm btn-icon" title="Save Connection">💾</button>
+                    <button type="button" onclick="deleteSavedConnection()" class="btn btn-sm btn-icon btn-danger" title="Delete Saved Connection">🗑️</button>
                 </div>
             </div>
             
@@ -141,7 +142,10 @@ def register_routes(http_api, template, connection_service, logger):
                 <div id="sqlite-fields" class="form-section">
                     <div class="form-group">
                         <label for="path">Database Path</label>
-                        <input type="text" id="path" name="path" placeholder="e.g., data/mydb.db or {{app_dir}}/data/mydb.db">
+                        <div class="form-row-inline">
+                            <input type="text" id="path" name="path" placeholder="e.g., data/mydb.db">
+                            <button type="button" onclick="createDatabase()" class="btn btn-success btn-icon" title="Create New Database">➕</button>
+                        </div>
                         <small class="text-muted">
                             Supports: relative paths, <code>{{app_dir}}</code>, <code>{{massir_dir}}</code>, and absolute paths
                         </small>
@@ -149,6 +153,16 @@ def register_routes(http_api, template, connection_service, logger):
                 </div>
                 
                 <div id="remote-fields" class="form-section" style="display: none;">
+                    <!-- URI Input for MySQL/PostgreSQL -->
+                    <div class="form-group">
+                        <label for="uri">Connection URI <small class="text-muted">(optional - auto-fill fields)</small></label>
+                        <div class="form-row-inline">
+                            <input type="text" id="uri" name="uri" placeholder="mysql://user:password@host:port/database">
+                            <button type="button" onclick="parseUri()" class="btn btn-sm" title="Parse URI">Parse</button>
+                        </div>
+                        <small class="text-muted">Format: <code>mysql://user:password@host:port/database</code> or <code>postgresql://user:password@host:port/database</code></small>
+                    </div>
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label for="host">Host</label>
@@ -177,51 +191,42 @@ def register_routes(http_api, template, connection_service, logger):
                 
                 <!-- Advanced Settings (Pool Configuration) -->
                 <details class="advanced-settings">
-                    <summary>Advanced Settings (Pool Configuration)</summary>
+                    <summary>Advanced Settings</summary>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="pool_min_size">Pool Min Size</label>
+                            <label for="pool_min_size">Pool Min</label>
                             <input type="number" id="pool_min_size" name="pool_min_size" value="5" min="1" max="100">
-                            <small class="text-muted">Minimum connections in pool</small>
                         </div>
                         <div class="form-group">
-                            <label for="pool_max_size">Pool Max Size</label>
+                            <label for="pool_max_size">Pool Max</label>
                             <input type="number" id="pool_max_size" name="pool_max_size" value="20" min="1" max="100">
-                            <small class="text-muted">Maximum connections in pool</small>
                         </div>
-                    </div>
-                    <div class="form-row">
                         <div class="form-group">
-                            <label for="pool_timeout">Pool Timeout (sec)</label>
+                            <label for="pool_timeout">Timeout</label>
                             <input type="number" id="pool_timeout" name="pool_timeout" value="30" min="1" max="300">
-                            <small class="text-muted">Timeout for getting connection from pool</small>
                         </div>
                         <div class="form-group">
-                            <label for="connect_timeout">Connect Timeout (sec)</label>
+                            <label for="connect_timeout">Connect Timeout</label>
                             <input type="number" id="connect_timeout" name="connect_timeout" value="10" min="1" max="60">
-                            <small class="text-muted">Timeout for establishing connection</small>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="cache_ttl">Cache TTL (sec)</label>
                             <input type="number" id="cache_ttl" name="cache_ttl" value="300" min="0" max="3600">
-                            <small class="text-muted">Query cache time-to-live (0 to disable)</small>
                         </div>
                         <div class="form-group">
                             <label>
                                 <input type="checkbox" id="cache_enabled" name="cache_enabled" checked>
-                                Enable Query Cache
+                                Enable Cache
                             </label>
                         </div>
                     </div>
                 </details>
                 
                 <div class="form-actions">
-                    <button type="button" onclick="testConnection()" class="btn btn-listless">Test Connection</button>
-                    <button type="button" onclick="saveConnection()" class="btn btn-secondary">Save Connection</button>
+                    <button type="button" onclick="testConnection()" class="btn">Test</button>
                     <button type="button" onclick="connectDatabase()" class="btn btn-primary">Connect</button>
-                    <button type="button" onclick="createDatabase()" class="btn btn-success" id="create-btn">Create New Database</button>
                 </div>
             </form>
         </div>
@@ -248,12 +253,8 @@ def register_routes(http_api, template, connection_service, logger):
         
         function updateSavedConnectionsSection() {{
             const section = document.getElementById('saved-connections-section');
-            if (savedConnections.length > 0) {{
-                section.style.display = 'block';
-                updateSavedConnectionsDropdown();
-            }} else {{
-                section.style.display = 'none';
-            }}
+            section.style.display = 'block'; // Always visible
+            updateSavedConnectionsDropdown();
         }}
         
         function updateSavedConnectionsDropdown() {{
@@ -303,22 +304,57 @@ def register_routes(http_api, template, connection_service, logger):
             const driver = document.getElementById('driver').value;
             const sqliteFields = document.getElementById('sqlite-fields');
             const remoteFields = document.getElementById('remote-fields');
-            const createBtn = document.getElementById('create-btn');
             
             if (driver === 'sqlite') {{
                 sqliteFields.style.display = 'block';
                 remoteFields.style.display = 'none';
-                createBtn.style.display = 'inline-block';
             }} else {{
                 sqliteFields.style.display = 'none';
                 remoteFields.style.display = 'block';
-                createBtn.style.display = 'none';
                 
                 // Set default ports
                 const portInput = document.getElementById('port');
                 if (!portInput.value) {{
                     portInput.value = driver === 'postgresql' ? 5432 : 3306;
                 }}
+            }}
+        }}
+        
+        function parseUri() {{
+            const uri = document.getElementById('uri').value.trim();
+            if (!uri) {{
+                showMessage('Please enter a URI', 'warning');
+                return;
+            }}
+            
+            try {{
+                // Parse URI: mysql://user:password@host:port/database
+                // or postgresql://user:password@host:port/database
+                const regex = /^(mysql|postgresql):\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)$/;
+                const match = uri.match(regex);
+                
+                if (match) {{
+                    const driver = match[1];
+                    const user = match[2];
+                    const password = match[3];
+                    const host = match[4];
+                    const port = match[5];
+                    const database = match[6];
+                    
+                    document.getElementById('driver').value = driver;
+                    document.getElementById('user').value = user;
+                    document.getElementById('password').value = password;
+                    document.getElementById('host').value = host;
+                    document.getElementById('port').value = port;
+                    document.getElementById('database').value = database;
+                    
+                    toggleConnectionFields();
+                    showMessage('URI parsed successfully', 'success');
+                }} else {{
+                    showMessage('Invalid URI format. Use: mysql://user:password@host:port/database', 'error');
+                }}
+            }} catch (error) {{
+                showMessage('Error parsing URI: ' + error.message, 'error');
             }}
         }}
         
@@ -593,24 +629,67 @@ def register_routes(http_api, template, connection_service, logger):
         </script>
         
         <style>
+        .form-row-inline {{
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }}
+        .form-row-inline input,
+        .form-row-inline select {{
+            flex: 1;
+        }}
+        .btn-icon {{
+            min-width: 36px;
+            padding: 0.4rem 0.6rem;
+            font-size: 1rem;
+        }}
+        .btn-success {{
+            background-color: #28a745;
+            color: white;
+        }}
+        .btn-success:hover {{
+            background-color: #218838;
+        }}
         .advanced-settings {{
-            margin-top: 1rem;
+            margin-top: 0.75rem;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
         }}
         .advanced-settings summary {{
             cursor: pointer;
             font-weight: 500;
             color: var(--text-muted);
-            padding: 0.5rem 0;
+            padding: 0.4rem 0;
+            font-size: 0.9rem;
         }}
         .advanced-settings summary:hover {{
             color: var(--text-color);
         }}
         .advanced-settings[open] summary {{
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
+        }}
+        .form-section {{
+            margin-bottom: 0.75rem;
+        }}
+        .form-group {{
+            margin-bottom: 0.5rem;
+        }}
+        .form-group label {{
+            margin-bottom: 0.2rem;
+        }}
+        .card {{
+            padding: 1rem;
+        }}
+        .card-title {{
+            margin-bottom: 0.5rem;
+        }}
+        .form-actions {{
+            margin-top: 0.75rem;
+        }}
+        #saved-connections-section {{
+            margin-bottom: 0.75rem;
         }}
         </style>
         """
