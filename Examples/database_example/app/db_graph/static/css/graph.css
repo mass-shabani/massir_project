@@ -1,0 +1,296 @@
+/* ═══════════════════════════════════════════════════════════════════
+   db_graph — Schema Graph Stylesheet
+   Dark terminal aesthetic, dot-grid canvas, draggable table cards
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens ───────────────────────────────────────────────────────── */
+:root {
+  --gr-bg:      #080c14;
+  --gr-surface: #0d1220;
+  --gr-panel:   #111827;
+  --gr-border:  rgba(99,179,237,.13);
+  --gr-text:    #e2e8f0;
+  --gr-muted:   #4a5568;
+  --gr-mono:    'JetBrains Mono','Fira Code','Consolas',monospace;
+
+  /* table accent palette (10 colours, cycled) */
+  --gr-p0: #63b3ed;
+  --gr-p1: #b794f4;
+  --gr-p2: #68d391;
+  --gr-p3: #f6ad55;
+  --gr-p4: #fc8181;
+  --gr-p5: #76e4f7;
+  --gr-p6: #fbd38d;
+  --gr-p7: #f687b3;
+  --gr-p8: #9ae6b4;
+  --gr-p9: #bee3f8;
+
+  /* badge colours */
+  --gr-pk: #f6ad55;
+  --gr-fk: #68d391;
+  --gr-uk: #76e4f7;
+
+  /* edge colours */
+  --gr-cascade:  #63b3ed;
+  --gr-setnull:  #f6ad55;
+  --gr-restrict: #fc8181;
+}
+
+/* ── Page header ────────────────────────────────────────────────────── */
+.gr-page-header {
+  background: var(--card-bg, #111827);
+  border: 1px solid var(--border-color, var(--gr-border));
+  border-radius: 10px;
+  padding: 1.2rem 1.5rem 1rem;
+  margin-bottom: .75rem;
+}
+
+.gr-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+
+.gr-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gr-p0);
+  margin: 0 0 .2rem;
+}
+.gr-subtitle {
+  font-size: .78rem;
+  color: var(--gr-muted);
+  font-family: var(--gr-mono);
+  margin: 0;
+}
+
+/* ── Header buttons ─────────────────────────────────────────────────── */
+.gr-header-btns { display: flex; gap: .45rem; flex-wrap: wrap; }
+
+.gr-btn {
+  background: rgba(99,179,237,.09);
+  border: 1px solid rgba(99,179,237,.28);
+  color: var(--gr-p0);
+  border-radius: 6px;
+  padding: .38rem .85rem;
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .18s, border-color .18s;
+  white-space: nowrap;
+}
+.gr-btn:hover { background: rgba(99,179,237,.2); border-color: var(--gr-p0); }
+.gr-btn--toggle       { opacity: .5; }
+.gr-btn--toggle.active { opacity: 1; background: rgba(99,179,237,.18); }
+
+/* ── Stat strip ──────────────────────────────────────────────────────── */
+.gr-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: .8rem;
+  padding-top: .8rem;
+  border-top: 1px solid var(--gr-border);
+  flex-wrap: wrap;
+}
+.gr-stat { font-size: .75rem; color: var(--gr-muted); }
+.gr-stat-val {
+  font-family: var(--gr-mono);
+  color: var(--gr-p0);
+  font-weight: 700;
+  font-size: 1rem;
+  margin-right: .15rem;
+}
+
+/* ── Legend ──────────────────────────────────────────────────────────── */
+.gr-legend {
+  display: flex;
+  gap: 1.1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: .7rem;
+  color: var(--gr-muted);
+  padding: .45rem 0 .7rem;
+}
+.gr-legend-item { display: flex; align-items: center; gap: .35rem; }
+.gr-badge {
+  font-family: var(--gr-mono);
+  font-size: .56rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: .3px;
+}
+.gr-pk { background: rgba(246,173,85,.18);  color: var(--gr-pk); }
+.gr-fk { background: rgba(104,211,145,.18); color: var(--gr-fk); }
+.gr-uk { background: rgba(118,228,247,.18); color: var(--gr-uk); }
+
+/* ── Canvas wrap ─────────────────────────────────────────────────────── */
+.gr-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 640px;
+  border: 1px solid var(--gr-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 18% 38%, rgba(99,179,237,.05)  0%, transparent 52%),
+    radial-gradient(ellipse at 82% 68%, rgba(183,148,244,.04) 0%, transparent 52%),
+    var(--gr-panel);
+  cursor: grab;
+  user-select: none;
+}
+.gr-canvas-wrap:active { cursor: grabbing; }
+
+/* dot grid */
+.gr-canvas-wrap::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 0;
+  background-image: radial-gradient(rgba(99,179,237,.11) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── SVG layer ────────────────────────────────────────────────────────── */
+.gr-svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+/* ── Nodes container ────────────────────────────────────────────────── */
+.gr-nodes { position: absolute; inset: 0; z-index: 2; }
+
+/* ── Table node ─────────────────────────────────────────────────────── */
+.gr-node {
+  position: absolute;
+  width: 218px;
+  background: var(--gr-panel);
+  border: 1px solid var(--gr-border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: move;
+  transition: box-shadow .2s, border-color .2s;
+  will-change: transform;
+}
+.gr-node:hover {
+  box-shadow: 0 0 0 1px var(--gr-p0), 0 6px 28px rgba(99,179,237,.18);
+  border-color: rgba(99,179,237,.5);
+  z-index: 50 !important;
+}
+.gr-node--dragging {
+  box-shadow: 0 0 0 2px var(--gr-p0), 0 10px 40px rgba(99,179,237,.25);
+  border-color: var(--gr-p0);
+  z-index: 60 !important;
+}
+
+/* node head */
+.gr-node-head {
+  padding: .5rem .8rem;
+  display: flex; align-items: center; gap: .4rem;
+  border-bottom: 1px solid var(--gr-border);
+  cursor: move;
+}
+.gr-node-icon  { font-size: .9rem; flex-shrink: 0; }
+.gr-node-name  {
+  font-family: var(--gr-mono);
+  font-size: .72rem; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1;
+}
+.gr-node-count { font-family: var(--gr-mono); font-size: .58rem; color: var(--gr-muted); }
+
+/* column rows */
+.gr-node-body { padding: .22rem 0; }
+
+.gr-col {
+  display: flex; align-items: center; gap: .32rem;
+  padding: .17rem .8rem;
+  font-family: var(--gr-mono); font-size: .63rem;
+  transition: background .12s;
+}
+.gr-col:hover { background: rgba(255,255,255,.03); }
+
+.gr-col-badge {
+  font-size: .52rem; font-weight: 700;
+  padding: 1px 4px; border-radius: 3px;
+  min-width: 19px; text-align: center; flex-shrink: 0;
+  letter-spacing: .3px;
+}
+.cbadge-pk { background: rgba(246,173,85,.2);  color: var(--gr-pk); }
+.cbadge-fk { background: rgba(104,211,145,.2); color: var(--gr-fk); }
+.cbadge-uk { background: rgba(118,228,247,.2); color: var(--gr-uk); }
+.cbadge-empty { min-width: 19px; }
+
+.gr-col-name { color: var(--gr-text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gr-col-type { color: var(--gr-muted); font-size: .59rem; flex-shrink: 0; }
+.gr-col-more {
+  padding: .18rem .8rem;
+  font-family: var(--gr-mono); font-size: .58rem;
+  color: var(--gr-muted); font-style: italic;
+}
+
+/* node footer */
+.gr-node-foot {
+  border-top: 1px solid var(--gr-border);
+  padding: .26rem .8rem;
+  font-family: var(--gr-mono); font-size: .58rem;
+  color: var(--gr-muted);
+  display: flex; justify-content: space-between;
+}
+
+/* ── Loading / empty overlays ────────────────────────────────────────── */
+.gr-overlay {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: .8rem;
+  color: var(--gr-muted); font-size: .88rem;
+  background: rgba(11,15,26,.55);
+  backdrop-filter: blur(2px);
+}
+.gr-spinner {
+  width: 34px; height: 34px;
+  border: 3px solid rgba(99,179,237,.15);
+  border-top-color: var(--gr-p0);
+  border-radius: 50%;
+  animation: gr-spin .75s linear infinite;
+}
+@keyframes gr-spin { to { transform: rotate(360deg); } }
+
+/* ── Minimap ──────────────────────────────────────────────────────────── */
+.gr-minimap {
+  position: absolute;
+  bottom: 12px; right: 12px;
+  width: 160px; height: 100px;
+  border: 1px solid var(--gr-border);
+  border-radius: 7px;
+  background: rgba(8,12,20,.82);
+  z-index: 10;
+  pointer-events: none;
+  display: none;           /* shown by JS when toggled */
+}
+
+/* ── Tooltip ──────────────────────────────────────────────────────────── */
+.gr-tooltip {
+  position: fixed; z-index: 9999;
+  background: var(--gr-panel);
+  border: 1px solid var(--gr-border);
+  border-radius: 8px;
+  padding: .6rem .85rem;
+  font-family: var(--gr-mono); font-size: .68rem;
+  color: var(--gr-text);
+  pointer-events: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,.55);
+  max-width: 270px;
+  line-height: 1.55;
+}
+
+/* ── SVG edge labels ──────────────────────────────────────────────────── */
+.gr-edge-lbl {
+  font-family: var(--gr-mono);
+  font-size: 9px;
+  pointer-events: none;
+}

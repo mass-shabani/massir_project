@@ -9,7 +9,18 @@
             },
             {
                 "path": "{app_dir}/app",
-                "names": ["template_service", "server_manager", "main_app", "db_connection", "db_tables", "db_data_editor", "db_transactions", "db_schema", "db_dashboard"],
+                "names": [
+                    "template_service", 
+                    "server_manager", 
+                    "main_app", 
+                    "db_connection", 
+                    "db_tables", 
+                    "db_data_editor", 
+                    "db_transactions", 
+                    "db_schema", 
+                    "db_dashboard", 
+                    "db_graph"
+                ],
                 "type": "all"
             }
         ],

@@ -1,0 +1,10 @@
+{
+    "name": "db_graph",
+    "version": "1.0.0",
+    "type": "application",
+    "entrypoint": "DbGraphModule",
+    "description": "Visual schema graph - interactive map of database tables and relationships",
+    "enabled": true,
+    "provides": [],
+    "requires": ["db_connection_service"]
+}
