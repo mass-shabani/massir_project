@@ -1,0 +1,9 @@
+{
+    "name": "system_encryption",
+    "version": "1.0.0",
+    "type": "system",
+    "entrypoint": "EncryptionModule",
+    "description": "Stateless cryptographic operations: AES-256-GCM, RSA-4096, HMAC-SHA256. Used for encrypting data at rest and in transit across the Massir framework.",
+    "requires": ["core_logger"],
+    "provides": ["encryption_api"]
+}

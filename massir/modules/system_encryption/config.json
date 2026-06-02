@@ -1,0 +1,16 @@
+{
+    "default_algorithm": "aes-256-gcm",
+    "rsa_key_size": 4096,
+    "hmac_algorithm": "sha256",
+    "auto_generate_keys_on_startup": false,
+    "key_storage": {
+        "enabled": false,
+        "path": "{app_dir}/keys",
+        "auto_create_dir": true
+    },
+    "logging": {
+        "tag": "encryption",
+        "log_operations": false,
+        "log_key_generation": true
+    }
+}
