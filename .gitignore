@@ -86,6 +86,10 @@ env.bak/
 venv.bak/
 .kilo
 .kilo/
+.temp
+.temp/
+.Temp/
+.TEMP/
 
 # data temporary
 data
