@@ -1,0 +1,10 @@
+{
+    "name": "encryption_demo",
+    "version": "1.0.0",
+    "enabled": true,
+    "type": "application",
+    "entrypoint": "EncryptionDemoModule",
+    "provides": ["encryption_service"],
+    "requires": ["encryption_api", "core_logger"],
+    "forced_execute": false
+}
