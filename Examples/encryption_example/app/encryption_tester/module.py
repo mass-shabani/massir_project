@@ -415,7 +415,6 @@ class EncryptionTesterModule(IModule):
             # Scenario: Alice wants to send encrypted message to Bob
             
             # Bob generates RSA keypair and shares public key
-            bob_public, bob_private = self.encryption.generate_k
             bob_public, bob_private = self.encryption.generate_keypair()
                         
             # Alice generates AES session key
