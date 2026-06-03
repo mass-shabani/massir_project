@@ -233,6 +233,9 @@ class DefaultLogger(CoreLoggerAPI):
             color: Foreground ANSI color
             **kwargs: Additional keyword arguments
         """
+        if not self._should_log(level, tag):
+            return
+
         if not isinstance(message, str):
             message = repr(message)
 

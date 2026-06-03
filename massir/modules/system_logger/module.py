@@ -238,6 +238,9 @@ class AdvancedLogger(CoreLoggerAPI):
             suffix: Text appended to the message
             styles: Additional raw ANSI codes to apply
         """
+        if not self._should_log(level, tag):
+            return
+
         if not isinstance(message, str):
             message = repr(message)
 
