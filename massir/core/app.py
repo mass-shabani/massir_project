@@ -129,7 +129,7 @@ class App:
         log_internal(
             self._config_api_ref[0], 
             self._logger_api_ref[0], 
-            "Shutdown requested programmatically [🛑]...", 
+            "Shutdown requested programmatically...", 
             level="CORE"
         )
         # Dispatch shutdown hook (synchronously since we're not in async context)
@@ -176,7 +176,7 @@ class App:
             loop: The asyncio event loop
         """
         def _shutdown_handler():
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Shutdown signal received.[🛑] Initiating graceful shutdown...", level="CORE")
+            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Shutdown signal received. Initiating graceful shutdown...", level="CORE")
             self._stop_event.set()
 
         # Try Unix-style signal handlers first
