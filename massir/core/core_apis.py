@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import List, Optional
+import os
 
 
 class CoreLoggerAPI(ABC):
@@ -19,6 +20,25 @@ class CoreLoggerAPI(ABC):
             level: Log level (INFO, WARNING, ERROR, etc.)
             tag: Optional tag for filtering
             **kwargs: Additional keyword arguments (e.g., level_color, text_color)
+        """
+        pass
+
+    def print(self, message: str, 
+              level: str = "INFO", 
+              tag: Optional[str] = None, 
+              end: str = "\n",
+              color: Optional[str] = None, 
+              **kwargs):
+        """
+        Print a raw message without log metadata.
+
+        Args:
+            message: The message to print
+            level: Log level (INFO, WARNING, ERROR, etc.), This is not displayed
+            tag: Optional tag for filtering, This is not displayed
+            end: String appended after the message (defaults to newline)
+            color: Foreground ANSI color
+            **kwargs: Additional keyword arguments
         """
         pass
 

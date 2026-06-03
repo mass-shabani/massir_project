@@ -1,7 +1,7 @@
 import datetime
 import os
 import re
-from typing import Optional
+from typing import List, Optional
 from massir.core.interfaces import IModule
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.hook_types import SystemHook
@@ -201,6 +201,66 @@ class AdvancedLogger(CoreLoggerAPI):
             str_message = f"{_text_color}{formatted_message}{Colors.RESET}"
 
         print(f"{str_time}{str_header}\t{str_message}")
+
+    def print(self,
+              message: str,
+              level: str = "INFO", 
+              tag: Optional[str] = None,
+              end: str = "\n",
+              color: Optional[str] = None,
+              bg_color: Optional[str] = None,
+              bold: bool = False,
+              underline: bool = False,
+              italic: bool = False,
+              dim: bool = False,
+              blink: bool = False,
+              inverse: bool = False,
+              prefix: Optional[str] = None,
+              suffix: Optional[str] = None,
+              styles: Optional[List[str]] = None):
+        """
+        Print raw output with advanced styling options but without log headers.
+
+        Args:
+            message: The text to print
+            level: Log level (INFO, WARNING, ERROR, etc.), This is not displayed
+            tag: Optional tag for filtering, This is not displayed
+            end: String appended after the message (defaults to newline)
+            color: Foreground ANSI color
+            bg_color: Background ANSI color
+            bold: Render bold text
+            underline: Render underlined text
+            italic: Render italic text
+            dim: Render dim text
+            blink: Enable blinking text
+            inverse: Swap foreground/background colors
+            prefix: Text prepended to the message
+            suffix: Text appended to the message
+            styles: Additional raw ANSI codes to apply
+        """
+        if not isinstance(message, str):
+            message = repr(message)
+
+        if prefix is None:  prefix = ""
+        if suffix is None:  suffix = ""
+
+        output = f"{prefix}{message}{suffix}"
+
+        codes: list[str] = []
+        if color:       codes.append(color)
+        if bg_color:    codes.append(bg_color)
+        if bold:        codes.append("\033[1m")
+        if italic:      codes.append("\033[3m")
+        if dim:         codes.append("\033[2m")
+        if underline:   codes.append("\033[4m")
+        if blink:       codes.append("\033[5m")
+        if inverse:     codes.append("\033[7m")
+        if styles:      codes.extend(styles)
+
+        if os.name == 'nt': os.system('')
+        if codes: output = "".join(codes) + output + Colors.RESET
+
+        print(output, end=end)
 
 
 class SystemLoggerModule(IModule):

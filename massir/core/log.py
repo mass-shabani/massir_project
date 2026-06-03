@@ -3,7 +3,7 @@
 Logging functions and classes.
 """
 import os
-from typing import Optional
+from typing import List, Optional
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 
 
@@ -62,6 +62,46 @@ class _FallbackLogger:
         level_prefix = f"[{level}]" if level else ""
         tag_prefix = f" [{tag}]" if tag else ""
         print(f"{level_prefix}{tag_prefix} {message}")
+
+    def print(self, message: str, *, color: Optional[str] = None, bg_color: Optional[str] = None, bold: bool = False,
+              underline: bool = False, italic: bool = False, dim: bool = False, blink: bool = False,
+              inverse: bool = False, prefix: Optional[str] = None, suffix: Optional[str] = None,
+              styles: Optional[List[str]] = None, end: str = "\n"):
+        if not isinstance(message, str):
+            message = repr(message)
+        if prefix is None:
+            prefix = ""
+        if suffix is None:
+            suffix = ""
+        output = f"{prefix}{message}{suffix}"
+
+        codes: list[str] = []
+        if color:
+            codes.append(color)
+        if bg_color:
+            codes.append(bg_color)
+        if bold:
+            codes.append("\033[1m")
+        if italic:
+            codes.append("\033[3m")
+        if dim:
+            codes.append("\033[2m")
+        if underline:
+            codes.append("\033[4m")
+        if blink:
+            codes.append("\033[5m")
+        if inverse:
+            codes.append("\033[7m")
+        if styles:
+            codes.extend(styles)
+
+        if os.name == 'nt':
+            os.system('')
+
+        if codes:
+            output = "".join(codes) + output + "\033[0m"
+
+        print(output, end=end)
 
 
 class _FallbackConfig:
@@ -175,3 +215,33 @@ class DefaultLogger(CoreLoggerAPI):
         reset_code = '\033[0m'
 
         print(f"{color_code_start}{formatted_msg}{reset_code}")
+
+    def print(self, message: str, 
+              level: str = "INFO", 
+              tag: Optional[str] = None, 
+              end: str = "\n",
+              color: Optional[str] = None, 
+              **kwargs):
+        """
+        Print a raw message without log metadata.
+
+        Args:
+            message: The message to print
+            level: Log level (INFO, WARNING, ERROR, etc.), This is not displayed
+            tag: Optional tag for filtering, This is not displayed
+            end: String appended after the message (defaults to newline)
+            color: Foreground ANSI color
+            **kwargs: Additional keyword arguments
+        """
+        if not isinstance(message, str):
+            message = repr(message)
+
+        output = f"{message}"
+
+        if os.name == 'nt':
+            os.system('')
+
+        if color:
+            output = color + output + "\033[0m"
+
+        print(output, end=end)
