@@ -1,0 +1,10 @@
+{
+    "name": "ssl_tester",
+    "version": "1.0.0",
+    "enabled": true,
+    "type": "application",
+    "entrypoint": "SSLTesterModule",
+    "provides": ["ssl_test_results"],
+    "requires": ["ssl_api", "core_logger"],
+    "forced_execute": false
+}
