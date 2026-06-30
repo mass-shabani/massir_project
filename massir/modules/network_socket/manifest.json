@@ -1,0 +1,9 @@
+{
+    "name": "network_socket",
+    "version": "1.0.0",
+    "type": "system",
+    "entrypoint": "NetworkSocketModule",
+    "description": "Async TCP/UDP socket programming with Message Mode (framed JSON) and Stream Mode (zero-copy passthrough). Supports connection pooling, heartbeats, auto-reconnect, and optional TLS/encryption.",
+    "requires": ["core_logger"],
+    "provides": ["socket_api"]
+}

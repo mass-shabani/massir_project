@@ -1,0 +1,47 @@
+{
+    "server": {
+        "default_host": "0.0.0.0",
+        "default_port": 8443,
+        "backlog": 100,
+        "max_connections_per_peer": 10
+    },
+    "client": {
+        "connect_timeout_seconds": 10.0,
+        "reconnect_enabled": true,
+        "reconnect_initial_delay_seconds": 1.0,
+        "reconnect_max_delay_seconds": 60.0,
+        "reconnect_backoff_multiplier": 2.0,
+        "reconnect_max_attempts": 0,
+        "send_queue_size": 1000
+    },
+    "framing": {
+        "max_message_size_bytes": 16777216,
+        "length_prefix_bytes": 4,
+        "default_codec": "json"
+    },
+    "heartbeat": {
+        "enabled": true,
+        "interval_seconds": 30.0,
+        "timeout_seconds": 90.0,
+        "missed_threshold": 3
+    },
+    "pool": {
+        "max_connections_per_peer": 5,
+        "idle_timeout_seconds": 300.0,
+        "cleanup_interval_seconds": 60.0
+    },
+    "ssl": {
+        "enabled": true,
+        "use_ssl_api": true
+    },
+    "encryption": {
+        "enabled": false,
+        "encrypt_payload": false
+    },
+    "logging": {
+        "tag": "socket",
+        "log_connections": true,
+        "log_messages": false,
+        "log_heartbeat": false
+    }
+}
