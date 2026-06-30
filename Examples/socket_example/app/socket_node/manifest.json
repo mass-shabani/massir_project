@@ -1,0 +1,10 @@
+{
+    "name": "socket_node",
+    "version": "1.0.0",
+    "enabled": true,
+    "type": "application",
+    "entrypoint": "SocketNodeModule",
+    "provides": ["node_service"],
+    "requires": ["socket_api", "ssl_api", "core_logger"],
+    "forced_execute": false
+}

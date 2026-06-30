@@ -1,0 +1,10 @@
+{
+    "name": "message_demo",
+    "version": "1.0.0",
+    "enabled": true,
+    "type": "application",
+    "entrypoint": "MessageDemoModule",
+    "provides": [],
+    "requires": ["node_service", "core_logger"],
+    "forced_execute": false
+}
