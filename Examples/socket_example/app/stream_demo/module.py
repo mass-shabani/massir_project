@@ -5,6 +5,8 @@ Demonstrates Stream Mode for zero-copy byte passthrough:
 - Raw file transfer
 - Large data streaming
 - Bidirectional byte pipes
+
+NOTE: Uses logger.print for demo output.
 """
 
 import asyncio
@@ -58,10 +60,12 @@ class StreamDemoModule(IModule):
     async def ready(self, context):
         """Called when all modules are ready."""
         if self.logger:
-            self.logger.log(
-                "StreamDemo ready - use stream_service.send_test_file(peer_id)",
-                tag="stream_demo"
-            )
+            # Use logger.print for demo output
+            self.logger.print("", tag="stream_demo")
+            self.logger.print("=" * 60, tag="stream_demo")
+            self.logger.print("🌊 StreamDemo ready", tag="stream_demo")
+            self.logger.print("   Use stream_service.send_test_file(peer_id) to stream data", tag="stream_demo")
+            self.logger.print("=" * 60, tag="stream_demo")
     
     async def stop(self, context):
         """Stop the module."""
@@ -90,18 +94,19 @@ class StreamDemoModule(IModule):
         chunk_size = self._config.get("chunk_size_bytes", 8192)
         
         if self.logger:
-            self.logger.log(
-                f"📤 Streaming {test_path.name} ({file_size} bytes) "
-                f"to peer '{peer_id}'",
-                tag="stream_demo"
-            )
+            # Use logger.print for demo output
+            self.logger.print("", tag="stream_demo")
+            self.logger.print("=" * 60, tag="stream_demo")
+            self.logger.print(f"📤 Streaming {test_path.name} ({file_size} bytes) to peer '{peer_id}'", tag="stream_demo")
+            self.logger.print("=" * 60, tag="stream_demo")
         
-        # Send header with filename and size (using message mode for control)
-        # Note: We're using bytes directly for stream mode simulation
+        # Send header with filename and size
         header = f"FILE:{test_path.name}:{file_size}\n".encode("utf-8")
         success = await self.socket_api.send_bytes(peer_id, header)
         
         if not success:
+            if self.logger:
+                self.logger.print(f"❌ Failed to send header to '{peer_id}'", tag="stream_demo")
             return False
         
         # Stream the file in chunks
@@ -118,11 +123,7 @@ class StreamDemoModule(IModule):
                     success = await self.socket_api.send_bytes(peer_id, chunk)
                     if not success:
                         if self.logger:
-                            self.logger.log(
-                                "Failed to send chunk",
-                                tag="stream_demo",
-                                level="ERROR"
-                            )
+                            self.logger.print("❌ Failed to send chunk", tag="stream_demo")
                         return False
                     
                     bytes_sent += len(chunk)
@@ -132,21 +133,15 @@ class StreamDemoModule(IModule):
             await self.socket_api.send_bytes(peer_id, b"\nEOF\n")
             
             if self.logger:
-                self.logger.log(
-                    f"✅ Stream complete: {bytes_sent} bytes in {chunks_sent} chunks",
-                    tag="stream_demo",
-                    text_color=self.colors.BRIGHT_GREEN if self.colors else None
-                )
+                # Use logger.print for demo output
+                self.logger.print(f"✅ Stream complete: {bytes_sent} bytes in {chunks_sent} chunks", tag="stream_demo")
+                self.logger.print("=" * 60, tag="stream_demo")
             
             return True
         
         except Exception as e:
             if self.logger:
-                self.logger.log(
-                    f"❌ Stream failed: {e}",
-                    tag="stream_demo",
-                    level="ERROR"
-                )
+                self.logger.print(f"❌ Stream failed: {e}", tag="stream_demo")
             return False
     
     def _create_test_file(self, path: Path, size_mb: int = 1):
@@ -154,7 +149,6 @@ class StreamDemoModule(IModule):
         path.parent.mkdir(parents=True, exist_ok=True)
         
         with open(path, "wb") as f:
-            # Write in 1MB chunks
             chunk = os.urandom(1024 * 1024)
             for _ in range(size_mb):
                 f.write(chunk)

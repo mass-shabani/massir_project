@@ -6,19 +6,15 @@ Manages a node in the distributed socket network:
 - Connects to all configured peers
 - Monitors connections via heartbeat
 - Provides node_service to other modules
+
+NOTE: This module does NOT import types directly from network_socket.
+All message creation goes through socket_api factory methods.
 """
 
 import asyncio
 from typing import Any, Dict, List, Optional
 
 from massir.core.interfaces import IModule
-
-from massir.modules.network_socket.core.types import (
-    SocketMessage,
-    MessageType,
-    PeerId,
-    Connection,
-)
 
 
 class SocketNodeModule(IModule):
@@ -192,7 +188,7 @@ class SocketNodeModule(IModule):
     # Inbound Handlers
     # =========================================================================
     
-    async def _on_inbound_connection(self, conn: Connection):
+    async def _on_inbound_connection(self, conn):
         """Handle inbound connection."""
         remote = conn.remote_address
         if self.logger:
@@ -202,7 +198,7 @@ class SocketNodeModule(IModule):
                 text_color=self.colors.BRIGHT_BLUE if self.colors else None
             )
     
-    async def _on_inbound_disconnection(self, conn: Connection):
+    async def _on_inbound_disconnection(self, conn):
         """Handle inbound disconnection."""
         remote = conn.remote_address
         if self.logger:
@@ -211,8 +207,11 @@ class SocketNodeModule(IModule):
                 tag="node"
             )
     
-    async def _on_inbound_message(self, message: SocketMessage, conn: Connection):
+    async def _on_inbound_message(self, message, conn):
         """Handle inbound message (dispatch to handlers)."""
+        # Use MessageType from socket_api factory (no direct import)
+        MessageType = self.socket_api.MessageType
+        
         # Skip control messages
         if message.type in (MessageType.PING, MessageType.PONG):
             return
@@ -237,18 +236,27 @@ class SocketNodeModule(IModule):
         """Get list of connected peer IDs."""
         return list(self._connected_peers.keys())
     
-    async def send_to_peer(self, peer_id: str, message: SocketMessage) -> bool:
+    def create_message(self, msg_type, payload=None, **kwargs):
+        """
+        Create a message using socket_api factory.
+        
+        This is a convenience method that delegates to socket_api.create_message()
+        so consumer modules don't need direct access to socket_api.
+        """
+        return self.socket_api.create_message(msg_type, payload, **kwargs)
+    
+    async def send_to_peer(self, peer_id: str, message) -> bool:
         """Send a message to a specific peer."""
         return await self.socket_api.send_message(peer_id, message)
     
-    async def broadcast(self, message: SocketMessage) -> Dict[str, bool]:
+    async def broadcast(self, message) -> Dict[str, bool]:
         """Broadcast a message to all connected peers."""
         results = {}
         for peer_id in self._connected_peers:
             results[peer_id] = await self.send_to_peer(peer_id, message)
         return results
     
-    async def broadcast_to_all(self, message: SocketMessage):
+    async def broadcast_to_all(self, message):
         """Broadcast to all configured peers (including disconnected)."""
         for peer in self._peers:
             await self.socket_api.send_message(peer["node_id"], message)

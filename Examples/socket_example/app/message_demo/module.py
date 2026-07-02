@@ -14,11 +14,6 @@ from typing import Dict, Any
 
 from massir.core.interfaces import IModule
 
-from massir.modules.network_socket.core.types import (
-    SocketMessage,
-    MessageType,
-)
-
 
 class MessageDemoModule(IModule):
     """
@@ -101,8 +96,9 @@ class MessageDemoModule(IModule):
                 )
             return
         
-        msg = SocketMessage(
-            type=MessageType.DATA,
+        # Use node_service.create_message() - NO direct imports
+        msg = self.node_service.create_message(
+            msg_type="data",
             payload={
                 "event": "node_online",
                 "node_id": node_id,
@@ -116,11 +112,11 @@ class MessageDemoModule(IModule):
         
         if self.logger:
             success = sum(1 for v in results.values() if v)
-            self.logger.log(
-                f"📢 Initial broadcast: {success}/{len(results)} peers received",
-                tag="msg_demo",
-                text_color=self.colors.BRIGHT_GREEN if self.colors else None
-            )
+            # Use logger.print for demo output
+            self.logger.print("", tag="msg_demo")
+            self.logger.print("=" * 60, tag="msg_demo")
+            self.logger.print(f"📢 Initial broadcast: {success}/{len(results)} peers received", tag="msg_demo")
+            self.logger.print("=" * 60, tag="msg_demo")
     
     async def _broadcast_loop(self):
         """Periodically broadcast status messages."""
@@ -138,8 +134,9 @@ class MessageDemoModule(IModule):
                 
                 self._message_counter += 1
                 
-                msg = SocketMessage(
-                    type=MessageType.DATA,
+                # Use node_service.create_message() - NO direct imports
+                msg = self.node_service.create_message(
+                    msg_type="data",
                     payload={
                         "event": "periodic_hello",
                         "node_id": node_id,
@@ -154,7 +151,8 @@ class MessageDemoModule(IModule):
                 
                 if self.logger:
                     success = sum(1 for v in results.values() if v)
-                    self.logger.log(
+                    # Use logger.print for demo output
+                    self.logger.print(
                         f"📢 Broadcast #{self._message_counter}: "
                         f"{success}/{len(results)} peers",
                         tag="msg_demo"

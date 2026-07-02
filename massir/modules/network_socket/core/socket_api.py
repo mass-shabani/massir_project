@@ -14,6 +14,7 @@ from .types import (
     ConnectionInfo,
     ConnectionState,
     SocketMode,
+    MessageType,
     PeerId,
 )
 from .connection import Connection
@@ -45,6 +46,7 @@ class SocketAPI:
     - Manage connection pools
     - Monitor connection health via heartbeats
     - Send messages (Message Mode) or bytes (Stream Mode)
+    - Factory methods for creating messages (no direct imports needed)
     """
     
     def __init__(self, config: dict, logger: Any = None):
@@ -57,13 +59,12 @@ class SocketAPI:
         """
         self._config = config
         self._logger = logger
-        
         # SSL API reference (optional, from network_ssl module)
         self._ssl_api = None
         
         # Encryption API reference (optional, from system_encryption module)
         self._encryption_api = None
-        
+
         # Active servers
         self._servers: dict[tuple[str, int], SocketServer] = {}
         
@@ -90,6 +91,99 @@ class SocketAPI:
         self._on_inbound_disconnection: Optional[ConnectionCallback] = None
         self._on_inbound_message: Optional[MessageCallback] = None
         self._on_inbound_bytes: Optional[BytesCallback] = None
+    
+    # =========================================================================
+    # Factory Methods (No Direct Imports Needed by Consumer Modules)
+    # =========================================================================
+    
+    @property
+    def MessageType(self):
+        """
+        Access MessageType enum without direct imports.
+        
+        Usage:
+            socket_api.MessageType.DATA
+            socket_api.MessageType.PING
+        """
+        return MessageType
+    
+    @property
+    def SocketMessage(self):
+        """
+        Access SocketMessage class without direct imports.
+        
+        Usage:
+            msg = socket_api.SocketMessage(type=..., payload=...)
+        """
+        return SocketMessage
+    
+    def create_message(
+        self,
+        msg_type: str | MessageType,
+        payload: Any = None,
+        message_id: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+        metadata: Optional[dict] = None,
+    ) -> SocketMessage:
+        """
+        Factory method to create a SocketMessage.
+        
+        This eliminates the need for consumer modules to import types directly.
+        
+        Args:
+            msg_type: Message type (string like "data" or MessageType enum)
+            payload: Message payload (any JSON-serializable data)
+            message_id: Optional unique message identifier
+            correlation_id: Optional correlation ID for request/reply
+            metadata: Optional metadata dictionary
+        
+        Returns:
+            SocketMessage instance
+        
+        Example:
+            >>> msg = socket_api.create_message(
+            ...     "data",
+            ...     payload={"key": "value"},
+            ...     message_id="msg-123"
+            ... )
+        """
+        # Convert string to MessageType if needed
+        if isinstance(msg_type, str):
+            try:
+                msg_type = MessageType(msg_type.lower())
+            except ValueError:
+                # Allow custom message types as strings
+                pass
+        
+        return SocketMessage(
+            type=msg_type,
+            payload=payload,
+            message_id=message_id,
+            correlation_id=correlation_id,
+            metadata=metadata or {},
+        )
+    
+    def create_ping(self, message_id: Optional[str] = None) -> SocketMessage:
+        """Create a PING message."""
+        return self.create_message(MessageType.PING, message_id=message_id)
+    
+    def create_pong(self, correlation_id: Optional[str] = None) -> SocketMessage:
+        """Create a PONG message."""
+        return self.create_message(MessageType.PONG, correlation_id=correlation_id)
+    
+    def create_data_message(
+        self,
+        payload: Any,
+        message_id: Optional[str] = None,
+        metadata: Optional[dict] = None,
+    ) -> SocketMessage:
+        """Create a DATA message (most common type)."""
+        return self.create_message(
+            MessageType.DATA,
+            payload=payload,
+            message_id=message_id,
+            metadata=metadata,
+        )
     
     # =========================================================================
     # Service Integration
@@ -124,7 +218,7 @@ class SocketAPI:
         self._on_inbound_bytes = callback
     
     # =========================================================================
-    # Server Management
+    # Server Management (unchanged from previous version)
     # =========================================================================
     
     async def create_server(
