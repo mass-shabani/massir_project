@@ -4,6 +4,8 @@ Unified Socket API.
 Provides a high-level interface for all socket operations.
 """
 
+from __future__ import annotations
+
 import asyncio
 import ssl
 from typing import Any, Callable, Optional, Awaitable
@@ -47,7 +49,16 @@ class SocketAPI:
     - Monitor connection health via heartbeats
     - Send messages (Message Mode) or bytes (Stream Mode)
     - Factory methods for creating messages (no direct imports needed)
+    
+    Access message types via instance attributes:
+        socket_api.MessageType.DATA
+        socket_api.SocketMessage(type=..., payload=...)
     """
+    
+    # Expose types as class attributes (NOT properties)
+    # This allows: socket_api.MessageType.DATA without instantiation issues
+    MessageType = MessageType
+    SocketMessage = SocketMessage
     
     def __init__(self, config: dict, logger: Any = None):
         """
@@ -59,9 +70,10 @@ class SocketAPI:
         """
         self._config = config
         self._logger = logger
+        ()
         # SSL API reference (optional, from network_ssl module)
         self._ssl_api = None
-        
+
         # Encryption API reference (optional, from system_encryption module)
         self._encryption_api = None
 
@@ -96,30 +108,9 @@ class SocketAPI:
     # Factory Methods (No Direct Imports Needed by Consumer Modules)
     # =========================================================================
     
-    @property
-    def MessageType(self):
-        """
-        Access MessageType enum without direct imports.
-        
-        Usage:
-            socket_api.MessageType.DATA
-            socket_api.MessageType.PING
-        """
-        return MessageType
-    
-    @property
-    def SocketMessage(self):
-        """
-        Access SocketMessage class without direct imports.
-        
-        Usage:
-            msg = socket_api.SocketMessage(type=..., payload=...)
-        """
-        return SocketMessage
-    
     def create_message(
         self,
-        msg_type: str | MessageType,
+        msg_type: Any, 
         payload: Any = None,
         message_id: Optional[str] = None,
         correlation_id: Optional[str] = None,
@@ -131,7 +122,10 @@ class SocketAPI:
         This eliminates the need for consumer modules to import types directly.
         
         Args:
-            msg_type: Message type (string like "data" or MessageType enum)
+            msg_type: Message type - can be:
+                     - String like "data", "ping", "pong"
+                     - MessageType enum value
+                     - Any custom string type
             payload: Message payload (any JSON-serializable data)
             message_id: Optional unique message identifier
             correlation_id: Optional correlation ID for request/reply
@@ -141,10 +135,13 @@ class SocketAPI:
             SocketMessage instance
         
         Example:
+            >>> # Using string
+            >>> msg = socket_api.create_message("data", payload={"key": "value"})
+            
+            >>> # Using MessageType enum
             >>> msg = socket_api.create_message(
-            ...     "data",
-            ...     payload={"key": "value"},
-            ...     message_id="msg-123"
+            ...     socket_api.MessageType.DATA,
+            ...     payload={"key": "value"}
             ... )
         """
         # Convert string to MessageType if needed
@@ -218,7 +215,7 @@ class SocketAPI:
         self._on_inbound_bytes = callback
     
     # =========================================================================
-    # Server Management (unchanged from previous version)
+    # Server Management
     # =========================================================================
     
     async def create_server(
