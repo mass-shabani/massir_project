@@ -45,13 +45,13 @@
                 "ca_file": "ca.crt"
             },
             "node2": {
-                "cert_file": "node2.crt",
-                "key_file": "node2.key",
+                "cert_file": "node1.crt",
+                "key_file": "node1.key",
                 "ca_file": "ca.crt"
             },
             "node3": {
-                "cert_file": "node3.crt",
-                "key_file": "node3.key",
+                "cert_file": "node1.crt",
+                "key_file": "node1.key",
                 "ca_file": "ca.crt"
             }
         }
@@ -81,8 +81,8 @@
         "listen_port": 8443,
         "advertise_host": "node1",
         "peers": [
-            {"node_id": "node2", "host": "node2", "port": 8443},
-            {"node_id": "node3", "host": "node3", "port": 8443}
+            {"node_id": "node2", "host": "replace_with_node2_host_address", "port": 8443},
+            {"node_id": "node3", "host": "replace_with_node3_host_address", "port": 8443}
         ],
         "use_tls": true,
         "auto_connect_on_start": true,

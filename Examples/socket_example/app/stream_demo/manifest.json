@@ -6,5 +6,5 @@
     "entrypoint": "StreamDemoModule",
     "provides": ["stream_service"],
     "requires": ["socket_api", "core_logger"],
-    "forced_execute": false
+    "forced_execute": true
 }

@@ -6,5 +6,5 @@
     "entrypoint": "MessageDemoModule",
     "provides": [],
     "requires": ["node_service", "core_logger"],
-    "forced_execute": false
+    "forced_execute": true
 }
