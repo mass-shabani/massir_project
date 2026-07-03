@@ -129,7 +129,7 @@ class SocketNodeModule(IModule):
     # =========================================================================
     # Peer Connection
     # =========================================================================
-    
+
     async def _connect_to_all_peers(self):
         """Connect to all configured peers."""
         if not self._peers:
@@ -158,32 +158,54 @@ class SocketNodeModule(IModule):
                     self._connected_peers.pop(pid, None)
                     if self.logger:
                         self.logger.log(
-                            f"❌ Disconnected from peer '{pid}'",
+                            f"❌ Disconnected from peer '{pid}' (will auto-reconnect)",
                             tag="node",
                             text_color=self.colors.BRIGHT_RED if self.colors else None
                         )
                 
+                # Register connect handler (for when reconnect succeeds)
+                async def on_connect(conn, pid=peer_id):
+                    self._connected_peers[pid] = client
+                    if self.logger:
+                        self.logger.log(
+                            f"✅ Connected to peer '{pid}' at {host}:{port}",
+                            tag="node",
+                            text_color=self.colors.BRIGHT_GREEN if self.colors else None
+                        )
+                
                 client.on_disconnect(on_disconnect)
+                client.on_connect(on_connect)
                 
-                self._connected_peers[peer_id] = client
-                
-                if self.logger:
-                    self.logger.log(
-                        f"✅ Connected to peer '{peer_id}' at {host}:{port}",
-                        tag="node",
-                        text_color=self.colors.BRIGHT_GREEN if self.colors else None
-                    )
+                # Check if already connected
+                if client.is_connected:
+                    self._connected_peers[peer_id] = client
+                    if self.logger:
+                        self.logger.log(
+                            f"✅ Connected to peer '{peer_id}' at {host}:{port}",
+                            tag="node",
+                            text_color=self.colors.BRIGHT_GREEN if self.colors else None
+                        )
+                else:
+                    # Not connected yet, but auto-reconnect is active
+                    if self.logger:
+                        self.logger.log(
+                            f"⏳ Peer '{peer_id}' at {host}:{port} not available yet, "
+                            f"auto-reconnect active (will keep trying)",
+                            tag="node",
+                            level="WARNING",
+                            text_color=self.colors.BRIGHT_YELLOW if self.colors else None
+                        )
             
             except Exception as e:
                 if self.logger:
                     self.logger.log(
-                        f"⚠️ Failed to connect to peer '{peer_id}' "
-                        f"at {host}:{port}: {e} (will retry)",
+                        f"⚠️ Failed to setup connection to peer '{peer_id}' "
+                        f"at {host}:{port}: {e}",
                         tag="node",
                         level="WARNING",
                         text_color=self.colors.BRIGHT_YELLOW if self.colors else None
                     )
-    
+
     # =========================================================================
     # Inbound Handlers
     # =========================================================================

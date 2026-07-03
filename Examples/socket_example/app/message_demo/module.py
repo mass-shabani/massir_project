@@ -5,6 +5,9 @@ Demonstrates Message Mode operations:
 - Periodic broadcast to all peers
 - Message handling and routing
 - Request/reply patterns
+
+NOTE: Uses logger.print for demo output (similar to ssl_example).
+      No direct imports from network_socket - uses factory methods.
 """
 
 import asyncio
@@ -41,21 +44,45 @@ class MessageDemoModule(IModule):
             self._config = core_config.get("message_demo", {})
         
         if self.logger:
-            self.logger.log(
-                "MessageDemoModule loaded",
-                tag="msg_demo",
-                text_color=self.colors.BRIGHT_MAGENTA if self.colors else None
-            )
+            if self.node_service:
+                self.logger.log(
+                    "MessageDemoModule loaded",
+                    tag="msg_demo",
+                    text_color=self.colors.BRIGHT_MAGENTA if self.colors else None
+                )
+            else:
+                self.logger.log(
+                    "MessageDemoModule loaded (node_service not yet available, will retry)",
+                    tag="msg_demo",
+                    level="WARNING"
+                )
     
     async def start(self, context):
         """Start periodic broadcast if configured."""
+        # Retry getting node_service if not available at load time
+        if not self.node_service:
+            self.node_service = context.services.get("node_service")
+        
+        if not self.node_service:
+            if self.logger:
+                self.logger.log(
+                    "Cannot start MessageDemo: node_service not available",
+                    tag="msg_demo",
+                    level="ERROR"
+                )
+            return
+        
         if self._config.get("enabled", True) and self._config.get("auto_broadcast_on_start", True):
             await self._initial_broadcast()
             self._broadcast_task = asyncio.create_task(self._broadcast_loop())
     
     async def ready(self, context):
         """Called when all modules are ready."""
-        if self.logger:
+        # Retry getting node_service if not available
+        if not self.node_service:
+            self.node_service = context.services.get("node_service")
+        
+        if self.logger and self.node_service:
             node_id = self.node_service.get_node_id()
             peers = self.node_service.get_connected_peers()
             self.logger.log(
@@ -84,6 +111,9 @@ class MessageDemoModule(IModule):
     
     async def _initial_broadcast(self):
         """Send initial broadcast message."""
+        if not self.node_service:
+            return
+            
         node_id = self.node_service.get_node_id()
         peers = self.node_service.get_connected_peers()
         
@@ -122,6 +152,22 @@ class MessageDemoModule(IModule):
         """Periodically broadcast status messages."""
         interval = self._config.get("broadcast_interval_seconds", 5.0)
         template = self._config.get("broadcast_message", "Hello from {node_id}!")
+        
+        # Wait for node_service to be available
+        wait_count = 0
+        while not self.node_service and wait_count < 30:
+            await asyncio.sleep(1)
+            wait_count += 1
+        
+        if not self.node_service:
+            if self.logger:
+                self.logger.log(
+                    "MessageDemo: node_service never became available",
+                    tag="msg_demo",
+                    level="ERROR"
+                )
+            return
+        
         node_id = self.node_service.get_node_id()
         
         try:
