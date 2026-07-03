@@ -340,7 +340,7 @@ class SocketAPI:
     # =========================================================================
     # Client Management
     # =========================================================================
-    
+
     async def connect_to_peer(
         self,
         peer_id: PeerId,
@@ -360,7 +360,8 @@ class SocketAPI:
             use_tls: Whether to use TLS
         
         Returns:
-            Connected SocketClient
+            SocketClient instance (may not be connected yet if initial
+            connection failed - auto-reconnect will keep trying)
         """
         client_config = self._config.get("client", {})
         framing_config = self._config.get("framing", {})
@@ -404,20 +405,22 @@ class SocketAPI:
             except Exception as e:
                 if self._logger:
                     self._logger.log(
-                        f"Failed to setup TLS for peer '{peer_id}': {e}",
+                        f"Failed to setup TLS for peer '{peer_id}': {e}. "
+                        f"Falling back to plain connection.",
                         level="WARNING",
                         tag="socket"
                     )
-        
-        # Register with pool
+                    # Continue without TLS
+    
+        # Add to pool (will attempt connect, but won't fail if connect fails)
         await self._pool.add_client(peer_id, client, connect=True)
         
-        # Register with heartbeat
+        # Register with heartbeat (only if connected and in message mode)
         if mode_enum == SocketMode.MESSAGE and client.connection:
             self._heartbeat.add_connection(peer_id, client.connection)
         
         return client
-    
+
     async def disconnect_from_peer(self, peer_id: PeerId):
         """Disconnect all connections to a peer."""
         self._heartbeat.remove_connection(peer_id)

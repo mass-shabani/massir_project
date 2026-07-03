@@ -107,6 +107,11 @@ class ConnectionPool:
         
         Raises:
             PoolError: If max connections reached for peer
+            
+        Note:
+            If connect=True and connection fails, the client is NOT removed
+            from the pool. The auto-reconnect mechanism will keep trying
+            to establish the connection in the background.
         """
         if peer_id not in self._pool:
             self._pool[peer_id] = []
@@ -121,18 +126,29 @@ class ConnectionPool:
         # Set peer_id on client
         client.peer_id = peer_id
         
-        # Enable auto-reconnect
+        # Enable auto-reconnect BEFORE adding to pool
+        # This ensures reconnect is active even if initial connect fails
         await client.enable_auto_reconnect()
         
+        # Add to pool FIRST so reconnect can find it
         self._pool[peer_id].append(client)
         
         if connect:
             try:
                 await client.connect()
             except Exception as e:
-                # Remove on failure
-                self._pool[peer_id].remove(client)
-                raise
+                # Don't remove from pool - let reconnect handle it
+                # The client remains in the pool and will keep trying
+                # to reconnect in the background via _schedule_reconnect()
+                if self._logger:
+                    self._logger.log(
+                        f"Initial connection to peer '{peer_id}' failed, "
+                        f"auto-reconnect is active: {e}",
+                        level="WARNING",
+                        tag="socket"
+                    )
+                # Don't raise - let reconnect work in background
+                # The caller can check client.is_connected later
         
         if self._logger:
             self._logger.log(
@@ -178,6 +194,9 @@ class ConnectionPool:
         Get a connected client for a peer using round-robin.
         
         Returns None if no connected clients available.
+        Note: A client may be in the pool but not connected yet
+        (e.g., during reconnection). This method only returns
+        actually connected clients.
         """
         if peer_id not in self._pool:
             return None
@@ -196,6 +215,19 @@ class ConnectionPool:
         self._rr_index[peer_id] = idx + 1
         
         return connected[idx]
+    
+    def get_any_client(self, peer_id: PeerId) -> Optional[SocketClient]:
+        """
+        Get any client for a peer (connected or not).
+        
+        Useful for checking if a client exists for a peer,
+        even if it's currently reconnecting.
+        """
+        if peer_id not in self._pool:
+            return None
+        
+        clients = self._pool[peer_id]
+        return clients[0] if clients else None
     
     def get_all_clients(self, peer_id: PeerId) -> list[SocketClient]:
         """Get all clients for a peer."""

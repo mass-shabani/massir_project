@@ -140,15 +140,24 @@ class SocketClient:
                 timeout=self._config.connect_timeout,
             )
         except asyncio.TimeoutError as e:
+            # Schedule reconnect before raising
+            if self._should_reconnect:
+                await self._schedule_reconnect()
             raise ConnectionTimeoutError(
                 f"Connection to {self._config.host}:{self._config.port} "
                 f"timed out after {self._config.connect_timeout}s"
             ) from e
         except ConnectionRefusedError as e:
+            # Schedule reconnect before raising
+            if self._should_reconnect:
+                await self._schedule_reconnect()
             raise ConnectionRefusedError(
                 f"Connection refused by {self._config.host}:{self._config.port}"
             ) from e
         except OSError as e:
+            # Schedule reconnect before raising
+            if self._should_reconnect:
+                await self._schedule_reconnect()
             raise ConnectionError(
                 f"Failed to connect to {self._config.host}:{self._config.port}: {e}"
             ) from e
@@ -177,7 +186,7 @@ class SocketClient:
         
         self._connection.on_close(on_close)
         
-        # Reset reconnect state
+        # Reset reconnect state on successful connection
         self._current_delay = self._config.reconnect_initial_delay
         self._reconnect_attempts = 0
         
