@@ -6,8 +6,11 @@ Demonstrates Message Mode operations:
 - Message handling and routing
 - Request/reply patterns
 
-NOTE: Uses logger.print for demo output (similar to ssl_example).
-      No direct imports from network_socket - uses factory methods.
+OUTPUT STRATEGY:
+- logger.print: For broadcast events and message exchanges
+- logger.log: For errors and general info
+
+NOTE: No direct imports from network_socket - uses factory methods.
 """
 
 import asyncio
@@ -45,11 +48,7 @@ class MessageDemoModule(IModule):
         
         if self.logger:
             if self.node_service:
-                self.logger.log(
-                    "MessageDemoModule loaded",
-                    tag="msg_demo",
-                    text_color=self.colors.BRIGHT_MAGENTA if self.colors else None
-                )
+                self.logger.log("MessageDemoModule loaded", tag="msg_demo")
             else:
                 self.logger.log(
                     "MessageDemoModule loaded (node_service not yet available, will retry)",
@@ -86,7 +85,7 @@ class MessageDemoModule(IModule):
             node_id = self.node_service.get_node_id()
             peers = self.node_service.get_connected_peers()
             self.logger.log(
-                f"MessageDemo ready on '{node_id}' - {len(peers)} peers",
+                f"MessageDemo ready on '{node_id}' - {len(peers)} peer(s) connected",
                 tag="msg_demo"
             )
     
@@ -100,9 +99,11 @@ class MessageDemoModule(IModule):
                 pass
         
         if self.logger:
-            self.logger.log(
-                f"MessageDemo stopped - {self._message_counter} messages sent",
-                tag="msg_demo"
+            # ✅ VISUAL OUTPUT: Stopped
+            self._print_box(
+                title="🛑 MESSAGE DEMO STOPPED",
+                lines=[f"Total messages sent: {self._message_counter}"],
+                color=self.colors.BRIGHT_YELLOW if self.colors else None
             )
     
     # =========================================================================
@@ -113,7 +114,7 @@ class MessageDemoModule(IModule):
         """Send initial broadcast message."""
         if not self.node_service:
             return
-            
+        
         node_id = self.node_service.get_node_id()
         peers = self.node_service.get_connected_peers()
         
@@ -142,11 +143,17 @@ class MessageDemoModule(IModule):
         
         if self.logger:
             success = sum(1 for v in results.values() if v)
-            # Use logger.print for demo output
-            self.logger.print("", tag="msg_demo")
-            self.logger.print("=" * 60, tag="msg_demo")
-            self.logger.print(f"📢 Initial broadcast: {success}/{len(results)} peers received", tag="msg_demo")
-            self.logger.print("=" * 60, tag="msg_demo")
+            # ✅ VISUAL OUTPUT: Initial broadcast
+            self._print_box(
+                title="📢 INITIAL BROADCAST",
+                lines=[
+                    f"Event: node_online",
+                    f"From: {node_id}",
+                    f"Delivered to: {success}/{len(results)} peers",
+                    f"Peers: {', '.join(results.keys())}",
+                ],
+                color=self.colors.BRIGHT_MAGENTA if self.colors else None
+            )
     
     async def _broadcast_loop(self):
         """Periodically broadcast status messages."""
@@ -197,12 +204,53 @@ class MessageDemoModule(IModule):
                 
                 if self.logger:
                     success = sum(1 for v in results.values() if v)
-                    # Use logger.print for demo output
-                    self.logger.print(
-                        f"📢 Broadcast #{self._message_counter}: "
-                        f"{success}/{len(results)} peers",
-                        tag="msg_demo"
+                    # ✅ VISUAL OUTPUT: Periodic broadcast
+                    self._print_box(
+                        title=f"📢 BROADCAST #{self._message_counter}",
+                        lines=[
+                            f"From: {node_id}",
+                            f"Delivered: {success}/{len(results)} peers",
+                        ],
+                        color=self.colors.BRIGHT_MAGENTA if self.colors else None,
+                        compact=True
                     )
         
         except asyncio.CancelledError:
             pass
+    
+    # =========================================================================
+    # Visual Helpers
+    # =========================================================================
+    
+    def _print_box(
+        self,
+        title: str,
+        lines: List[str],
+        color=None,
+        compact: bool = False
+    ):
+        """Print a visually distinct box for broadcast events."""
+        if not self.logger:
+            return
+        
+        width = 60
+        
+        if compact:
+            separator = "─" * width
+            self.logger.print(f"┌{separator}┐", tag="msg_demo", text_color=color)
+            self.logger.print(f"│ {title:<{width-2}} │", tag="msg_demo", text_color=color)
+            for line in lines:
+                if len(line) > width - 4:
+                    line = line[:width-7] + "..."
+                self.logger.print(f"│   {line:<{width-4}} │", tag="msg_demo", text_color=color)
+            self.logger.print(f"└{separator}┘", tag="msg_demo", text_color=color)
+        else:
+            separator = "═" * width
+            self.logger.print(f"╔{separator}╗", tag="msg_demo", text_color=color)
+            self.logger.print(f"║  {title:<{width-3}} ║", tag="msg_demo", text_color=color)
+            self.logger.print(f"╠{separator}╣", tag="msg_demo", text_color=color)
+            for line in lines:
+                self.logger.print(f"║  {line:<{width-3}} ║", tag="msg_demo", text_color=color)
+            self.logger.print(f"╚{separator}╝", tag="msg_demo", text_color=color)
+        
+        self.logger.print("", tag="msg_demo")

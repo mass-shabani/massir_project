@@ -9,6 +9,10 @@ Manages a node in the distributed socket network:
 
 NOTE: This module does NOT import types directly from network_socket.
 All message creation goes through socket_api factory methods.
+
+OUTPUT STRATEGY:
+- logger.print: For visual events (server start, connections, messages)
+- logger.log: For general info, warnings, and errors
 """
 
 import asyncio
@@ -62,8 +66,7 @@ class SocketNodeModule(IModule):
         if self.logger:
             self.logger.log(
                 f"SocketNodeModule loaded - Node ID: {self._node_id}",
-                tag="node",
-                text_color=self.colors.BRIGHT_GREEN if self.colors else None
+                tag="node"
             )
     
     async def start(self, context):
@@ -86,12 +89,17 @@ class SocketNodeModule(IModule):
                 use_tls=use_tls,
             )
             
+            # ✅ VISUAL OUTPUT: Server started
             if self.logger:
-                self.logger.log(
-                    f"🖥️  Server started on {listen_host}:{listen_port} "
-                    f"({'TLS' if use_tls else 'plain'})",
-                    tag="node",
-                    text_color=self.colors.BRIGHT_CYAN if self.colors else None
+                self._print_box(
+                    title="🖥️  SERVER STARTED",
+                    lines=[
+                        f"Node ID: {self._node_id}",
+                        f"Address: {listen_host}:{listen_port}",
+                        f"Protocol: {'TLS 1.3' if use_tls else 'Plain TCP'}",
+                        f"Mode: Message (framed JSON)",
+                    ],
+                    color=self.colors.BRIGHT_GREEN if self.colors else None
                 )
         
         # Connect to peers
@@ -101,9 +109,9 @@ class SocketNodeModule(IModule):
     async def ready(self, context):
         """Called when all modules are ready."""
         if self.logger:
+            # Show summary of configured peers
             self.logger.log(
-                f"SocketNode '{self._node_id}' ready - "
-                f"{len(self._peers)} peers configured",
+                f"Node '{self._node_id}' ready with {len(self._peers)} configured peer(s)",
                 tag="node"
             )
     
@@ -120,16 +128,18 @@ class SocketNodeModule(IModule):
         if self._server:
             await self.socket_api.stop_server()
         
+        # ✅ VISUAL OUTPUT: Server stopped
         if self.logger:
-            self.logger.log(
-                f"SocketNode '{self._node_id}' stopped",
-                tag="node"
+            self._print_box(
+                title="🛑 SERVER STOPPED",
+                lines=[f"Node '{self._node_id}' shutdown complete"],
+                color=self.colors.BRIGHT_RED if self.colors else None
             )
     
     # =========================================================================
     # Peer Connection
     # =========================================================================
-
+    
     async def _connect_to_all_peers(self):
         """Connect to all configured peers."""
         if not self._peers:
@@ -154,23 +164,31 @@ class SocketNodeModule(IModule):
                 )
                 
                 # Register disconnect handler
-                async def on_disconnect(conn, pid=peer_id):
+                async def on_disconnect(conn, pid=peer_id, h=host, p=port):
                     self._connected_peers.pop(pid, None)
                     if self.logger:
-                        self.logger.log(
-                            f"❌ Disconnected from peer '{pid}' (will auto-reconnect)",
-                            tag="node",
-                            text_color=self.colors.BRIGHT_RED if self.colors else None
+                        # ✅ VISUAL OUTPUT: Disconnection
+                        self._print_box(
+                            title=f"❌ PEER DISCONNECTED: {pid}",
+                            lines=[
+                                f"Address: {h}:{p}",
+                                f"Status: Auto-reconnect enabled",
+                            ],
+                            color=self.colors.BRIGHT_RED if self.colors else None
                         )
                 
                 # Register connect handler (for when reconnect succeeds)
-                async def on_connect(conn, pid=peer_id):
+                async def on_connect(conn, pid=peer_id, h=host, p=port):
                     self._connected_peers[pid] = client
                     if self.logger:
-                        self.logger.log(
-                            f"✅ Connected to peer '{pid}' at {host}:{port}",
-                            tag="node",
-                            text_color=self.colors.BRIGHT_GREEN if self.colors else None
+                        # ✅ VISUAL OUTPUT: Connection established
+                        self._print_box(
+                            title=f"✅ PEER CONNECTED: {pid}",
+                            lines=[
+                                f"Address: {h}:{p}",
+                                f"Protocol: {'TLS' if use_tls else 'Plain'}",
+                            ],
+                            color=self.colors.BRIGHT_GREEN if self.colors else None
                         )
                 
                 client.on_disconnect(on_disconnect)
@@ -180,17 +198,20 @@ class SocketNodeModule(IModule):
                 if client.is_connected:
                     self._connected_peers[peer_id] = client
                     if self.logger:
-                        self.logger.log(
-                            f"✅ Connected to peer '{peer_id}' at {host}:{port}",
-                            tag="node",
-                            text_color=self.colors.BRIGHT_GREEN if self.colors else None
+                        # ✅ VISUAL OUTPUT: Initial connection
+                        self._print_box(
+                            title=f"✅ PEER CONNECTED: {peer_id}",
+                            lines=[
+                                f"Address: {host}:{port}",
+                                f"Protocol: {'TLS' if use_tls else 'Plain'}",
+                            ],
+                            color=self.colors.BRIGHT_GREEN if self.colors else None
                         )
                 else:
                     # Not connected yet, but auto-reconnect is active
                     if self.logger:
                         self.logger.log(
-                            f"⏳ Peer '{peer_id}' at {host}:{port} not available yet, "
-                            f"auto-reconnect active (will keep trying)",
+                            f"⏳ Peer '{peer_id}' at {host}:{port} - waiting for connection (auto-reconnect active)",
                             tag="node",
                             level="WARNING",
                             text_color=self.colors.BRIGHT_YELLOW if self.colors else None
@@ -199,13 +220,12 @@ class SocketNodeModule(IModule):
             except Exception as e:
                 if self.logger:
                     self.logger.log(
-                        f"⚠️ Failed to setup connection to peer '{peer_id}' "
-                        f"at {host}:{port}: {e}",
+                        f"⚠️ Failed to setup connection to peer '{peer_id}' at {host}:{port}: {e}",
                         tag="node",
                         level="WARNING",
                         text_color=self.colors.BRIGHT_YELLOW if self.colors else None
                     )
-
+    
     # =========================================================================
     # Inbound Handlers
     # =========================================================================
@@ -214,10 +234,14 @@ class SocketNodeModule(IModule):
         """Handle inbound connection."""
         remote = conn.remote_address
         if self.logger:
-            self.logger.log(
-                f"📥 Inbound connection from {remote[0]}:{remote[1]}",
-                tag="node",
-                text_color=self.colors.BRIGHT_BLUE if self.colors else None
+            # ✅ VISUAL OUTPUT: Inbound connection
+            self._print_box(
+                title="📥 INBOUND CONNECTION",
+                lines=[
+                    f"From: {remote[0]}:{remote[1]}",
+                    f"Status: Accepted",
+                ],
+                color=self.colors.BRIGHT_CYAN if self.colors else None
             )
     
     async def _on_inbound_disconnection(self, conn):
@@ -225,7 +249,7 @@ class SocketNodeModule(IModule):
         remote = conn.remote_address
         if self.logger:
             self.logger.log(
-                f"📤 Connection closed from {remote[0]}:{remote[1]}",
+                f"Connection closed from {remote[0]}:{remote[1]}",
                 tag="node"
             )
     
@@ -240,10 +264,17 @@ class SocketNodeModule(IModule):
         
         if self.logger:
             peer_id = conn.peer_id or "unknown"
-            self.logger.log(
-                f"📨 Message from '{peer_id}' type={message.type.value}: "
-                f"{str(message.payload)[:100]}",
-                tag="node"
+            payload_preview = str(message.payload)[:80]
+            
+            # ✅ VISUAL OUTPUT: Received message
+            self._print_box(
+                title=f"📨 RECEIVED from '{peer_id}'",
+                lines=[
+                    f"Type: {message.type.value}",
+                    f"Payload: {payload_preview}{'...' if len(str(message.payload)) > 80 else ''}",
+                ],
+                color=self.colors.BRIGHT_CYAN if self.colors else None,
+                compact=True
             )
     
     # =========================================================================
@@ -269,7 +300,22 @@ class SocketNodeModule(IModule):
     
     async def send_to_peer(self, peer_id: str, message) -> bool:
         """Send a message to a specific peer."""
-        return await self.socket_api.send_message(peer_id, message)
+        success = await self.socket_api.send_message(peer_id, message)
+        
+        if self.logger and success:
+            # ✅ VISUAL OUTPUT: Sent message
+            payload_preview = str(message.payload)[:60]
+            self._print_box(
+                title=f"📤 SENT to '{peer_id}'",
+                lines=[
+                    f"Type: {message.type.value}",
+                    f"Payload: {payload_preview}{'...' if len(str(message.payload)) > 60 else ''}",
+                ],
+                color=self.colors.BRIGHT_MAGENTA if self.colors else None,
+                compact=True
+            )
+        
+        return success
     
     async def broadcast(self, message) -> Dict[str, bool]:
         """Broadcast a message to all connected peers."""
@@ -290,3 +336,51 @@ class SocketNodeModule(IModule):
     def is_connected_to(self, peer_id: str) -> bool:
         """Check if connected to a specific peer."""
         return peer_id in self._connected_peers
+    
+    # =========================================================================
+    # Visual Helpers
+    # =========================================================================
+    
+    def _print_box(
+        self,
+        title: str,
+        lines: List[str],
+        color=None,
+        compact: bool = False
+    ):
+        """
+        Print a visually distinct box for important events.
+        
+        Args:
+            title: Box title (with emoji)
+            lines: List of content lines
+            color: Text color
+            compact: If True, use single-line borders
+        """
+        if not self.logger:
+            return
+        
+        width = 60
+        
+        if compact:
+            # Compact format for frequent messages
+            separator = "─" * width
+            self.logger.print(f"┌{separator}┐", tag="node", text_color=color)
+            self.logger.print(f"│ {title:<{width-2}} │", tag="node", text_color=color)
+            for line in lines:
+                # Truncate if too long
+                if len(line) > width - 4:
+                    line = line[:width-7] + "..."
+                self.logger.print(f"│   {line:<{width-4}} │", tag="node", text_color=color)
+            self.logger.print(f"└{separator}┘", tag="node", text_color=color)
+        else:
+            # Full format for important events
+            separator = "═" * width
+            self.logger.print(f"╔{separator}╗", tag="node", text_color=color)
+            self.logger.print(f"║  {title:<{width-3}} ║", tag="node", text_color=color)
+            self.logger.print(f"╠{separator}╣", tag="node", text_color=color)
+            for line in lines:
+                self.logger.print(f"║  {line:<{width-3}} ║", tag="node", text_color=color)
+            self.logger.print(f"╚{separator}╝", tag="node", text_color=color)
+        
+        self.logger.print("", tag="node")  # Empty line after box

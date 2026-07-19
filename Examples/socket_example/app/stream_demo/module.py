@@ -6,13 +6,17 @@ Demonstrates Stream Mode for zero-copy byte passthrough:
 - Large data streaming
 - Bidirectional byte pipes
 
-NOTE: Uses logger.print for demo output.
+OUTPUT STRATEGY:
+- logger.print: For stream events (start, progress, complete)
+- logger.log: For errors and general info
+
+NOTE: Uses distinct cyan color for stream operations.
 """
 
 import asyncio
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from massir.core.interfaces import IModule
 
@@ -44,11 +48,7 @@ class StreamDemoModule(IModule):
         context.services.set("stream_service", self)
         
         if self.logger:
-            self.logger.log(
-                "StreamDemoModule loaded",
-                tag="stream_demo",
-                text_color=self.colors.BRIGHT_MAGENTA if self.colors else None
-            )
+            self.logger.log("StreamDemoModule loaded", tag="stream_demo")
     
     async def start(self, context):
         """Start stream demo."""
@@ -60,12 +60,15 @@ class StreamDemoModule(IModule):
     async def ready(self, context):
         """Called when all modules are ready."""
         if self.logger:
-            # Use logger.print for demo output
-            self.logger.print("", tag="stream_demo")
-            self.logger.print("=" * 60, tag="stream_demo")
-            self.logger.print("🌊 StreamDemo ready", tag="stream_demo")
-            self.logger.print("   Use stream_service.send_test_file(peer_id) to stream data", tag="stream_demo")
-            self.logger.print("=" * 60, tag="stream_demo")
+            # ✅ VISUAL OUTPUT: Ready
+            self._print_box(
+                title="🌊 STREAM DEMO READY",
+                lines=[
+                    "Mode: Zero-copy byte passthrough",
+                    "Usage: stream_service.send_test_file(peer_id)",
+                ],
+                color=self.colors.BRIGHT_CYAN if self.colors else None
+            )
     
     async def stop(self, context):
         """Stop the module."""
@@ -92,13 +95,20 @@ class StreamDemoModule(IModule):
         
         file_size = test_path.stat().st_size
         chunk_size = self._config.get("chunk_size_bytes", 8192)
+        total_chunks = (file_size + chunk_size - 1) // chunk_size
         
         if self.logger:
-            # Use logger.print for demo output
-            self.logger.print("", tag="stream_demo")
-            self.logger.print("=" * 60, tag="stream_demo")
-            self.logger.print(f"📤 Streaming {test_path.name} ({file_size} bytes) to peer '{peer_id}'", tag="stream_demo")
-            self.logger.print("=" * 60, tag="stream_demo")
+            # ✅ VISUAL OUTPUT: Stream start
+            self._print_box(
+                title=f"🌊 STREAM START: {test_path.name}",
+                lines=[
+                    f"Target Peer: {peer_id}",
+                    f"File Size: {self._format_bytes(file_size)}",
+                    f"Chunk Size: {self._format_bytes(chunk_size)}",
+                    f"Total Chunks: {total_chunks}",
+                ],
+                color=self.colors.BRIGHT_CYAN if self.colors else None
+            )
         
         # Send header with filename and size
         header = f"FILE:{test_path.name}:{file_size}\n".encode("utf-8")
@@ -106,12 +116,17 @@ class StreamDemoModule(IModule):
         
         if not success:
             if self.logger:
-                self.logger.print(f"❌ Failed to send header to '{peer_id}'", tag="stream_demo")
+                self.logger.log(
+                    f"❌ Failed to send stream header to '{peer_id}'",
+                    tag="stream_demo",
+                    level="ERROR"
+                )
             return False
         
         # Stream the file in chunks
         bytes_sent = 0
         chunks_sent = 0
+        last_progress = 0
         
         try:
             with open(test_path, "rb") as f:
@@ -123,25 +138,52 @@ class StreamDemoModule(IModule):
                     success = await self.socket_api.send_bytes(peer_id, chunk)
                     if not success:
                         if self.logger:
-                            self.logger.print("❌ Failed to send chunk", tag="stream_demo")
+                            self.logger.log(
+                                "❌ Failed to send stream chunk",
+                                tag="stream_demo",
+                                level="ERROR"
+                            )
                         return False
                     
                     bytes_sent += len(chunk)
                     chunks_sent += 1
+                    
+                    # Progress indicator (every 10%)
+                    progress = int((chunks_sent / total_chunks) * 100)
+                    if progress >= last_progress + 10 and self.logger:
+                        self.logger.print(
+                            f"   ⏳ Progress: {progress}% ({chunks_sent}/{total_chunks} chunks, "
+                            f"{self._format_bytes(bytes_sent)})",
+                            tag="stream_demo",
+                            text_color=self.colors.BRIGHT_CYAN if self.colors else None
+                        )
+                        last_progress = progress
             
             # Send end marker
             await self.socket_api.send_bytes(peer_id, b"\nEOF\n")
             
             if self.logger:
-                # Use logger.print for demo output
-                self.logger.print(f"✅ Stream complete: {bytes_sent} bytes in {chunks_sent} chunks", tag="stream_demo")
-                self.logger.print("=" * 60, tag="stream_demo")
+                # ✅ VISUAL OUTPUT: Stream complete
+                self._print_box(
+                    title=f"✅ STREAM COMPLETE: {test_path.name}",
+                    lines=[
+                        f"Target Peer: {peer_id}",
+                        f"Bytes Sent: {self._format_bytes(bytes_sent)}",
+                        f"Chunks Sent: {chunks_sent}",
+                        f"Status: Success",
+                    ],
+                    color=self.colors.BRIGHT_GREEN if self.colors else None
+                )
             
             return True
         
         except Exception as e:
             if self.logger:
-                self.logger.print(f"❌ Stream failed: {e}", tag="stream_demo")
+                self.logger.log(
+                    f"❌ Stream failed: {e}",
+                    tag="stream_demo",
+                    level="ERROR"
+                )
             return False
     
     def _create_test_file(self, path: Path, size_mb: int = 1):
@@ -158,3 +200,48 @@ class StreamDemoModule(IModule):
                 f"Created test file: {path} ({size_mb} MB)",
                 tag="stream_demo"
             )
+    
+    # =========================================================================
+    # Visual Helpers
+    # =========================================================================
+    
+    def _print_box(
+        self,
+        title: str,
+        lines: List[str],
+        color=None,
+        compact: bool = False
+    ):
+        """Print a visually distinct box for stream events."""
+        if not self.logger:
+            return
+        
+        width = 60
+        
+        if compact:
+            separator = "─" * width
+            self.logger.print(f"┌{separator}┐", tag="stream_demo", text_color=color)
+            self.logger.print(f"│ {title:<{width-2}} │", tag="stream_demo", text_color=color)
+            for line in lines:
+                if len(line) > width - 4:
+                    line = line[:width-7] + "..."
+                self.logger.print(f"│   {line:<{width-4}} │", tag="stream_demo", text_color=color)
+            self.logger.print(f"└{separator}┘", tag="stream_demo", text_color=color)
+        else:
+            separator = "═" * width
+            self.logger.print(f"╔{separator}╗", tag="stream_demo", text_color=color)
+            self.logger.print(f"║  {title:<{width-3}} ║", tag="stream_demo", text_color=color)
+            self.logger.print(f"╠{separator}╣", tag="stream_demo", text_color=color)
+            for line in lines:
+                self.logger.print(f"║  {line:<{width-3}} ║", tag="stream_demo", text_color=color)
+            self.logger.print(f"╚{separator}╝", tag="stream_demo", text_color=color)
+        
+        self.logger.print("", tag="stream_demo")
+    
+    def _format_bytes(self, size: int) -> str:
+        """Format byte size to human-readable string."""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024:
+                return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} TB"
