@@ -8,11 +8,26 @@ from massir.core.hook_types import SystemHook
 
 
 # ANSI Color Codes - Available for all modules
+
 class Colors:
-    """ANSI color codes for terminal output."""
+    """
+    ANSI color codes for terminal output.
+    
+    This class provides a comprehensive set of ANSI escape codes for:
+    - Standard foreground colors (8 colors)
+    - Bright foreground colors (8 colors)
+    - Standard background colors (8 colors)
+    - Bright background colors (8 colors)
+    
+    All modules can access these colors via context.services.get("log_colors")
+    """
+    
+    # Reset all formatting
     RESET = '\033[0m'
     
-    # Standard colors
+    # =========================================================================
+    # Standard Foreground Colors (8 colors)
+    # =========================================================================
     BLACK = '\033[30m'
     RED = '\033[31m'
     GREEN = '\033[32m'
@@ -22,7 +37,9 @@ class Colors:
     CYAN = '\033[36m'
     WHITE = '\033[37m'
     
-    # Bright colors
+    # =========================================================================
+    # Bright Foreground Colors (8 colors)
+    # =========================================================================
     BRIGHT_BLACK = '\033[90m'
     BRIGHT_RED = '\033[91m'
     BRIGHT_GREEN = '\033[92m'
@@ -32,11 +49,29 @@ class Colors:
     BRIGHT_CYAN = '\033[96m'
     BRIGHT_WHITE = '\033[97m'
     
-    # Background colors
+    # =========================================================================
+    # Standard Background Colors (8 colors)
+    # =========================================================================
+    BG_BLACK = '\033[40m'
     BG_RED = '\033[41m'
     BG_GREEN = '\033[42m'
     BG_YELLOW = '\033[43m'
     BG_BLUE = '\033[44m'
+    BG_MAGENTA = '\033[45m'
+    BG_CYAN = '\033[46m'
+    BG_WHITE = '\033[47m'
+    
+    # =========================================================================
+    # Bright Background Colors (8 colors)
+    # =========================================================================
+    BG_BRIGHT_BLACK = '\033[100m'
+    BG_BRIGHT_RED = '\033[101m'
+    BG_BRIGHT_GREEN = '\033[102m'
+    BG_BRIGHT_YELLOW = '\033[103m'
+    BG_BRIGHT_BLUE = '\033[104m'
+    BG_BRIGHT_MAGENTA = '\033[105m'
+    BG_BRIGHT_CYAN = '\033[106m'
+    BG_BRIGHT_WHITE = '\033[107m'
 
 
 class AdvancedLogger(CoreLoggerAPI):
