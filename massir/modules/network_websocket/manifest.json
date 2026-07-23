@@ -1,0 +1,9 @@
+{
+    "name": "network_websocket",
+    "version": "1.0.0",
+    "type": "system",
+    "entrypoint": "NetworkWebSocketModule",
+    "description": "WebSocket transport layer optimized for cloud-friendly deployments. Provides URL/path-based connections, subprotocol negotiation, native ping/pong, close codes, and HTTP header support. Designed to work through Cloudflare, CDNs, and reverse proxies.",
+    "requires": ["core_logger"],
+    "provides": ["websocket_api"]
+}

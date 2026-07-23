@@ -1,0 +1,43 @@
+{
+    "server": {
+        "default_host": "0.0.0.0",
+        "default_port": 443,
+        "default_path": "/ws",
+        "max_size_bytes": 16777216,
+        "compression_enabled": true,
+        "allowed_origins": ["*"]
+    },
+    "client": {
+        "connect_timeout_seconds": 10.0,
+        "reconnect_enabled": true,
+        "reconnect_initial_delay_seconds": 2.0,
+        "reconnect_max_delay_seconds": 60.0,
+        "reconnect_backoff_multiplier": 2.0,
+        "reconnect_max_attempts": 0,
+        "send_queue_size": 1000,
+        "default_path": "/ws",
+        "subprotocol": "massir.v1",
+        "additional_headers": {},
+        "compression_enabled": true
+    },
+    "heartbeat": {
+        "enabled": true,
+        "interval_seconds": 20.0,
+        "timeout_seconds": 60.0
+    },
+    "pool": {
+        "max_connections_per_peer": 3,
+        "idle_timeout_seconds": 300.0,
+        "cleanup_interval_seconds": 60.0
+    },
+    "ssl": {
+        "enabled": true,
+        "use_ssl_api": true
+    },
+    "logging": {
+        "tag": "websocket",
+        "log_connections": true,
+        "log_messages": false,
+        "log_frames": false
+    }
+}
