@@ -1,0 +1,2 @@
+# No external dependencies - uses only Python standard library
+# Requires network_socket and/or network_websocket as transport providers

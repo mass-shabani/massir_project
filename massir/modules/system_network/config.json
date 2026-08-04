@@ -1,0 +1,36 @@
+{
+    "self_node": {
+        "node_id": "node1",
+        "metadata": {},
+        "capabilities": []
+    },
+    "topology": {
+        "type": "mesh",
+        "hub_node": null,
+        "parent_node": null,
+        "custom_edges": []
+    },
+    "nodes": [],
+    "routing": {
+        "default_ttl": 10,
+        "enable_multi_hop": true,
+        "route_cache_ttl_seconds": 60.0
+    },
+    "connection": {
+        "auto_connect_on_start": true,
+        "auto_reconnect": true,
+        "reconnect_delay_seconds": 5.0,
+        "health_check_interval_seconds": 30.0
+    },
+    "message": {
+        "include_trace_id": true,
+        "include_timestamp": true,
+        "max_payload_size_bytes": 16777216
+    },
+    "logging": {
+        "tag": "network",
+        "log_routing": false,
+        "log_envelopes": false,
+        "log_topology_changes": true
+    }
+}
