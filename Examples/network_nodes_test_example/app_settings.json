@@ -1,0 +1,155 @@
+{
+    "modules": [
+        {
+            "path": "{massir_dir}/modules",
+            "type": "systems",
+            "names": ["system_logger", "network_ssl", "network_socket", "system_network"]
+        },
+        {
+            "path": "{app_dir}/app",
+            "type": "all",
+            "names": "all"
+        }
+    ],
+
+    "template": {
+        "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Nodes Test Example - {node_id:<38} ║\n║  Version: {project_version:<47} ║\n║  Testing system_network capabilities                       ║\n╚════════════════════════════════════════════════════════════╝\n",
+        "system_log_template": "[{level}]\t{message}",
+        "banner_color_code": "35",
+        "system_log_color_code": "96"
+    },
+
+    "logs": {
+        "show_logs": true,
+        "show_banner": true,
+        "hide_log_tags": [],
+        "hide_log_levels": [],
+        "debug_mode": true
+    },
+
+    "information": {
+        "project_name": "Network Nodes Test Example",
+        "project_version": "1.0.0",
+        "project_info": "Comprehensive system_network test",
+        "node_id": "node1"
+    },
+
+    "test_config": {
+        "test_duration_seconds": 60,
+        "warmup_seconds": 10,
+        "test_interval_seconds": 5,
+        "shutdown_grace_period_seconds": 5
+    },
+
+    "network_ssl": {
+        "tls_version": "1.3",
+        "default_certs_path": "{app_dir}/certs",
+        "verify_client_certs": true,
+        "verify_server_certs": true,
+        "check_hostname": false,
+        "nodes": {
+            "default": {
+                "cert_file": "node1.crt",
+                "key_file": "node1.key",
+                "ca_file": "ca.crt"
+            }
+        }
+    },
+
+    "network_socket": {
+        "server": {
+            "default_host": "0.0.0.0",
+            "default_port": 8443
+        },
+        "client": {
+            "reconnect_enabled": true,
+            "reconnect_initial_delay_seconds": 2.0,
+            "reconnect_max_delay_seconds": 30.0
+        },
+        "heartbeat": {
+            "enabled": true,
+            "interval_seconds": 10.0,
+            "timeout_seconds": 30.0
+        }
+    },
+
+    "system_network": {
+        "self_node": {
+            "node_id": "node1",
+            "metadata": {
+                "role": "primary",
+                "region": "local",
+                "test_node": true
+            },
+            "capabilities": ["storage", "compute", "gateway"]
+        },
+        "topology": {
+            "type": "mesh"
+        },
+        "nodes": [
+            {
+                "node_id": "node2",
+                "transport": "socket",
+                "endpoint": {
+                    "host": "192.168.1.102",
+                    "port": 8443,
+                    "use_tls": true
+                },
+                "metadata": {"role": "worker", "test_node": true},
+                "capabilities": ["compute"]
+            },
+            {
+                "node_id": "node3",
+                "transport": "socket",
+                "endpoint": {
+                    "host": "192.168.1.103",
+                    "port": 8443,
+                    "use_tls": true
+                },
+                "metadata": {"role": "worker", "test_node": true},
+                "capabilities": ["compute", "analytics"]
+            },
+            {
+                "node_id": "node4",
+                "transport": "websocket",
+                "endpoint": {
+                    "host": "192.168.1.104",
+                    "port": 8444,
+                    "path": "/ws",
+                    "use_tls": true,
+                    "subprotocol": "massir.v1"
+                },
+                "metadata": {"role": "cloud", "test_node": true, "via": "websocket"},
+                "capabilities": ["gateway", "external"]
+            }
+        ],
+        "routing": {
+            "default_ttl": 10,
+            "enable_multi_hop": true
+        },
+        "connection": {
+            "auto_connect_on_start": true
+        }
+    },
+
+    "network_tester": {
+        "enabled": true,
+        "run_tests": true,
+        "tests": [
+            "network_status",
+            "direct_messaging",
+            "broadcast",
+            "capability_messaging",
+            "routing_table",
+            "multi_hop",
+            "envelope_inspection",
+            "event_handlers"
+        ]
+    },
+
+    "network_reporter": {
+        "enabled": true,
+        "show_report_on_shutdown": true,
+        "report_format": "table"
+    }
+}

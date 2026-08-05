@@ -1,0 +1,10 @@
+{
+    "name": "network_reporter",
+    "version": "1.0.0",
+    "enabled": true,
+    "type": "application",
+    "entrypoint": "NetworkReporterModule",
+    "provides": [],
+    "requires": ["network_api", "test_results_service", "core_logger"],
+    "forced_execute": true
+}
