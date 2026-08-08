@@ -8,12 +8,12 @@
         {
             "path": "{app_dir}/app",
             "type": "all",
-            "names": "all"
+            "names": ["network_node", "network_tester", "network_reporter"]
         }
     ],
 
     "template": {
-        "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Test - NODE 4 (WebSocket Transport)             ║\n║  Version: 1.0.0                                          ║\n║  Testing system_network with websocket transport         ║\n╚════════════════════════════════════════════════════════════╝\n",
+        "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Test - NODE 4 (WebSocket Transport)             ║\n║  Version: 1.0.0                                          ║\n╚════════════════════════════════════════════════════════════╝\n",
         "system_log_template": "[{level}]\t{message}",
         "banner_color_code": "34",
         "system_log_color_code": "96"
@@ -54,17 +54,11 @@
     },
 
     "network_websocket": {
-        "server": {
-            "default_host": "0.0.0.0",
-            "default_port": 8444,
-            "default_path": "/ws",
-            "compression_enabled": true
-        },
         "client": {
             "reconnect_enabled": true,
-            "default_path": "/ws",
-            "subprotocol": "massir.v1",
-            "compression_enabled": true
+            "reconnect_initial_delay_seconds": 2.0,
+            "reconnect_max_delay_seconds": 30.0,
+            "subprotocol": "massir.v1"
         },
         "heartbeat": {
             "enabled": true,
@@ -79,7 +73,6 @@
             "metadata": {
                 "role": "cloud",
                 "region": "external",
-                "test_node": true,
                 "transport": "websocket"
             },
             "capabilities": ["gateway", "external"]
@@ -92,7 +85,7 @@
                 "node_id": "node1",
                 "transport": "socket",
                 "endpoint": {
-                    "host": "192.168.1.101",
+                    "host": "192.168.56.100",
                     "port": 8443,
                     "use_tls": true
                 },
@@ -102,7 +95,7 @@
                 "node_id": "node2",
                 "transport": "socket",
                 "endpoint": {
-                    "host": "192.168.1.102",
+                    "host": "192.168.56.102",
                     "port": 8443,
                     "use_tls": true
                 },
@@ -112,7 +105,7 @@
                 "node_id": "node3",
                 "transport": "socket",
                 "endpoint": {
-                    "host": "192.168.1.103",
+                    "host": "192.168.56.103",
                     "port": 8443,
                     "use_tls": true
                 },
@@ -128,9 +121,18 @@
         }
     },
 
+    "network_node": {
+        "server_transport": "websocket",
+        "listen": {
+            "host": "0.0.0.0",
+            "port": 8444,
+            "path": "/ws",
+            "use_tls": true
+        }
+    },
+
     "network_tester": {
-        "enabled": true,
-        "run_tests": true
+        "enabled": true
     },
 
     "network_reporter": {

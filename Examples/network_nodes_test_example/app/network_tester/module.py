@@ -28,7 +28,8 @@ class NetworkTesterModule(IModule):
     Comprehensive tester for system_network capabilities.
     
     Runs tests and collects results for the final report.
-    Automatically shuts down the application after test_duration_seconds.
+    Automatically requests graceful shutdown after test_duration_seconds
+    using app.request_shutdown().
     """
     
     name = "network_tester"
@@ -37,6 +38,7 @@ class NetworkTesterModule(IModule):
         self.network_api = None
         self.logger = None
         self.colors = None
+        self._context = None  # ✅ ذخیره context برای دسترسی به app
         self._config: Dict = {}
         self._test_results: Dict[str, Any] = {}
         self._received_messages: List[Dict] = []
@@ -58,6 +60,8 @@ class NetworkTesterModule(IModule):
     
     async def load(self, context):
         """Load the module."""
+        self._context = context
+        
         self.network_api = context.services.get("network_api")
         self.logger = context.services.get("core_logger")
         self.colors = context.services.get("log_colors")
@@ -201,7 +205,15 @@ class NetworkTesterModule(IModule):
                 pass
     
     async def _schedule_shutdown(self, delay_seconds: float):
-        """Schedule application shutdown after delay."""
+        """
+        Schedule graceful application shutdown after delay.
+        
+        Uses context.get_app() to access the App instance and calls
+        request_shutdown() which:
+        1. Dispatches ON_SHUTDOWN_REQUEST hook
+        2. Sets the _stop_event
+        3. Triggers clean shutdown sequence in core/stop.py
+        """
         await asyncio.sleep(delay_seconds)
         
         if self.logger:
@@ -212,7 +224,7 @@ class NetworkTesterModule(IModule):
                 bold=True
             )
             self.logger.print(
-                "  🛑 TEST DURATION COMPLETE - INITIATING SHUTDOWN",
+                "  🛑 TEST DURATION COMPLETE - REQUESTING GRACEFUL SHUTDOWN",
                 tag="tester",
                 color=self.colors.BRIGHT_RED if self.colors else None,
                 bold=True
@@ -224,13 +236,40 @@ class NetworkTesterModule(IModule):
                 bold=True
             )
         
-        # Trigger shutdown via app
-        try:
-            app = self.network_api._connection_manager._registry  # Access app
-            # We need to get the app instance - use a different approach
-            # The reporter will handle the report, we just signal completion
-        except Exception:
-            pass
+        if self._context:
+            try:
+                app = self._context.get_app()
+                if app:
+                    if self.logger:
+                        self.logger.log(
+                            "Requesting graceful shutdown via app.request_shutdown()...",
+                            tag="tester"
+                        )
+                    # the sync request_shutdown()
+                    # this methode dispatch the ON_SHUTDOWN_REQUEST hook
+                    app.request_shutdown()
+                    return
+                else:
+                    if self.logger:
+                        self.logger.log(
+                            "Warning: context.get_app() returned None",
+                            level="WARNING",
+                            tag="tester"
+                        )
+            except Exception as e:
+                if self.logger:
+                    self.logger.log(
+                        f"Error calling app.request_shutdown(): {e}",
+                        level="ERROR",
+                        tag="tester"
+                    )
+        else:
+            if self.logger:
+                self.logger.log(
+                    "Error: context not available for shutdown",
+                    level="ERROR",
+                    tag="tester"
+                )
     
     # =========================================================================
     # Event Handlers

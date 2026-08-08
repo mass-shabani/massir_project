@@ -8,12 +8,12 @@
         {
             "path": "{app_dir}/app",
             "type": "all",
-            "names": "all"
+            "names": ["network_node", "network_tester", "network_reporter"]
         }
     ],
 
     "template": {
-        "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Test - NODE 1 (Socket Transport)                ║\n║  Version: 1.0.0                                          ║\n║  Testing system_network with socket transport            ║\n╚════════════════════════════════════════════════════════════╝\n",
+        "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Test - NODE 1 (Socket Transport)                ║\n║  Version: 1.0.0                                          ║\n╚════════════════════════════════════════════════════════════╝\n",
         "system_log_template": "[{level}]\t{message}",
         "banner_color_code": "35",
         "system_log_color_code": "96"
@@ -54,10 +54,6 @@
     },
 
     "network_socket": {
-        "server": {
-            "default_host": "0.0.0.0",
-            "default_port": 8443
-        },
         "client": {
             "reconnect_enabled": true,
             "reconnect_initial_delay_seconds": 2.0,
@@ -76,7 +72,6 @@
             "metadata": {
                 "role": "primary",
                 "region": "local",
-                "test_node": true,
                 "transport": "socket"
             },
             "capabilities": ["storage", "compute", "gateway"]
@@ -89,35 +84,31 @@
                 "node_id": "node2",
                 "transport": "socket",
                 "endpoint": {
-                    "host": "192.168.1.102",
+                    "host": "192.168.56.102",
                     "port": 8443,
                     "use_tls": true
                 },
-                "metadata": {"role": "worker", "test_node": true},
                 "capabilities": ["compute"]
             },
             {
                 "node_id": "node3",
                 "transport": "socket",
                 "endpoint": {
-                    "host": "192.168.1.103",
+                    "host": "192.168.56.103",
                     "port": 8443,
                     "use_tls": true
                 },
-                "metadata": {"role": "worker", "test_node": true},
                 "capabilities": ["compute", "analytics"]
             },
             {
                 "node_id": "node4",
                 "transport": "websocket",
                 "endpoint": {
-                    "host": "192.168.1.104",
+                    "host": "192.168.56.104",
                     "port": 8444,
                     "path": "/ws",
-                    "use_tls": true,
-                    "subprotocol": "massir.v1"
+                    "use_tls": true
                 },
-                "metadata": {"role": "cloud", "test_node": true, "via": "websocket"},
                 "capabilities": ["gateway", "external"]
             }
         ],
@@ -130,9 +121,17 @@
         }
     },
 
+    "network_node": {
+        "server_transport": "socket",
+        "listen": {
+            "host": "0.0.0.0",
+            "port": 8443,
+            "use_tls": true
+        }
+    },
+
     "network_tester": {
         "enabled": true,
-        "run_tests": true,
         "tests": [
             "network_status",
             "direct_messaging",
