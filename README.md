@@ -1,34 +1,57 @@
 # Massir
 
-Massir is a modular application framework for Python that enables developers to build scalable and maintainable applications through a plugin-based architecture.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![Status](https://img.shields.io/badge/status-alpha-success.svg)]()
 
-## Overview
+Massir is a modular application framework for Python designed to enable developers to build scalable and maintainable applications through a plugin-based architecture.
 
-Massir provides a structured approach to application development by separating functionality into independent modules. Each module can be loaded, started, and stopped independently, allowing for flexible application composition and easy maintenance.
+The Massir project was born from the idea that project structures and code can be split into multiple parts without worrying about breaking code or affecting other parts of the project. In essence, with a dynamic modular structure within a project, it can be developed without concern and by an unlimited number of different development teams without development concurrency issues. Even if the development team is reduced to one person, developing a project using Massir's modular standard can greatly reduce code complexity and entanglement. Massir takes responsibility for managing this modular structure. And with a lightweight core and simple capabilities, it can make development faster.
 
-## Philosophy
+## Features
 
-The framework is built on the principle of modularity, where complex applications are broken down into smaller, self-contained components. This approach offers several advantages:
+| Feature | Description |
+|---------|-------------|
+| **Modular Architecture** | Load, start, and stop modules independently |
+| **Dependency Resolution** | Automatic module dependency sorting and validation |
+| **Multi-Transport Networking** | Socket, WebSocket, SSL, and FastAPI support |
+| **Configuration Management** | Multi-tier priority system (code → JSON → defaults) |
+| **Lifecycle Hooks** | Extensible event system for custom behaviors |
+| **Hot Reload** | Runtime application restart capability |
+| **Async Core** | Built on asyncio for high-performance I/O |
 
-- **Separation of Concerns**: Each module handles a specific aspect of the application, reducing complexity and improving code organization.
-- **Independent Development**: Modules can be developed and tested independently, enabling parallel development workflows.
-- **Flexible Composition**: Applications can be assembled by combining different modules based on requirements.
-- **Easy Maintenance**: Changes to one module do not affect others, making updates and bug fixes simpler.
-- **Reusability**: Modules can be reused across different projects, reducing development time.
-- **Dynamic Configuration**: Modules can be enabled or disabled without causing errors in the application, allowing for rapid feature addition or removal without modifying the core project structure.
+## Quick Start
 
-## Use Cases
+### Basic Usage
 
-Massir is suitable for various types of applications and technologies:
+```python
+import asyncio
+from massir import App
 
-- **Web Applications**: Build modular web services where each module handles specific functionality such as authentication, database access, or API endpoints.
-- **Microservices**: Create independent services that can be deployed and scaled separately while sharing common infrastructure modules.
-- **Data Processing Pipelines**: Develop data processing workflows where each module represents a stage in the pipeline.
-- **IoT Applications**: Manage device communication, data collection, and processing through separate modules.
-- **Desktop Applications**: Structure desktop applications with pluggable components for features like plugins, extensions, or themes.
-- **API Gateways**: Build modular API gateways where each module handles routing, authentication, rate limiting, or logging.
-- **Monitoring Systems**: Create monitoring solutions with separate modules for metrics collection, alerting, and visualization.
+async def main():
+    app = App(
+        settings_path="app_settings.json",
+        app_dir="."
+    )
+    await app.run()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+```
+
+### Example Projects
+
+See [`Examples/`](../Examples/) for complete working examples. More examples will be added during the development process.
+
+## Documentation
+
+For detailed architecture, module structure, configuration options, and advanced usage, see [Docs/PROJECT_ANALYSIS.md](Docs/PROJECT_ANALYSIS.md).
 
 ## License
 
-This project is licensed under the MIT License.
+![License](https://img.shields.io/badge/license-MIT-yellow.svg)
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
