@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
 ### Example Projects
 
-See [`Examples/`](../Examples/) for complete working examples. More examples will be added during the development process.
+See [`Examples/`](Examples/) for complete working examples. More examples will be added during the development process.
 
 ## Documentation
 
