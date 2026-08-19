@@ -30,9 +30,6 @@ class NetworkSSLModule(IModule):
     multiple connections to the same peer.
     """
     
-    name = "network_ssl"
-    provides = ["ssl_api"]
-    
     def __init__(self):
         self._api: Optional[SSLAPI] = None
         self._logger: Any = None

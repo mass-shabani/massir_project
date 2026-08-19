@@ -578,7 +578,10 @@ class TestDatabaseModule:
     @pytest.fixture
     def module(self):
         """Create a DatabaseModule instance."""
-        return DatabaseModule()
+        module = DatabaseModule()
+        module.name = "system_database"
+        module.provides = ["database_types", "database_service"]
+        return module
     
     @pytest.fixture
     def mock_context(self):

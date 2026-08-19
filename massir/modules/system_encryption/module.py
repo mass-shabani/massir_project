@@ -29,9 +29,6 @@ class EncryptionModule(IModule):
     Keys must be managed by consuming modules or provided at runtime.
     """
     
-    name = "system_encryption"
-    provides = ["encryption_api"]
-    
     def __init__(self):
         self._api: Optional[EncryptionAPI] = None
         self._logger = None

@@ -32,9 +32,6 @@ class NetworkFastAPIModule(IModule):
     should use the ServerAPI to start the server when needed.
     """
     
-    name = "network_fastapi"
-    provides = ["http_api", "router_api", "net_api", "server_api"]
-    
     def __init__(self):
         self.app: Optional[FastAPI] = None
         self.http_api: Optional[HTTPAPI] = None

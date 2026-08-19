@@ -615,7 +615,10 @@ class TestNetworkFastAPIModule:
     @pytest.fixture
     def module(self):
         """Create a NetworkFastAPIModule instance."""
-        return NetworkFastAPIModule()
+        module = NetworkFastAPIModule()
+        module.name = "network_fastapi"
+        module.provides = ["http_api", "router_api", "net_api", "server_api"]
+        return module
     
     @pytest.fixture
     def mock_context(self):

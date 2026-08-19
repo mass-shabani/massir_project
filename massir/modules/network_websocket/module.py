@@ -36,9 +36,6 @@ class NetworkWebSocketModule(IModule):
     to a common network_api interface.
     """
     
-    name = "network_websocket"
-    provides = ["websocket_api"]
-    
     def __init__(self):
         self._api: Optional[WebSocketAPI] = None
         self._logger: Any = None

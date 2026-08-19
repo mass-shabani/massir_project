@@ -5,5 +5,5 @@
     "entrypoint": "DatabaseModule",
     "description": "Async database middleware for relational databases (PostgreSQL, MySQL, SQLite) with connection pooling, caching, and unified API",
     "requires": ["core_logger", "core_config"],
-    "provides": ["database_service"]
+    "provides": ["database_types", "database_service"]
 }

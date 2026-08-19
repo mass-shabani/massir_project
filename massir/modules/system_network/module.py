@@ -42,9 +42,6 @@ class SystemNetworkModule(IModule):
     At least one transport must be available.
     """
     
-    name = "system_network"
-    provides = ["network_api"]
-    
     def __init__(self):
         self._api: Optional[NetworkAPI] = None
         self._logger: Any = None

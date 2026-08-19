@@ -22,9 +22,6 @@ class DatabaseModule(IModule):
     Supports PostgreSQL, MySQL, and SQLite.
     """
     
-    name = "system_database"
-    provides = ["database_service"]
-    
     def __init__(self):
         self._service: Optional[DatabaseService] = None
         self._logger = None

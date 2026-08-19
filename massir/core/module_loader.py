@@ -84,8 +84,35 @@ class ModuleLoader:
                 manifest_path = module_path / "manifest.json"
 
                 if manifest_path.exists():
-                    with open(manifest_path, 'r', encoding='utf-8') as f:
-                        manifest = json.load(f)
+                    try:
+                        with open(manifest_path, 'r', encoding='utf-8') as f:
+                            manifest = json.load(f)
+                    except Exception as e:
+                        module_type = "System" if is_system else "Application"
+                        log_internal(
+                            config_api, logger_api,
+                            f"{module_type} module '{name}' has invalid manifest.json: {e}",
+                            level="ERROR", tag="core"
+                        )
+                        continue
+
+                    # Validate required fields
+                    missing_fields = []
+                    if not manifest.get("name"):
+                        missing_fields.append("name")
+                    if not manifest.get("type"):
+                        missing_fields.append("type")
+                    if not manifest.get("entrypoint"):
+                        missing_fields.append("entrypoint")
+
+                    if missing_fields:
+                        module_type = "System" if is_system else "Application"
+                        log_internal(
+                            config_api, logger_api,
+                            f"{module_type} module '{name}' manifest.json is missing required fields: {', '.join(missing_fields)}",
+                            level="ERROR", tag="core"
+                        )
+                        continue
 
                     # Check module type
                     manifest_type = manifest.get("type", "application")
@@ -127,6 +154,14 @@ class ModuleLoader:
                         "path": module_path,
                         "manifest": manifest
                     })
+                else:
+                    module_type = "System" if is_system else "Application"
+                    log_internal(
+                        config_api, logger_api,
+                        f"{module_type} module '{name}' is missing manifest.json",
+                        level="ERROR", tag="core"
+                    )
+                    continue
 
         return discovered, disabled_modules, should_sort
 
@@ -219,6 +254,9 @@ class ModuleLoader:
         instance._context = context
 
         await instance.load(context)
+
+        # Set provides from manifest as the single source of truth
+        instance.provides = mod_info["manifest"].get("provides", [])
 
         # Inject system APIs if provided by module
         await inject_system_apis(instance, context.services, logger_ref, config_ref)

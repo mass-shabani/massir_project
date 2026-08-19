@@ -29,9 +29,6 @@ class NetworkSocketModule(IModule):
     - Optional encryption via encryption_api
     """
     
-    name = "network_socket"
-    provides = ["socket_api"]
-    
     def __init__(self):
         self._api: Optional[SocketAPI] = None
         self._logger: Any = None
