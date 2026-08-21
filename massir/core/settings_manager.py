@@ -133,7 +133,9 @@ class SettingsManager(CoreConfigAPI):
         result = []
         for item in all_config:
             folder_type = item.get("type", "all")
-            if folder_type == "all" or folder_type == config_type:
+            normalized = folder_type.rstrip("s") if folder_type != "all" else "all"
+            target = config_type.rstrip("s")
+            if folder_type == "all" or normalized == target:
                 result.append(item)
         return result
 
