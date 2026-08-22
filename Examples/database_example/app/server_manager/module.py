@@ -14,8 +14,6 @@ class ServerManagerModule(IModule):
     This module starts the HTTP server using the ServerAPI.
     """
     
-    name = "server_manager"
-    
     def __init__(self):
         self.server_api = None
         self.net_api = None

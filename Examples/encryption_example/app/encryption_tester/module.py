@@ -20,7 +20,6 @@ class EncryptionTesterModule(IModule):
     - Key export/import
     - EncryptedData container serialization
     """
-    name = 'encryption_tester'
 
     def __init__(self):
         self.encryption = None

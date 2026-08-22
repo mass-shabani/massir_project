@@ -39,8 +39,6 @@ class SocketNodeModule(IModule):
     a client (connecting to peers), enabling full mesh topology.
     """
     
-    name = "socket_node"
-    
     def __init__(self):
         self.socket_api = None
         self.ssl_api = None

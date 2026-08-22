@@ -17,9 +17,6 @@ from .routes  import register_routes
 
 
 class DbGraphModule(IModule):
-
-    name     = "db_graph"
-    provides = []
     requires = ["db_connection_service"]
 
     def __init__(self):

@@ -27,8 +27,6 @@ class SSLTesterModule(IModule):
     - Real TLS server/client connection
     """
     
-    name = "ssl_tester"
-    
     def __init__(self):
         self.ssl_api = None
         self.logger = None

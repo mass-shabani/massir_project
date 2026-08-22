@@ -18,9 +18,6 @@ class DbDataEditorModule(IModule):
     
     This module requires db_connection_service to be available.
     """
-    
-    name = "db_data_editor"
-    provides = []
     requires = ["db_connection_service"]  # Requires db_connection module
     
     def __init__(self):

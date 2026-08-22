@@ -37,8 +37,6 @@ class StreamDemoModule(IModule):
     that need raw TCP-like behavior over the secure connection.
     """
     
-    name = "stream_demo"
-    
     def __init__(self):
         self.socket_api = None
         self.logger = None

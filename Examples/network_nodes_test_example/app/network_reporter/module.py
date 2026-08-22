@@ -24,8 +24,6 @@ class NetworkReporterModule(IModule):
     Reporter module that displays test results during shutdown.
     """
     
-    name = "network_reporter"
-    
     def __init__(self):
         self.network_api = None
         self.test_results_service = None

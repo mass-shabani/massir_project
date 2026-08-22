@@ -21,8 +21,6 @@ class NetworkNodeModule(IModule):
     - Provide node_service for other modules
     """
     
-    name = "network_node"
-    
     def __init__(self):
         self.network_api = None
         self.socket_api = None

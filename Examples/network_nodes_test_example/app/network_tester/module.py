@@ -32,8 +32,6 @@ class NetworkTesterModule(IModule):
     using app.request_shutdown().
     """
     
-    name = "network_tester"
-    
     def __init__(self):
         self.network_api = None
         self.logger = None

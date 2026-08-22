@@ -15,7 +15,6 @@ class EncryptionDemoModule(IModule):
     This module wraps the encryption_api with higher-level
     operations suitable for application use.
     """
-    name = 'encryption_demo'
 
     def __init__(self):
         self.encryption = None

@@ -14,8 +14,6 @@ class NetworkInfoModule(IModule):
     Provides network information endpoints using net_api utilities.
     """
     
-    name = "network_info"
-    
     def __init__(self):
         self.http_api = None
         self.router_api = None

@@ -19,8 +19,6 @@ class SSLDemoModule(IModule):
     secure TLS communications.
     """
     
-    name = "ssl_demo"
-    
     def __init__(self):
         self.ssl_api = None
         self.logger = None

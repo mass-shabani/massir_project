@@ -14,8 +14,6 @@ class MainAppModule(IModule):
     Provides main website pages using template_service.
     """
     
-    name = "main_app"
-    
     def __init__(self):
         self.http_api = None
         self.template_service = None
@@ -97,7 +95,6 @@ class MainAppModule(IModule):
         async def contact_post(request: self.http_api.Request):
             """Handle contact form submission."""
             form_data = await request.form()
-            name = form_data.get("name", "")
             email = form_data.get("email", "")
             message = form_data.get("message", "")
             

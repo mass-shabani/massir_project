@@ -18,9 +18,6 @@ class DbTablesModule(IModule):
     
     This module requires db_connection_service to be available.
     """
-    
-    name = "db_tables"
-    provides = []
     requires = ["db_connection_service"]  # Requires db_connection module
     
     def __init__(self):

@@ -35,8 +35,6 @@ class MessageDemoModule(IModule):
     capabilities of the network_socket module.
     """
     
-    name = "message_demo"
-    
     def __init__(self):
         self.node_service = None
         self.logger = None

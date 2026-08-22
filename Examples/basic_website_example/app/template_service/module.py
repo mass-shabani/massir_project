@@ -283,9 +283,6 @@ class TemplateServiceModule(IModule):
     Provides Jinja2 template rendering service for other modules.
     """
     
-    name = "template_service"
-    provides = ["template_service"]
-    
     def __init__(self):
         self.template_service = None
         self.logger = None

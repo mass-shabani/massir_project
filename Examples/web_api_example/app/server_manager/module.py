@@ -15,8 +15,6 @@ class ServerManagerModule(IModule):
     It demonstrates how consuming modules control server lifecycle.
     """
     
-    name = "server_manager"
-    
     def __init__(self):
         self.server_api = None
         self.net_api = None

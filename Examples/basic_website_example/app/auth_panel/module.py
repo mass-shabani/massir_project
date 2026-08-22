@@ -25,8 +25,6 @@ class AuthPanelModule(IModule):
     Provides login and user panel pages.
     """
     
-    name = "auth_panel"
-    
     def __init__(self):
         self.http_api = None
         self.template_service = None

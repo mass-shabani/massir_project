@@ -15,9 +15,6 @@ class TemplateServiceModule(IModule):
     Template service module providing unified theme for web modules.
     """
     
-    name = "template_service"
-    provides = ["template_service", "menu_manager"]
-    
     def __init__(self):
         self.http_api = None
         self.logger = None

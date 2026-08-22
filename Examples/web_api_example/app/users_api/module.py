@@ -15,8 +15,6 @@ class UsersAPIModule(IModule):
     Provides CRUD operations for users without importing FastAPI.
     """
     
-    name = "users_api"
-    
     # In-memory user storage
     _users: Dict[int, Dict] = {}
     _next_id: int = 1
