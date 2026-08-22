@@ -56,7 +56,7 @@ def initialize_core_services(
     SettingsManager.set_logger(logger_api)
 
     # Now create SettingsManager (if JSON error, it will be logged with logger)
-    config_api = SettingsManager(str(full_settings_path), initial_settings=initial_settings)
+    config_api = SettingsManager(str(full_settings_path), initial_settings=initial_settings, path_manager=path_manager)
 
     # Update logger with correct config (since config is now loaded)
     logger_api.config = config_api

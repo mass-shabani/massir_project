@@ -37,13 +37,14 @@ class SettingsManager(CoreConfigAPI):
         else:
             log_internal(None, None, message, level=level, tag="config")
 
-    def __init__(self, settings_path: str = "app_settings.json", initial_settings: Optional[dict] = None):
+    def __init__(self, settings_path: str = "app_settings.json", initial_settings: Optional[dict] = None, path_manager=None):
         """
         Initialize settings manager.
 
         Args:
             settings_path: Path to JSON file
             initial_settings: Code settings (highest priority)
+            path_manager: Path manager instance for placeholder substitution
         """
         # 1. Default values
         self._settings = get_default_settings()
@@ -51,7 +52,11 @@ class SettingsManager(CoreConfigAPI):
         # 2. Read from JSON
         self._load_settings(settings_path)
 
-        # 3. Code settings (highest priority)
+        # 3. Substitute path placeholders if path_manager is available
+        if path_manager:
+            self._substitute_path_placeholders(path_manager)
+
+        # 4. Code settings (highest priority)
         if initial_settings:
             self.update_settings(initial_settings)
 
@@ -69,6 +74,30 @@ class SettingsManager(CoreConfigAPI):
             except Exception as e:
                 self._log(f"Failed to load settings from {full_path}: {e}")
                 self._log("Skipping settings file. Using default settings.")
+
+    def _substitute_path_placeholders(self, path_manager):
+        """
+        Substitute {app_dir} and {massir_dir} placeholders in all string settings values.
+        
+        Args:
+            path_manager: Path manager instance
+        """
+        app_dir = str(path_manager.app)
+        massir_dir = str(path_manager.massir)
+        
+        def substitute_in_value(value):
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    value[k] = substitute_in_value(v)
+            elif isinstance(value, list):
+                for i, v in enumerate(value):
+                    value[i] = substitute_in_value(v)
+            elif isinstance(value, str):
+                value = value.replace("{app_dir}", app_dir)
+                value = value.replace("{massir_dir}", massir_dir)
+            return value
+        
+        self._settings = substitute_in_value(self._settings)
 
     def get(self, key: str, default=None):
         """Get value with support for nested keys."""

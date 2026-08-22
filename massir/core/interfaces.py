@@ -39,6 +39,32 @@ class ModuleContext:
         """
         return self._app
 
+    @property
+    def app_dir(self) -> str:
+        """
+        Get the application directory path.
+
+        Returns:
+            Application directory path string
+        """
+        app = self.get_app()
+        if app and hasattr(app, 'path'):
+            return str(app.path.app)
+        return ""
+
+    @property
+    def massir_dir(self) -> str:
+        """
+        Get the massir framework directory path.
+
+        Returns:
+            Massir framework directory path string
+        """
+        app = self.get_app()
+        if app and hasattr(app, 'path'):
+            return str(app.path.massir)
+        return ""
+
 
 class IModule(ABC):
     """
