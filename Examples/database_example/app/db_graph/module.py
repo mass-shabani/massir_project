@@ -17,7 +17,6 @@ from .routes  import register_routes
 
 
 class DbGraphModule(IModule):
-    requires = ["db_connection_service"]
 
     def __init__(self):
         self.http_api           = None

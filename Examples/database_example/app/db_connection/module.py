@@ -19,7 +19,6 @@ class DbConnectionModule(IModule):
     This module is the core of database management and must be loaded before
     other database-related modules (tables, data_editor, transactions, schema, dashboard).
     """
-    requires = ["database_service"]  # Requires system_database module
     
     def __init__(self):
         self.http_api = None

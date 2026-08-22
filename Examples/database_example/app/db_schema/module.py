@@ -16,7 +16,6 @@ class DbSchemaModule(IModule):
     
     This module requires db_connection_service to be available.
     """
-    requires = ["db_connection_service"]  # Requires db_connection module
     
     def __init__(self):
         self.http_api = None
