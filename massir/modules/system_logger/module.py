@@ -1,13 +1,28 @@
+"""
+System Logger Module for Massir Framework.
+
+This module provides an advanced logging service that replaces the
+default logger with enhanced capabilities including:
+- Color-coded output with ANSI escape codes
+- Timestamp formatting
+- Configurable filtering by level and tag
+- HTTP request log formatting
+- Raw print with advanced styling options
+
+The module registers two services:
+- core_logger: AdvancedLogger instance (replaces DefaultLogger)
+- log_colors: Colors class (for use by other modules)
+"""
+
 import datetime
 import os
 import re
 from typing import List, Optional
+
 from massir.core.interfaces import IModule
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.hook_types import SystemHook
 
-
-# ANSI Color Codes - Available for all modules
 
 class Colors:
     """
@@ -19,7 +34,8 @@ class Colors:
     - Standard background colors (8 colors)
     - Bright background colors (8 colors)
     
-    All modules can access these colors via context.services.get("log_colors")
+    All modules can access these colors via:
+        context.services.get("log_colors")
     """
     
     # Reset all formatting
@@ -77,24 +93,37 @@ class Colors:
 class AdvancedLogger(CoreLoggerAPI):
     """
     Advanced logger with color support and filtering.
-
+    
     This logger provides enhanced logging capabilities including
     color-coded output, timestamp, and configurable filtering.
+    
+    The logger reads configuration from CoreConfigAPI:
+    - logs.show_logs: Enable/disable logging
+    - logs.hide_log_levels: List of levels to hide
+    - logs.hide_log_tags: List of tags to hide
+    - logs.debug_mode: Show debug-level messages
+    - template.system_log_template: Log message format template
+    - template.system_log_color_code: ANSI color code for logs
     """
-
+    
     def __init__(self, config_api: CoreConfigAPI):
         """
         Initialize advanced logger.
-
+        
         Args:
-            config_api: Configuration API
+            config_api: Configuration API for reading log settings
         """
         self.config = config_api
         if self.config is None:
             self.config = self._get_fallback()
-
+    
     def _get_fallback(self):
-        """Get fallback configuration."""
+        """
+        Get fallback configuration for when config_api is None.
+        
+        Returns:
+            Fallback config object with default values
+        """
         class F:
             def get_project_name(self): return "Unknown"
             def get_system_log_template(self): return "[{level}]\t{message}"
@@ -104,58 +133,61 @@ class AdvancedLogger(CoreLoggerAPI):
             def get_hide_log_levels(self): return []
             def get_hide_log_tags(self): return []
         return F()
-
+    
     def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
         """
         Check if message should be logged based on config.
-
+        
+        Filtering rules:
+        1. If show_logs is False, nothing is logged
+        2. If tag is in hide_log_tags, message is skipped
+        3. If level is in hide_log_levels, message is skipped
+        4. Critical levels (ERROR, WARNING, etc.) only show in debug mode
+        
         Args:
             level: Log level
             tag: Log tag
-
+            
         Returns:
             True if should log, False otherwise
         """
         config = self.config
-
         if not config.show_logs():
             return False
-
         if tag:
             hidden_tags = config.get_hide_log_tags()
             if isinstance(hidden_tags, list) and tag in hidden_tags:
                 return False
-
         hidden_levels = config.get_hide_log_levels()
         if isinstance(hidden_levels, list):
             if level in hidden_levels:
                 return False
-
         critical_levels = ["ERROR", "WARNING", "EXCEPTION", "CRITICAL"]
         if level in critical_levels and not config.is_debug():
             return False
-
         return True
-
+    
     def _format_http_request(self, message: str) -> str:
         """
         Format HTTP request log messages with enhanced styling.
         
+        Parses HTTP access log format: IP:PORT - "METHOD PATH PROTOCOL" STATUS
+        and applies color coding based on HTTP method and status code.
+        
         Args:
-            message: The log message
+            message: The log message containing HTTP request info
             
         Returns:
-            Formatted message with colors
+            Formatted message with ANSI colors
         """
         # Pattern for HTTP access logs: IP:PORT - "METHOD PATH PROTOCOL" STATUS
         http_pattern = r'^(\d+\.\d+\.\d+\.\d+):(\d+)\s+-\s+"(\w+)\s+([^\s]+)\s+([^"]+)"\s+(\d+)'
         match = re.match(http_pattern, message)
-        
         if match:
             ip, port, method, path, protocol, status = match.groups()
             status_code = int(status)
             
-            # Determine status color
+            # Determine status color based on code range
             if status_code >= 500:
                 status_color = Colors.BRIGHT_RED
             elif status_code >= 400:
@@ -174,19 +206,21 @@ class AdvancedLogger(CoreLoggerAPI):
                 'PATCH': Colors.BRIGHT_MAGENTA,
             }
             method_color = method_colors.get(method, Colors.BRIGHT_WHITE)
-            
             return f"{method_color}{method}{Colors.RESET} {path} {status_color}{status}{Colors.RESET}"
-        
         return message
-
+    
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None,
-            level_color: Optional[str] = None, text_color: Optional[str] = None, bracket_color: Optional[str] = None):
+            level_color: Optional[str] = None, text_color: Optional[str] = None,
+            bracket_color: Optional[str] = None):
         """
         Log a message with color support.
-
+        
+        Output format: [timestamp] [level] [tag] message
+        Colors are applied to each section based on level and custom overrides.
+        
         Args:
             message: The message to log
-            level: Log level
+            level: Log level (INFO, WARNING, ERROR, DEBUG, CORE)
             tag: Log tag for filtering
             level_color: Custom color for level tag (use Colors class)
             text_color: Custom color for message text (use Colors class)
@@ -195,15 +229,16 @@ class AdvancedLogger(CoreLoggerAPI):
         # Check filtering
         if not self._should_log(level, tag):
             return
-
+        
+        # Enable ANSI on Windows
         if os.name == 'nt':
             os.system('')
-
+        
         # Default colors
         _bracket_color = bracket_color if bracket_color else Colors.BRIGHT_GREEN
         _text_color = text_color if text_color else Colors.BRIGHT_WHITE
         _level_color = level_color if level_color else Colors.BRIGHT_GREEN
-
+        
         # Set level colors based on level (if not provided)
         if level_color is None:
             level_colors = {
@@ -214,12 +249,13 @@ class AdvancedLogger(CoreLoggerAPI):
                 "CORE": Colors.BRIGHT_CYAN,
             }
             _level_color = level_colors.get(level, Colors.BRIGHT_GREEN)
-
+        
+        # Use red text for errors if no custom color
         if level == "ERROR" and text_color is None:
             _text_color = Colors.BRIGHT_RED
-
+        
+        # Build output string
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
         str_time = f"{_bracket_color}[{timestamp}]{Colors.RESET} "
         str_header = f"{_level_color}[{level}]{Colors.RESET} "
         
@@ -234,12 +270,12 @@ class AdvancedLogger(CoreLoggerAPI):
             str_message = f"{_text_color}[{tag}]{Colors.RESET} {formatted_message}{Colors.RESET}"
         else:
             str_message = f"{_text_color}{formatted_message}{Colors.RESET}"
-
+        
         print(f"{str_time}{str_header}\t{str_message}")
-
+    
     def print(self,
               message: str,
-              level: str = "INFO", 
+              level: str = "INFO",
               tag: Optional[str] = None,
               end: str = "\n",
               color: Optional[str] = None,
@@ -255,11 +291,15 @@ class AdvancedLogger(CoreLoggerAPI):
               styles: Optional[List[str]] = None):
         """
         Print raw output with advanced styling options but without log headers.
-
+        
+        This method provides fine-grained control over terminal output
+        with ANSI styling. Unlike log(), it does not add timestamp or
+        level headers.
+        
         Args:
             message: The text to print
-            level: Log level (INFO, WARNING, ERROR, etc.), This is not displayed
-            tag: Optional tag for filtering, This is not displayed
+            level: Log level (for filtering only, not displayed)
+            tag: Optional tag for filtering (not displayed)
             end: String appended after the message (defaults to newline)
             color: Foreground ANSI color
             bg_color: Background ANSI color
@@ -275,105 +315,130 @@ class AdvancedLogger(CoreLoggerAPI):
         """
         if not self._should_log(level, tag):
             return
-
         if not isinstance(message, str):
             message = repr(message)
-
-        if prefix is None:  prefix = ""
-        if suffix is None:  suffix = ""
-
+        if prefix is None:
+            prefix = ""
+        if suffix is None:
+            suffix = ""
         output = f"{prefix}{message}{suffix}"
-
+        
         codes: list[str] = []
-        if color:       codes.append(color)
-        if bg_color:    codes.append(bg_color)
-        if bold:        codes.append("\033[1m")
-        if italic:      codes.append("\033[3m")
-        if dim:         codes.append("\033[2m")
-        if underline:   codes.append("\033[4m")
-        if blink:       codes.append("\033[5m")
-        if inverse:     codes.append("\033[7m")
-        if styles:      codes.extend(styles)
-
-        if os.name == 'nt': os.system('')
-        if codes: output = "".join(codes) + output + Colors.RESET
-
+        if color:
+            codes.append(color)
+        if bg_color:
+            codes.append(bg_color)
+        if bold:
+            codes.append("\033[1m")
+        if italic:
+            codes.append("\033[3m")
+        if dim:
+            codes.append("\033[2m")
+        if underline:
+            codes.append("\033[4m")
+        if blink:
+            codes.append("\033[5m")
+        if inverse:
+            codes.append("\033[7m")
+        if styles:
+            codes.extend(styles)
+        
+        if os.name == 'nt':
+            os.system('')
+        if codes:
+            output = "".join(codes) + output + Colors.RESET
         print(output, end=end)
 
 
 class SystemLoggerModule(IModule):
     """
     System logger module.
-
+    
     This module provides an advanced logging service to the framework,
     replacing the default logger with enhanced capabilities.
+    
+    Services registered:
+    - core_logger: AdvancedLogger instance
+    - log_colors: Colors class for terminal styling
+    
+    Hooks registered:
+    - ON_MODULE_STARTED: Track when other modules start
+    - ON_SETTINGS_LOADED: React to settings reload (restart scenarios)
     """
-
-    async def load(self, context):
+    
+    async def start(self, context: 'ModuleContext') -> None:
         """
-        Load the system logger module.
-
+        Start the system logger module.
+        
+        This method:
+        1. Creates the AdvancedLogger instance with current config
+        2. Registers it as the core_logger service (replaces DefaultLogger)
+        3. Registers the Colors class for use by other modules
+        4. Updates the App's logger reference so core uses the new logger
+        5. Registers lifecycle hooks
+        6. Logs activation confirmation
+        
         Args:
-            context: Module context
+            context: Module context providing access to services and app
         """
         self.context = context
         config = context.services.get("core_config")
-
+        
+        # Create and register the advanced logger
         my_logger = AdvancedLogger(config)
         context.services.set("core_logger", my_logger)
         
         # Register Colors class for use by other modules
         context.services.set("log_colors", Colors)
-
+        
+        # Update App's logger reference so core uses the new logger
+        # In the new system, inject_system_apis is no longer called by
+        # the loader, so the module must update the reference directly
         app = context.get_app()
-        app.register_hook(SystemHook.ON_MODULE_LOADED, self._on_module_loaded)
+        if app and hasattr(app, '_logger_api_ref'):
+            app._logger_api_ref[0] = my_logger
+        
+        # Register lifecycle hooks
+        # Note: ON_SETTINGS_LOADED fires before this module starts on
+        # initial bootstrap, so this hook only catches reloads on restart
+        app.register_hook(SystemHook.ON_MODULE_STARTED, self._on_module_started)
         app.register_hook(SystemHook.ON_SETTINGS_LOADED, self._on_settings_loaded)
-
-    async def start(self, context):
-        """
-        Start the system logger module.
-
-        Args:
-            context: Module context
-        """
-        # Important fix: update module config reference
-        # Since code settings (initial_settings) may have been applied after load
-        # or config may have been replaced in registry.
-        logger = context.services.get("core_logger")
-        if logger and hasattr(logger, 'config'):
-            logger.config = context.services.get("core_config")
-
-        logger.log("System Logger Module Active.", tag="System")
-
-    async def ready(self, context):
-        """
-        Called when all modules have started and are ready.
-
-        Args:
-            context: Module context
-        """
-        pass
-
-    async def stop(self, context):
+        
+        # Log activation
+        my_logger.log("System Logger Module Active.", tag="System")
+    
+    async def stop(self, context: 'ModuleContext') -> None:
         """
         Stop the system logger module.
-
+        
+        The logger service remains registered until shutdown completes
+        so other modules can still log during their stop() phase.
+        
         Args:
             context: Module context
         """
-        pass
-
+        logger = context.services.get("core_logger")
+        if logger:
+            logger.log("System Logger Module stopping.", tag="System")
+    
     def _on_settings_loaded(self):
-        """Handle settings loaded event."""
+        """
+        Handle settings loaded event.
+        
+        This callback fires when settings are loaded. On initial bootstrap,
+        this fires before the module has started, so it only catches
+        settings reloads during restart scenarios.
+        """
         pass
-
-    def _on_module_loaded(self, module_instance):
+    
+    def _on_module_started(self, module_instance):
         """
-        Handle module loaded event.
-
+        Handle module started event.
+        
+        Called when another module's start() method completes.
+        Can be used for logging or dependency tracking.
+        
         Args:
-            module_instance: The loaded module instance
+            module_instance: The module instance that just started
         """
-        # logger = self.context.services.get("core_logger")
-        # logger.log(f"Detected loaded module: {module_instance.name}", level="CORE", tag="detailed")
         pass
