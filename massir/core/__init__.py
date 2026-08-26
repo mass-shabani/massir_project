@@ -1,36 +1,66 @@
-from .app import App, ModuleContext
-from .interfaces import IModule
+"""
+Core module for the Massir framework.
+
+This module exports all core classes and functions needed by the
+application and module developers.
+"""
+
+from .app import App
+from .interfaces import IModule, ModuleContext
 from .registry import ModuleRegistry
 from .core_apis import CoreLoggerAPI, CoreConfigAPI
 from .hook_types import SystemHook
-from .config import SettingsManager, DefaultConfig
-from .hooks import HooksManager
+from .hooks import Hook, HooksManager
 from .module_loader import ModuleLoader
 from .api import initialize_core_services
 from .log import print_banner, log_internal, DefaultLogger
-from .inject import inject_system_apis
-from .stop import shutdown
-from .exceptions import FrameworkError, ModuleLoadError, DependencyResolutionError
+from .path import Path
+from .run_order_group import (
+    RunOrderGroupManager,
+    RunOrderGroup,
+    ModuleInfo,
+    RunAtRegistry,
+)
+from .exceptions import (
+    FrameworkError,
+    ModuleLoadError,
+    DependencyResolutionError
+)
 
 __all__ = [
-    'App', 
-    'ModuleContext', 
-    'IModule', 
+    # Core application
+    'App',
+    
+    # Module interfaces
+    'IModule',
+    'ModuleContext',
+    
+    # Services
     'ModuleRegistry',
-    'ModuleLoader',
-    'DefaultLogger',
-    'DefaultConfig',
-    'SettingsManager',
-    'HooksManager',
-    'CoreLoggerAPI', 
-    'CoreConfigAPI', 
+    'CoreLoggerAPI',
+    'CoreConfigAPI',
+    
+    # Hooks
     'SystemHook',
-    'FrameworkError',
-    'ModuleLoadError',
-    'inject_system_apis',
-    'DependencyResolutionError',
+    'Hook',
+    'HooksManager',
+    
+    # Module loading
+    'ModuleLoader',
+    'ModuleInfo',
+    'RunOrderGroup',
+    'RunOrderGroupManager',
+    'RunAtRegistry',
+    
+    # Utilities
+    'initialize_core_services',
     'print_banner',
     'log_internal',
-    'shutdown',
+    'DefaultLogger',
+    'Path',
+    
+    # Exceptions
+    'FrameworkError',
+    'ModuleLoadError',
+    'DependencyResolutionError',
 ]
-

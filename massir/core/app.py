@@ -1,29 +1,51 @@
+"""
+Main application class for the Massir framework.
+
+This module provides the App class that serves as the central orchestrator
+for the entire framework. It manages:
+- Core service initialization
+- Run order group execution based on system triggers
+- Hook dispatching (both SystemHook and Hook)
+- Background task management
+- Graceful shutdown and restart
+
+The run_at system is fully dynamic:
+- "on_start" groups execute during bootstrap
+- Groups with SystemHook-based run_at values execute when their
+  corresponding hook is dispatched (via auto-registered callbacks)
+"""
+
 import asyncio
 import signal
-from pathlib import Path
-from typing import List, Dict, Optional, TYPE_CHECKING
+from typing import List, Dict, Optional, Union
 
-# Imports with flat structure
 from massir.core.interfaces import IModule, ModuleContext
 from massir.core.hook_types import SystemHook
+from massir.core.hooks import Hook, HooksManager
 from massir.core.module_loader import ModuleLoader
 from massir.core.api import initialize_core_services
 from massir.core.log import print_banner, log_internal
-from massir.core.hooks import HooksManager
-from massir.core.stop import shutdown
 from massir.core.path import Path as PathManager
-
-if TYPE_CHECKING:
-    from massir.core.app import App
+from massir.core.run_order_group import RunOrderGroupManager
 
 
 class App:
     """
     Main application class.
-
-    Responsible for managing lifecycle, modules, and settings.
+    
+    This class manages the complete application lifecycle:
+    1. Initialization of core services (config, logger, path)
+    2. Parsing run order groups from configuration
+    3. Auto-registration of callbacks for non-default run_at values
+    4. Execution of on_start groups during bootstrap
+    5. Event dispatching via hooks system
+    6. Graceful shutdown in reverse execution order
+    7. Restart capability for hot-reloading
+    
+    The class supports both system hooks (SystemHook enum) and
+    custom hooks (Hook instances created by modules).
     """
-
+    
     def __init__(
         self,
         initial_settings: Optional[dict] = None,
@@ -32,111 +54,165 @@ class App:
     ):
         """
         Initialize the application.
-
+        
         Args:
-            initial_settings: Code settings (highest priority)
+            initial_settings: Code settings (highest priority override)
             settings_path: Path to JSON settings file
-                - "./config/settings.json" : Relative path
-                - "/absolute/path.json" : Absolute path
-                - "__cwd__" : Current directory
-            app_dir: Path to user application directory (where main.py is located)
+            app_dir: Path to user application directory
         """
         # Path management
         self.path = PathManager(app_dir)
-
-        # Module loader with access to path
+        
+        # Module loader
         self.loader = ModuleLoader(path=self.path)
-
+        
+        # Module registry (global)
         self.modules: Dict[str, IModule] = {}
+        
+        # Module context
         self.context = ModuleContext()
+        
+        # Hooks manager
         self.hooks = HooksManager()
-
-        # References to allow modification by other modules
+        
+        # Run order groups manager
+        self.run_groups = RunOrderGroupManager(
+            self.hooks, self.loader, self.path
+        )
+        
+        # References to core services (mutable lists for updating)
         self._logger_api_ref = [None]
         self._config_api_ref = [None]
+        
+        # Background tasks
         self._background_tasks: List[asyncio.Task] = []
+        
+        # Lifecycle events
         self._stop_event = asyncio.Event()
         self._restart_event = asyncio.Event()
-
-        # Module name management variables
-        self._system_module_names: List[str] = []
-        self._app_module_names: List[str] = []
         
-        # Store initial settings for restart
+        # Store settings for restart
         self._initial_settings = initial_settings
         self._settings_path = settings_path
-
-        # Initialize services
+        
+        # Bootstrap core services
         self._bootstrap_system(initial_settings, settings_path)
-
-    def _bootstrap_system(self, initial_settings: Optional[dict], settings_path: str):
+    
+    def _bootstrap_system(
+        self,
+        initial_settings: Optional[dict],
+        settings_path: Optional[str]
+    ) -> None:
         """
-        Bootstrap system services.
-
+        Bootstrap core services.
+        
+        This method initializes the core services (config, logger, path)
+        and registers them in the service registry.
+        
         Args:
             initial_settings: Initial settings dictionary
             settings_path: Path to settings file
         """
-        # First register services with complete settings
+        # Initialize core services
         _, _, self.path = initialize_core_services(
             self.context.services,
             initial_settings,
             settings_path,
             str(self.path.app)
         )
-
+        
         # Get references to registered services
         self._config_api_ref[0] = self.context.services.get("core_config")
         self._logger_api_ref[0] = self.context.services.get("core_logger")
-
+        
+        # Set logger in hooks manager
+        self.hooks.set_logger(self._logger_api_ref[0])
+        
+        # Set app reference in context
         self.context.set_app(self)
-
-    # --- Hooks ---
-    def register_hook(self, hook: SystemHook, callback):
+    
+    # =========================================================================
+    # Public API - Hooks
+    # =========================================================================
+    
+    def register_hook(
+        self,
+        hook: Union[SystemHook, Hook],
+        callback
+    ) -> None:
         """
         Register a hook callback.
-
+        
+        This method accepts both SystemHook enum values and Hook
+        instances created by modules.
+        
         Args:
-            hook: The hook type
+            hook: The hook type (SystemHook or Hook)
             callback: The callback function
         """
-        self.hooks.register(hook, callback, self._logger_api_ref[0])
-
-    # --- Task management ---
-    def register_background_task(self, coroutine):
+        self.hooks.register(
+            hook, callback, self._logger_api_ref[0]
+        )
+    
+    async def trigger_hook(
+        self,
+        hook: Union[SystemHook, Hook],
+        *args,
+        **kwargs
+    ) -> None:
         """
-        Register a background task (e.g., Uvicorn).
-
+        Trigger a hook to all registered callbacks.
+        
+        This method allows modules to dispatch their custom hooks
+        (Hook instances) or system hooks to all registered callbacks.
+        
         Args:
-            coroutine: The coroutine or function to run as background task
+            hook: The hook to trigger (SystemHook or Hook)
+            *args: Positional arguments for callbacks
+            **kwargs: Keyword arguments for callbacks
+        """
+        await self.hooks.dispatch(hook, *args, **kwargs)
+    
+    # =========================================================================
+    # Public API - Tasks
+    # =========================================================================
+    
+    def register_background_task(self, coroutine) -> None:
+        """
+        Register a background task.
+        
+        Background tasks are automatically cancelled during shutdown.
+        
+        Args:
+            coroutine: Coroutine or function to run as background task
         """
         if asyncio.iscoroutinefunction(coroutine):
             task = asyncio.create_task(coroutine())
-            self._background_tasks.append(task)
         else:
             task = asyncio.create_task(asyncio.to_thread(coroutine))
-            self._background_tasks.append(task)
+        self._background_tasks.append(task)
     
-    # --- Shutdown and Restart ---
-    def request_shutdown(self):
+    # =========================================================================
+    # Public API - Lifecycle Control
+    # =========================================================================
+    
+    def request_shutdown(self) -> None:
         """
         Request a graceful shutdown of the application.
         
-        This method can be called from any module to initiate
-        a clean shutdown sequence. The application will stop
-        all modules and background tasks in the correct order.
+        This method sets the stop event. The actual shutdown sequence
+        (including dispatching ON_SHUTDOWN_REQUEST hook) is handled
+        in the run loop's finally block.
         """
         log_internal(
-            self._config_api_ref[0], 
-            self._logger_api_ref[0], 
-            "Shutdown requested programmatically...", 
+            self._config_api_ref[0],
+            self._logger_api_ref[0],
+            "Shutdown requested programmatically...",
             level="CORE"
         )
-        # Dispatch shutdown hook (synchronously since we're not in async context)
-        asyncio.create_task(self.hooks.dispatch(SystemHook.ON_SHUTDOWN_REQUEST))
         self._stop_event.set()
     
-    def request_restart(self):
+    def request_restart(self) -> None:
         """
         Request a restart of the application.
         
@@ -144,17 +220,13 @@ class App:
         1. Stop all modules and background tasks
         2. Clear all loaded modules
         3. Re-bootstrap the application from scratch
-        
-        Useful for hot-reloading configuration or modules.
         """
         log_internal(
-            self._config_api_ref[0], 
-            self._logger_api_ref[0], 
-            "Restart requested programmatically [🔄]...", 
+            self._config_api_ref[0],
+            self._logger_api_ref[0],
+            "Restart requested programmatically...",
             level="CORE"
         )
-        # Dispatch restart hook (synchronously since we're not in async context)
-        asyncio.create_task(self.hooks.dispatch(SystemHook.ON_RESTART_REQUEST))
         self._restart_event.set()
         self._stop_event.set()
     
@@ -166,112 +238,211 @@ class App:
             True if restart was requested, False otherwise
         """
         return self._restart_event.is_set()
-
-    # --- Signal handling ---
-    def _setup_signal_handlers(self, loop: asyncio.AbstractEventLoop):
-        """
-        Setup signal handlers for graceful shutdown.
-
-        Args:
-            loop: The asyncio event loop
-        """
-        def _shutdown_handler():
-            log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Shutdown signal received. Initiating graceful shutdown...", level="CORE")
-            self._stop_event.set()
-
-        # Try Unix-style signal handlers first
-        try:
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                loop.add_signal_handler(sig, _shutdown_handler)
-        except NotImplementedError:
-            # Windows fallback: use signal.signal() with wakeup fd
-            import sys
-            if sys.platform == 'win32':
-                # Use signal.signal for Windows
-                def _win_shutdown_handler(signum, frame):
-                    _shutdown_handler()
-                signal.signal(signal.SIGINT, _win_shutdown_handler)
-                signal.signal(signal.SIGTERM, _win_shutdown_handler)
-
-    # --- Lifecycle ---
-    async def run(self):
+    
+    # =========================================================================
+    # Lifecycle - Main Run Loop
+    # =========================================================================
+    
+    async def run(self) -> None:
         """
         Main entry point for the application.
         
-        Supports restart functionality - if request_restart() was called,
-        the application will shutdown and then re-bootstrap from scratch.
+        This method runs the application lifecycle:
+        1. Setup signal handlers
+        2. Bootstrap (parse groups, register callbacks, execute on_start)
+        3. Wait for stop signal
+        4. Dispatch ON_RESTART_REQUEST if restart requested
+        5. Dispatch ON_SHUTDOWN_REQUEST (triggers matching run_at groups)
+        6. Stop all groups in reverse execution order
+        7. Check for restart (loop back if restart requested)
         """
         loop = asyncio.get_running_loop()
         self._setup_signal_handlers(loop)
-
+        
         while True:
             try:
                 await self._bootstrap_phases()
                 
-                # Ready phase - called after bootstrap is complete
-                # This ensures all modules are started and background tasks are running
-                await self._ready_all_modules()
-                await self.hooks.dispatch(SystemHook.ON_ALL_MODULES_READY)
-                
                 # Check for auto_shutdown setting
-                auto_shutdown = self._config_api_ref[0].get("system.auto_shutdown", False)
+                auto_shutdown = self._config_api_ref[0].get(
+                    "system.auto_shutdown", False
+                )
+                
                 if auto_shutdown:
-                    # Get configurable delay (default 0.5 seconds)
-                    shutdown_delay = self._config_api_ref[0].get("system.auto_shutdown_delay", 0.0)
+                    delay = self._config_api_ref[0].get(
+                        "system.auto_shutdown_delay", 0.0
+                    )
+                    if delay > 0:
+                        await asyncio.sleep(delay)
                     
-                    if shutdown_delay > 0:
-                        await asyncio.sleep(shutdown_delay)
-
                     log_internal(
-                        self._config_api_ref[0], 
-                        self._logger_api_ref[0], 
-                        "Auto-shutdown is enabled. Initiating shutdown...", 
+                        self._config_api_ref[0],
+                        self._logger_api_ref[0],
+                        "Auto-shutdown is enabled. Initiating shutdown...",
                         level="CORE"
                     )
                     self._stop_event.set()
                 else:
-                    log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application is running. Press Ctrl+C to stop.", level="CORE")
+                    log_internal(
+                        self._config_api_ref[0],
+                        self._logger_api_ref[0],
+                        "Application is running. Press Ctrl+C to stop.",
+                        level="CORE"
+                    )
                 
-                # Wait for stop event, but also handle KeyboardInterrupt on Windows
+                # Wait for stop event
                 while not self._stop_event.is_set():
                     try:
-                        await asyncio.wait_for(self._stop_event.wait(), timeout=0.5)
+                        await asyncio.wait_for(
+                            self._stop_event.wait(), timeout=0.5
+                        )
                     except asyncio.TimeoutError:
-                        # Continue waiting
-                        pass
-
-            except asyncio.CancelledError:
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Core run loop cancelled.", level="CORE")
+                        continue
+                
             except KeyboardInterrupt:
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "\n\nKeyboard interrupt received. Initiating graceful shutdown...", level="CORE")
+                log_internal(
+                    self._config_api_ref[0],
+                    self._logger_api_ref[0],
+                    "\nKeyboard interrupt received. "
+                    "Initiating graceful shutdown...",
+                    level="CORE"
+                )
             except Exception as e:
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], f"Fatal Error in core execution: {e}", level="ERROR")
+                log_internal(
+                    self._config_api_ref[0],
+                    self._logger_api_ref[0],
+                    f"Fatal error in core execution: {e}",
+                    level="ERROR"
+                )
             finally:
-                await shutdown(self.modules, self._background_tasks,
-                              self._config_api_ref[0], self._logger_api_ref[0],
-                              self._system_module_names, self._app_module_names)
-            
-            # Check if restart was requested
-            if self._restart_event.is_set():
-                log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Restarting application...", level="CORE")
-                await self._reset_for_restart()
-                # Continue the while loop to re-bootstrap
-            else:
-                # Normal shutdown, exit the loop
-                break
+                await self._shutdown_all()
+                
+                # Check if restart was requested
+                if self._restart_event.is_set():
+                    log_internal(
+                        self._config_api_ref[0],
+                        self._logger_api_ref[0],
+                        "Restarting application...",
+                        level="CORE"
+                    )
+                    await self._reset_for_restart()
+                else:
+                    break
     
-    async def _reset_for_restart(self):
+    async def _bootstrap_phases(self) -> None:
+        """
+        Execute bootstrap phases using run order groups.
+        
+        Phase order:
+        1. Parse groups from configuration (validates run_at values)
+        2. Register callbacks for non-default run_at values
+        3. Dispatch ON_SETTINGS_LOADED (may trigger matching groups)
+        4. Print banner
+        5. Dispatch ON_APP_BOOTSTRAP_START (may trigger matching groups)
+        6. Execute on_start groups (the default run_at)
+        7. Dispatch ON_APP_BOOTSTRAP_END (may trigger matching groups)
+        """
+        # Phase 1: Parse groups and validate run_at values
+        modules_config = self._config_api_ref[0].get_modules_config()
+        self.run_groups.parse_groups_from_config(
+            modules_config,
+            self._config_api_ref[0],
+            self._logger_api_ref[0]
+        )
+        
+        # Phase 2: Register callbacks for non-default run_at values
+        # This must happen BEFORE any hooks are dispatched so that
+        # groups with run_at matching early hooks (like on_settings_loaded)
+        # are executed when those hooks fire
+        self.run_groups.register_run_at_callbacks(
+            self.modules,
+            self.context,
+            self._config_api_ref[0],
+            self._logger_api_ref[0]
+        )
+        
+        # Phase 3: Dispatch ON_SETTINGS_LOADED
+        # Groups with run_at="on_settings_loaded" execute via callback
+        await self.hooks.dispatch(SystemHook.ON_SETTINGS_LOADED)
+        print_banner(self._config_api_ref[0])
+        
+        # Phase 4: Dispatch ON_APP_BOOTSTRAP_START
+        # Groups with run_at="on_app_bootstrap_start" execute via callback
+        await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_START)
+        
+        log_internal(
+            self._config_api_ref[0],
+            self._logger_api_ref[0],
+            "Starting Massir Framework...",
+            level="CORE", tag="core_init"
+        )
+        
+        # Phase 5: Execute on_start groups (the default run_at)
+        await self.run_groups.execute_on_start_groups(
+            self.modules,
+            self.context,
+            self._config_api_ref[0],
+            self._logger_api_ref[0]
+        )
+        
+        # Phase 6: Dispatch ON_APP_BOOTSTRAP_END
+        # Groups with run_at="on_app_bootstrap_end" execute via callback
+        await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
+        
+        log_internal(
+            self._config_api_ref[0],
+            self._logger_api_ref[0],
+            "Framework bootstrap complete.",
+            level="CORE"
+        )
+    
+    async def _shutdown_all(self) -> None:
+        """
+        Execute the complete shutdown sequence.
+        
+        This method:
+        1. Cancels all background tasks
+        2. Dispatches ON_RESTART_REQUEST if restart was requested
+           (triggers groups with run_at="on_restart_request")
+        3. Dispatches ON_SHUTDOWN_REQUEST
+           (triggers groups with run_at="on_shutdown_request")
+        4. Stops all groups in reverse execution order
+        """
+        # Cancel background tasks
+        for task in self._background_tasks:
+            if not task.done():
+                task.cancel()
+        
+        # Dispatch ON_RESTART_REQUEST if restart was requested
+        # Groups with run_at="on_restart_request" execute via callback
+        if self._restart_event.is_set():
+            await self.hooks.dispatch(SystemHook.ON_RESTART_REQUEST)
+        
+        # Dispatch ON_SHUTDOWN_REQUEST
+        # Groups with run_at="on_shutdown_request" execute via callback
+        await self.hooks.dispatch(SystemHook.ON_SHUTDOWN_REQUEST)
+        
+        # Stop all groups in reverse execution order
+        await self.run_groups.shutdown_all_groups(
+            self.modules,
+            self.context,
+            self._config_api_ref[0],
+            self._logger_api_ref[0]
+        )
+    
+    async def _reset_for_restart(self) -> None:
         """
         Reset application state for restart.
         
-        Clears all modules, tasks, and events to prepare for a fresh start.
+        This method clears all state to prepare for a fresh bootstrap:
+        - Module registry
+        - Run order groups
+        - Background tasks
+        - Lifecycle events
+        - Re-initializes context and hooks
         """
         # Clear modules
         self.modules.clear()
-        
-        # Clear module name lists
-        self._system_module_names.clear()
-        self._app_module_names.clear()
         
         # Clear background tasks
         self._background_tasks.clear()
@@ -283,146 +454,57 @@ class App:
         # Re-initialize context and hooks
         self.context = ModuleContext()
         self.hooks = HooksManager()
+        self.run_groups = RunOrderGroupManager(
+            self.hooks, self.loader, self.path
+        )
         
-        # Re-bootstrap system services
-        self._bootstrap_system(self._initial_settings, self._settings_path)
+        # Re-bootstrap core services
+        self._bootstrap_system(
+            self._initial_settings, self._settings_path
+        )
         
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Application state reset complete.", level="CORE")
-
-    async def _bootstrap_phases(self):
-        """
-        Manage module bootstrap phases.
-        
-        This method handles:
-        - Loading settings
-        - Discovering and loading modules
-        - Starting modules
-        
-        The ready phase is called separately after this completes.
-        """
-        # Phase 0 - Settings loaded
-        await self.hooks.dispatch(SystemHook.ON_SETTINGS_LOADED)
-        print_banner(self._config_api_ref[0])
-
-        # Phase 1 - Bootstrap start
-        await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_START)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Starting Massir Framework...", level="CORE", tag="core_init")
-
-        # Phase 2 - Discover and load system modules
-        system_modules_config = self._config_api_ref[0].get_modules_config_for_type("systems")
-        system_data, disabled_system, _ = await self._discover_modules(system_modules_config, is_system=True)
-        await self._load_system_modules(system_data, disabled_system)
-
-        # Phase 3 - Discover and load application modules
-        app_modules_config = self._config_api_ref[0].get_modules_config_for_type("applications")
-        app_data, disabled_app, should_sort = await self._discover_modules(app_modules_config, is_system=False)
-        await self._load_application_modules(app_data, disabled_system, disabled_app, should_sort)
-
-        # Phase 4 - Start all modules
-        await self._start_all_modules()
-
-        # Phase 5 - Bootstrap end
-        await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "Framework bootstrap complete.", level="CORE")
-
-    async def _discover_modules(self, modules_config: List[Dict], is_system: bool) -> tuple[List[Dict], Dict[str, List[str]], bool]:
-        """
-        Discover modules from settings.
-
-        Args:
-            modules_config: List of module settings
-            is_system: Are these system modules?
-
-        Returns:
-            Tuple of (List of discovered modules, disabled modules dict, should_sort flag)
-        """
-        return await self.loader.discover_modules(
-            modules_config,
-            is_system,
+        log_internal(
             self._config_api_ref[0],
-            self._logger_api_ref[0]
+            self._logger_api_ref[0],
+            "Application state reset complete.",
+            level="CORE"
         )
-
-    async def _load_system_modules(self, system_data: List[Dict], disabled_modules: Dict[str, List[str]] = None):
+    
+    def _setup_signal_handlers(
+        self,
+        loop: asyncio.AbstractEventLoop
+    ) -> None:
         """
-        Load system modules.
-
+        Setup signal handlers for graceful shutdown.
+        
+        This method handles both Unix and Windows signal handling:
+        - Unix: Uses loop.add_signal_handler (preferred)
+        - Windows: Falls back to signal.signal()
+        
         Args:
-            system_data: List of system module information
-            disabled_modules: Dictionary of disabled modules and their capabilities
+            loop: The asyncio event loop
         """
-        await self.loader.load_system_modules(
-            system_data,
-            self.modules,
-            self.context,
-            self._logger_api_ref,
-            self._config_api_ref,
-            disabled_modules or {}
-        )
-
-        # Collect system module names
-        for mod_info in system_data:
-            mod_name = mod_info["manifest"]["name"]
-            if mod_name in self.modules:
-                self._system_module_names.append(mod_name)
-
-    async def _load_application_modules(self, app_data: List[Dict], disabled_system: Dict[str, List[str]] = None, disabled_app: Dict[str, List[str]] = None, should_sort: bool = False):
-        """
-        Load application modules.
-
-        Args:
-            app_data: List of application module information
-            disabled_system: Dictionary of disabled system modules
-            disabled_app: Dictionary of disabled application modules
-            should_sort: Whether to sort modules by dependencies (True when names="all")
-        """
-        # Combine disabled modules
-        all_disabled = {**(disabled_system or {}), **(disabled_app or {})}
+        def _shutdown_handler() -> None:
+            """Signal handler callback for shutdown."""
+            log_internal(
+                self._config_api_ref[0],
+                self._logger_api_ref[0],
+                "Shutdown signal received. "
+                "Initiating graceful shutdown...",
+                level="CORE"
+            )
+            self._stop_event.set()
         
-        await self.loader.load_application_modules(
-            app_data,
-            self.modules,
-            self.context,
-            self._logger_api_ref,
-            self._config_api_ref,
-            all_disabled,
-            should_sort
-        )
-
-        # Collect application module names
-        for mod_info in app_data:
-            mod_name = mod_info["manifest"]["name"]
-            if mod_name in self.modules:
-                self._app_module_names.append(mod_name)
-
-    async def _start_all_modules(self):
-        """
-        Start all modules.
-        """
-        await self.loader.start_all_modules(
-            self.modules,
-            self._system_module_names,
-            self._app_module_names,
-            self._logger_api_ref,
-            self._config_api_ref,
-            self.hooks
-        )
-
-    async def _ready_all_modules(self):
-        """
-        Call ready on all modules after bootstrap is complete.
-        
-        This method is called after _bootstrap_phases() finishes,
-        ensuring all modules are loaded, started, and background tasks
-        (like servers) are running.
-        """
-        await self.loader.ready_all_modules(
-            self.modules,
-            self._system_module_names,
-            self._app_module_names,
-            self._logger_api_ref,
-            self._config_api_ref,
-            self.hooks
-        )
-        
-        log_internal(self._config_api_ref[0], self._logger_api_ref[0], "All modules ready. Application initialization complete.", level="CORE")
+        # Try Unix-style signal handlers first
+        try:
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                loop.add_signal_handler(sig, _shutdown_handler)
+        except NotImplementedError:
+            # Windows fallback
+            import sys
+            if sys.platform == 'win32':
+                def _win_shutdown_handler(signum, frame):
+                    _shutdown_handler()
+                
+                signal.signal(signal.SIGINT, _win_shutdown_handler)
+                signal.signal(signal.SIGTERM, _win_shutdown_handler)
