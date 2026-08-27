@@ -25,10 +25,22 @@ class AppModule(IModule):
             context: The module context containing services and configuration.
         """
         logger = context.services.get("core_logger")
+        colors = context.services.get("log_colors")
+        
 
-        if logger:
-            logger.log("AppModule started successfully and using System Logger!", level="CUST", level_color="\033[94m")
-            logger.log("Performing some business logic...", level="CUST", level_color="\033[94m")
+        if logger and colors:
+            logger.log("AppModule started successfully and using System Logger!", 
+                       level="INFO", 
+                       tag="app_consumer", 
+                       level_color=colors.BRIGHT_BLUE , 
+                       text_color=colors.GREEN,
+                       bracket_color=colors.BRIGHT_BLUE)
+            logger.log("Performing some business logic...", 
+                       level="INFO", 
+                       tag="app_consumer",
+                       level_color=colors.BRIGHT_BLUE, 
+                       text_color=colors.GREEN, 
+                       bracket_color=colors.BRIGHT_BLUE)
         else:
             print("   [AppModule] Fallback to standard print because system logger is missing.")
 
