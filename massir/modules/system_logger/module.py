@@ -126,7 +126,7 @@ class AdvancedLogger(CoreLoggerAPI):
         """
         class F:
             def get_project_name(self): return "Unknown"
-            def get_system_log_template(self): return "[{level}]\t{message}"
+            def get_system_log_template(self): return "{timestamp} | {level}:\t{tag} | {message}"
             def get_system_log_color_code(self): return "92"
             def is_debug(self): return True
             def show_logs(self): return True

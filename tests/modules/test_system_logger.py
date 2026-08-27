@@ -88,6 +88,8 @@ class TestAdvancedLoggerInit:
         assert fallback.get_hide_log_levels() == []
         assert fallback.get_hide_log_tags() == []
         assert "{level}" in fallback.get_system_log_template()
+        assert "{tag}" in fallback.get_system_log_template()
+        assert "{timestamp}" in fallback.get_system_log_template()
 
 
 class TestAdvancedLoggerShouldLog:

@@ -207,13 +207,19 @@ class DefaultLogger(CoreLoggerAPI):
         color_code = self.config.get_system_log_color_code()
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        formatted_msg = template.format(
-            project_name=self.config.get_project_name(),
-            level=level,
-            message=message,
-            tag=tag or "",
-            timestamp=timestamp
-        )
+        format_kwargs = {
+            "project_name": self.config.get_project_name(),
+            "level": level,
+            "message": message,
+            "tag": tag or "",
+            "timestamp": timestamp
+        }
+
+        class _SafeFormatDict(dict):
+            def __missing__(self, key):
+                return ""
+
+        formatted_msg = template.format_map(_SafeFormatDict(format_kwargs))
 
         color_code_start = f'\033[{color_code}m'
         reset_code = '\033[0m'

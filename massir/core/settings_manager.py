@@ -205,7 +205,7 @@ class SettingsManager(CoreConfigAPI):
         return self.get("template.project_banner_template", "{project_name}\n")
 
     def get_system_log_template(self) -> str:
-        return self.get("template.system_log_template", "[{level}] {message}")
+        return self.get("template.system_log_template", "[{level}]\t{message}")
 
     def get_banner_color_code(self) -> str:
         return self.get("template.banner_color_code", "33")
