@@ -509,7 +509,8 @@ class RunOrderGroupManager:
             try:
                 # Check requirements
                 reqs_met, missing = await self.loader.check_requirements(
-                    mod_info, available_provides,
+                    {"manifest": mod_info.manifest, "path": str(mod_info.path)}, 
+                    available_provides,
                     config_api, logger_api, self._disabled_modules
                 )
                 
@@ -533,7 +534,8 @@ class RunOrderGroupManager:
                 
                 # Instantiate module
                 instance = await self.loader.instantiate(
-                    mod_info, context, [logger_api], [config_api]
+                    {"manifest": mod_info.manifest, "path": str(mod_info.path)},
+                    context, [logger_api], [config_api]
                 )
                 
                 # Register in global registry
