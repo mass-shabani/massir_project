@@ -19,7 +19,7 @@ import os
 import re
 from typing import List, Optional
 
-from massir.core.interfaces import IModule
+from massir.core.interfaces import IModule, ModuleContext
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.hook_types import SystemHook
 
@@ -208,37 +208,86 @@ class AdvancedLogger(CoreLoggerAPI):
             method_color = method_colors.get(method, Colors.BRIGHT_WHITE)
             return f"{method_color}{method}{Colors.RESET} {path} {status_color}{status}{Colors.RESET}"
         return message
-    
+
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None,
-            level_color: Optional[str] = None, text_color: Optional[str] = None,
-            bracket_color: Optional[str] = None):
+            level_color: Optional[str] = None, timestamp_color: Optional[str] = None,
+            tag_color: Optional[str] = None, text_color: Optional[str] = None,
+            timestamp_bg_color: Optional[str] = None,
+            level_bg_color: Optional[str] = None,
+            tag_bg_color: Optional[str] = None,
+            text_bg_color: Optional[str] = None,
+            bold: bool = False, underline: bool = False, italic: bool = False,
+            dim: bool = False, blink: bool = False, inverse: bool = False,
+            prefix: Optional[str] = None, suffix: Optional[str] = None,
+            styles: Optional[List[str]] = None):
         """
-        Log a message with color support.
-        
+        Log a message with advanced color and style support.
+
         Output format: [timestamp] [level] [tag] message
-        Colors are applied to each section based on level and custom overrides.
-        
+        Each section can have independent foreground and background colors,
+        plus text styles like bold, italic, etc.
+
         Args:
             message: The message to log
             level: Log level (INFO, WARNING, ERROR, DEBUG, CORE)
             tag: Log tag for filtering
             level_color: Custom color for level tag (use Colors class)
+            timestamp_color: Custom color for timestamp brackets (use Colors class)
+            tag_color: Custom color for tag brackets (use Colors class)
             text_color: Custom color for message text (use Colors class)
-            bracket_color: Custom color for timestamp brackets (use Colors class)
+            timestamp_bg_color: Background color for timestamp (use Colors class)
+            level_bg_color: Background color for level tag (use Colors class)
+            tag_bg_color: Background color for tag brackets (use Colors class)
+            text_bg_color: Background color for message text (use Colors class)
+            bold: Render bold text
+            underline: Render underlined text
+            italic: Render italic text
+            dim: Render dim text
+            blink: Enable blinking text
+            inverse: Swap foreground and background colors
+            prefix: Text prepended to the message
+            suffix: Text appended to the message
+            styles: Additional raw ANSI codes to apply
         """
         # Check filtering
         if not self._should_log(level, tag):
             return
-        
+
         # Enable ANSI on Windows
         if os.name == 'nt':
             os.system('')
-        
+
+        # Build style codes
+        style_codes = []
+        if bold:
+            style_codes.append("\033[1m")
+        if italic:
+            style_codes.append("\033[3m")
+        if dim:
+            style_codes.append("\033[2m")
+        if underline:
+            style_codes.append("\033[4m")
+        if blink:
+            style_codes.append("\033[5m")
+        if inverse:
+            style_codes.append("\033[7m")
+        if styles:
+            style_codes.extend(styles)
+        style_prefix = "".join(style_codes)
+        style_suffix = Colors.RESET if style_codes else ""
+
         # Default colors
-        _bracket_color = bracket_color if bracket_color else Colors.BRIGHT_GREEN
-        _text_color = text_color if text_color else Colors.BRIGHT_WHITE
+        _timestamp_color = timestamp_color if timestamp_color else Colors.BRIGHT_GREEN
         _level_color = level_color if level_color else Colors.BRIGHT_GREEN
-        
+        _tag_color = tag_color if tag_color else Colors.BRIGHT_WHITE
+        _text_color = text_color if text_color else Colors.BRIGHT_WHITE
+
+        # Default backgrounds
+        _timestamp_bg = timestamp_bg_color if timestamp_bg_color else ""
+        _level_bg = level_bg_color if level_bg_color else ""
+        _tag_bg = tag_bg_color if tag_bg_color else ""
+        _text_bg = text_bg_color if text_bg_color else ""
+
         # Set level colors based on level (if not provided)
         if level_color is None:
             level_colors = {
@@ -249,30 +298,45 @@ class AdvancedLogger(CoreLoggerAPI):
                 "CORE": Colors.BRIGHT_CYAN,
             }
             _level_color = level_colors.get(level, Colors.BRIGHT_GREEN)
-        
-        # Use red text for errors if no custom color
+
+        # Use red text for errors if no custom text_color
         if level == "ERROR" and text_color is None:
             _text_color = Colors.BRIGHT_RED
-        
+
         # Build output string
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        str_time = f"{_bracket_color}[{timestamp}]{Colors.RESET} "
-        str_header = f"{_level_color}[{level}]{Colors.RESET} "
-        
-        # Format HTTP requests specially (only if no custom colors)
+
+        # Timestamp part
+        str_time = f"{_timestamp_color}{_timestamp_bg}[{timestamp}]{Colors.RESET}"
+
+        # Level part
+        str_header = f"{_level_color}{_level_bg}[{level}]{Colors.RESET}"
+
+        # Format HTTP requests specially (only if no custom text_color)
         if text_color is None and tag in ["http", "server"]:
             formatted_message = self._format_http_request(message)
         else:
             formatted_message = message
-        
-        # Add tag if present
+
+        # Build message part with tag and text
         if tag:
-            str_message = f"{_text_color}[{tag}]{Colors.RESET} {formatted_message}{Colors.RESET}"
+            str_message = (
+                f"{_tag_color}{_tag_bg}[{tag}]{Colors.RESET} "
+                f"{style_prefix}{_text_color}{_text_bg}{formatted_message}{style_suffix}{Colors.RESET}"
+            )
         else:
-            str_message = f"{_text_color}{formatted_message}{Colors.RESET}"
-        
-        print(f"{str_time}{str_header}\t{str_message}")
-    
+            str_message = (
+                f"{style_prefix}{_text_color}{_text_bg}{formatted_message}{style_suffix}{Colors.RESET}"
+            )
+
+        # Add prefix and suffix
+        if prefix:
+            str_message = f"{prefix}{str_message}"
+        if suffix:
+            str_message = f"{str_message}{suffix}"
+
+        print(f"{str_time} {str_header}\t{str_message}")
+
     def print(self,
               message: str,
               level: str = "INFO",

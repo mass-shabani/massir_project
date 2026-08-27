@@ -32,15 +32,21 @@ class AppModule(IModule):
             logger.log("AppModule started successfully and using System Logger!", 
                        level="INFO", 
                        tag="app_consumer", 
-                       level_color=colors.BRIGHT_BLUE , 
-                       text_color=colors.GREEN,
-                       bracket_color=colors.BRIGHT_BLUE)
+                       timestamp_color=colors.CYAN,
+                       level_color=colors.BRIGHT_BLUE,
+                       tag_color=colors.BRIGHT_MAGENTA,
+                       text_color=colors.BRIGHT_MAGENTA,
+                       bold=True,
+                       italic=True)
             logger.log("Performing some business logic...", 
                        level="INFO", 
                        tag="app_consumer",
-                       level_color=colors.BRIGHT_BLUE, 
-                       text_color=colors.GREEN, 
-                       bracket_color=colors.BRIGHT_BLUE)
+                       timestamp_color=colors.CYAN,
+                       level_color=colors.BRIGHT_BLUE,
+                       tag_color=colors.BRIGHT_MAGENTA,
+                       text_color=colors.BRIGHT_MAGENTA,
+                       bold=True,
+                       italic=True)
         else:
             print("   [AppModule] Fallback to standard print because system logger is missing.")
 
