@@ -3,6 +3,7 @@
 Logging functions and classes.
 """
 import os
+import datetime
 from typing import List, Optional
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 
@@ -204,11 +205,14 @@ class DefaultLogger(CoreLoggerAPI):
 
         template = self.config.get_system_log_template()
         color_code = self.config.get_system_log_color_code()
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         formatted_msg = template.format(
             project_name=self.config.get_project_name(),
             level=level,
-            message=message
+            message=message,
+            tag=tag or "",
+            timestamp=timestamp
         )
 
         color_code_start = f'\033[{color_code}m'
