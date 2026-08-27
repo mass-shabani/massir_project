@@ -346,8 +346,8 @@ class App:
         modules_config = self._config_api_ref[0].get_modules_config()
         self.run_groups.parse_groups_from_config(
             modules_config,
-            self._config_api_ref[0],
-            self._logger_api_ref[0]
+            self._config_api_ref,
+            self._logger_api_ref
         )
         
         # Phase 2: Register callbacks for non-default run_at values
@@ -357,8 +357,8 @@ class App:
         self.run_groups.register_run_at_callbacks(
             self.modules,
             self.context,
-            self._config_api_ref[0],
-            self._logger_api_ref[0]
+            self._config_api_ref,
+            self._logger_api_ref
         )
         
         # Phase 3: Dispatch ON_SETTINGS_LOADED
@@ -381,8 +381,8 @@ class App:
         await self.run_groups.execute_on_start_groups(
             self.modules,
             self.context,
-            self._config_api_ref[0],
-            self._logger_api_ref[0]
+            self._config_api_ref,
+            self._logger_api_ref
         )
         
         # Phase 6: Dispatch ON_APP_BOOTSTRAP_END
@@ -426,8 +426,8 @@ class App:
         await self.run_groups.shutdown_all_groups(
             self.modules,
             self.context,
-            self._config_api_ref[0],
-            self._logger_api_ref[0]
+            self._config_api_ref,
+            self._logger_api_ref
         )
     
     async def _reset_for_restart(self) -> None:
