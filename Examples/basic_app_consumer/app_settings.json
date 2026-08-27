@@ -1,14 +1,20 @@
 {
   "modules": [
     {
+      "name": "system_modules",
+      "run_at": "on_start",
       "path": "{massir_dir}/modules",
-      "type": "systems",
-      "names": ["system_logger"]
+      "names": [
+        "system_logger"
+      ]
     },
     {
+      "name": "app_modules",
+      "run_at": "on_start",
       "path": "{app_dir}/app",
-      "type": "all",
-      "names": "all"
+      "names": [
+        "app_consumer"
+      ]
     }
   ],
   "system": {

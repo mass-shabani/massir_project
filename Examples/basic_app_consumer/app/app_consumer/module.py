@@ -5,27 +5,21 @@ class AppModule(IModule):
     """
     Basic application module demonstrating module functionality.
 
-    This module demonstrates how to use the system logger service injected
-    by the core framework to log messages during module lifecycle.
+    This module demonstrates how to use the system logger service
+    injected by the core framework to log messages during module lifecycle.
+
+    Lifecycle methods:
+    - start(): Called when the module is started (during bootstrap)
+    - stop(): Called when the application shuts down
     """
-
-    async def load(self, context):
-        """
-        Load the module and initialize resources.
-
-        Args:
-            context: The module context containing services and configuration.
-        """
-        logger = context.services.get("core_logger")
-        if logger:
-            logger.log("AppConsumer Loading...", level_color='\033[94m')
 
     async def start(self, context):
         """
         Start the module and execute business logic.
 
-        Retrieves the system logger service injected by the core framework
-        and uses it to log messages.
+        This is the main entry point for module initialization.
+        In the new Massir architecture, start() is called directly
+        by RunOrderGroupManager during bootstrap.
 
         Args:
             context: The module context containing services and configuration.
@@ -33,30 +27,20 @@ class AppModule(IModule):
         logger = context.services.get("core_logger")
 
         if logger:
-            logger.log("App Module started successfully and using System Logger!", level_color='\033[94m')
-            logger.log("Performing some business logic...", level="CUST", level_color='\033[94m')
+            logger.log("AppModule started successfully and using System Logger!", level="CUST", level_color="\033[94m")
+            logger.log("Performing some business logic...", level="CUST", level_color="\033[94m")
         else:
             print("   [AppModule] Fallback to standard print because system logger is missing.")
-
-    async def ready(self, context):
-        """
-        Called when all modules have started and are ready.
-
-        Args:
-            context: The module context containing services and configuration.
-        """
-        logger = context.services.get("core_logger")
-
-        if logger:
-            logger.log("App Module is ready! All modules have started.", level_color='\033[94m')
-        else:
-            print("   [AppModule] Ready - Fallback to standard print because system logger is missing.")
 
     async def stop(self, context):
         """
         Stop the module and cleanup resources.
 
+        Called during application shutdown in reverse execution order.
+
         Args:
             context: The module context containing services and configuration.
         """
-        pass
+        logger = context.services.get("core_logger")
+        if logger:
+            logger.log("AppModule stopped.", tag="app_consumer")
