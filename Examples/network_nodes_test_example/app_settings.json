@@ -15,8 +15,8 @@
     "template": {
         "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Nodes Test Example - {node_id:<38} ║\n║  Version: {project_version:<47} ║\n║  Testing system_network capabilities                       ║\n╚════════════════════════════════════════════════════════════╝\n",
         "system_log_template": "[{level}]\t{message}",
-        "banner_color_code": "35",
-        "system_log_color_code": "96"
+"banner_color": "magenta",
+    "log_color": "bright_cyan"
     },
 
     "logs": {

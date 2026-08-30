@@ -62,3 +62,28 @@ class CoreConfigAPI(ABC):
             The configuration value or None if not found
         """
         pass
+
+    @abstractmethod
+    def get_banner_color(self) -> str:
+        """Get banner color name."""
+        pass
+
+    @abstractmethod
+    def get_log_color(self) -> str:
+        """Get default log color name."""
+        pass
+
+    @abstractmethod
+    def get_print_color(self) -> str:
+        """Get default print color name."""
+        pass
+
+    @abstractmethod
+    def get_system_log_template(self) -> str:
+        """Get log message format template."""
+        pass
+
+    @abstractmethod
+    def get_banner_template(self) -> str:
+        """Get banner template."""
+        pass

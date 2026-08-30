@@ -22,6 +22,8 @@ from typing import List, Optional
 from massir.core.interfaces import IModule, ModuleContext
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.hook_types import SystemHook
+from massir.core.log import _get_color_code
+from massir.modules.system_logger.log_defaults import SystemLoggerDefaults
 
 
 class Colors:
@@ -103,7 +105,7 @@ class AdvancedLogger(CoreLoggerAPI):
     - logs.hide_log_tags: List of tags to hide
     - logs.debug_mode: Show debug-level messages
     - template.system_log_template: Log message format template
-    - template.system_log_color_code: ANSI color code for logs
+    - template.log_color: Default color name for logs
     """
     
     def __init__(self, config_api: CoreConfigAPI):
@@ -119,20 +121,19 @@ class AdvancedLogger(CoreLoggerAPI):
     
     def _get_fallback(self):
         """
-        Get fallback configuration for when config_api is None.
-        
-        Returns:
-            Fallback config object with default values
+        Fallback config for when config_api is None.
         """
-        class F:
+        class _SystemLoggerFallbackConfig:
             def get_project_name(self): return "Unknown"
-            def get_system_log_template(self): return "{timestamp} | {level}:\t{tag} | {message}"
-            def get_system_log_color_code(self): return "92"
+            def get_system_log_template(self): return "{timestamp}--- | {level}:\t{tag} | {message}"
+            def get_log_color(self): return "bright_green"
             def is_debug(self): return True
             def show_logs(self): return True
             def get_hide_log_levels(self): return []
             def get_hide_log_tags(self): return []
-        return F()
+            def get_banner_color(self): return "yellow"
+            def get_print_color(self): return "white"
+        return _SystemLoggerFallbackConfig()
     
     def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
         """
@@ -249,15 +250,50 @@ class AdvancedLogger(CoreLoggerAPI):
             suffix: Text appended to the message
             styles: Additional raw ANSI codes to apply
         """
-        # Check filtering
         if not self._should_log(level, tag):
             return
 
-        # Enable ANSI on Windows
         if os.name == 'nt':
             os.system('')
 
-        # Build style codes
+        template = self.config.get_system_log_template()
+        core_default = "[{level}]\t{message}"
+        module_default = "{timestamp} | {level}:\t{tag} | {message}"
+
+        if isinstance(template, str) and template != core_default:
+            format_template = template
+        else:
+            format_template = module_default
+
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        project_name = ""
+        if hasattr(self.config, "get_project_name"):
+            project_name = self.config.get_project_name()
+
+        format_kwargs = {
+            "project_name": project_name,
+            "level": level,
+            "message": message,
+            "tag": tag or "",
+            "timestamp": timestamp
+        }
+
+        class _SafeFormatDict(dict):
+            def __missing__(self, key):
+                return ""
+
+        formatted_msg = format_template.format_map(_SafeFormatDict(format_kwargs))
+
+        log_color = self.config.get_log_color()
+        level_colors = {}
+        if hasattr(self.config, "get"):
+            level_colors = self.config.get("logs.level_colors", {}) or {}
+
+        resolved_level_color = level_color or level_colors.get(level) or log_color
+        resolved_timestamp_color = timestamp_color or log_color
+        resolved_tag_color = tag_color or log_color
+        resolved_text_color = text_color or log_color
+
         style_codes = []
         if bold:
             style_codes.append("\033[1m")
@@ -273,69 +309,51 @@ class AdvancedLogger(CoreLoggerAPI):
             style_codes.append("\033[7m")
         if styles:
             style_codes.extend(styles)
-        style_prefix = "".join(style_codes)
-        style_suffix = Colors.RESET if style_codes else ""
 
-        # Default colors
-        _timestamp_color = timestamp_color if timestamp_color else Colors.BRIGHT_GREEN
-        _level_color = level_color if level_color else Colors.BRIGHT_GREEN
-        _tag_color = tag_color if tag_color else Colors.BRIGHT_WHITE
-        _text_color = text_color if text_color else Colors.BRIGHT_WHITE
+        def _apply_style(text, fg_color, bg_color=None):
+            fg_code = _get_color_code(fg_color)
+            codes = [f"\033[{fg_code}m"]
+            if bg_color:
+                bg_code = _get_color_code(bg_color)
+                codes.append(f"\033[{bg_code}m")
+            codes.extend(style_codes)
+            return "".join(codes) + text + "\033[0m"
 
-        # Default backgrounds
-        _timestamp_bg = timestamp_bg_color if timestamp_bg_color else ""
-        _level_bg = level_bg_color if level_bg_color else ""
-        _tag_bg = tag_bg_color if tag_bg_color else ""
-        _text_bg = text_bg_color if text_bg_color else ""
+        result = ""
+        i = 0
+        while i < len(format_template):
+            if format_template[i] == "{":
+                end = format_template.find("}", i)
+                if end != -1:
+                    placeholder = format_template[i:end+1]
+                    key = placeholder[1:-1]
+                    value = format_kwargs.get(key, "")
 
-        # Set level colors based on level (if not provided)
-        if level_color is None:
-            level_colors = {
-                "ERROR": Colors.BRIGHT_RED,
-                "WARNING": Colors.BRIGHT_YELLOW,
-                "INFO": Colors.BRIGHT_GREEN,
-                "DEBUG": Colors.BRIGHT_BLACK,
-                "CORE": Colors.BRIGHT_CYAN,
-            }
-            _level_color = level_colors.get(level, Colors.BRIGHT_GREEN)
+                    if key == "timestamp":
+                        colored = _apply_style(value, resolved_timestamp_color, timestamp_bg_color)
+                    elif key == "level":
+                        colored = _apply_style(value, resolved_level_color, level_bg_color)
+                    elif key == "tag":
+                        colored = _apply_style(value, resolved_tag_color, tag_bg_color)
+                    elif key == "message":
+                        colored = _apply_style(value, resolved_text_color, text_bg_color)
+                    elif key == "project_name":
+                        colored = _apply_style(value, log_color)
+                    else:
+                        colored = value
 
-        # Use red text for errors if no custom text_color
-        if level == "ERROR" and text_color is None:
-            _text_color = Colors.BRIGHT_RED
+                    result += colored
+                    i = end + 1
+                    continue
+            result += format_template[i]
+            i += 1
 
-        # Build output string
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Timestamp part
-        str_time = f"{_timestamp_color}{_timestamp_bg}[{timestamp}]{Colors.RESET}"
-
-        # Level part
-        str_header = f"{_level_color}{_level_bg}[{level}]{Colors.RESET}"
-
-        # Format HTTP requests specially (only if no custom text_color)
-        if text_color is None and tag in ["http", "server"]:
-            formatted_message = self._format_http_request(message)
-        else:
-            formatted_message = message
-
-        # Build message part with tag and text
-        if tag:
-            str_message = (
-                f"{_tag_color}{_tag_bg}[{tag}]{Colors.RESET} "
-                f"{style_prefix}{_text_color}{_text_bg}{formatted_message}{style_suffix}{Colors.RESET}"
-            )
-        else:
-            str_message = (
-                f"{style_prefix}{_text_color}{_text_bg}{formatted_message}{style_suffix}{Colors.RESET}"
-            )
-
-        # Add prefix and suffix
         if prefix:
-            str_message = f"{prefix}{str_message}"
+            result = prefix + result
         if suffix:
-            str_message = f"{str_message}{suffix}"
+            result = result + suffix
 
-        print(f"{str_time} {str_header}\t{str_message}")
+        print(result)
 
     def print(self,
               message: str,
@@ -365,8 +383,8 @@ class AdvancedLogger(CoreLoggerAPI):
             level: Log level (for filtering only, not displayed)
             tag: Optional tag for filtering (not displayed)
             end: String appended after the message (defaults to newline)
-            color: Foreground ANSI color
-            bg_color: Background ANSI color
+            color: Foreground ANSI color code or color name
+            bg_color: Background ANSI color code or color name
             bold: Render bold text
             underline: Render underlined text
             italic: Render italic text
@@ -385,13 +403,14 @@ class AdvancedLogger(CoreLoggerAPI):
             prefix = ""
         if suffix is None:
             suffix = ""
-        output = f"{prefix}{message}{suffix}"
         
-        codes: list[str] = []
-        if color:
-            codes.append(color)
+        resolved_color = color or self.config.get_print_color()
+        color_code = _get_color_code(resolved_color)
+        
+        codes: list[str] = [f"\033[{color_code}m"]
         if bg_color:
-            codes.append(bg_color)
+            bg_code = _get_color_code(bg_color)
+            codes.append(f"\033[{bg_code}m")
         if bold:
             codes.append("\033[1m")
         if italic:
@@ -409,6 +428,7 @@ class AdvancedLogger(CoreLoggerAPI):
         
         if os.name == 'nt':
             os.system('')
+        output = f"{prefix}{message}{suffix}"
         if codes:
             output = "".join(codes) + output + Colors.RESET
         print(output, end=end)
@@ -447,6 +467,9 @@ class SystemLoggerModule(IModule):
         """
         self.context = context
         config = context.services.get("core_config")
+        
+        if config:
+            config.apply_module_defaults(SystemLoggerDefaults().to_dict())
         
         # Create and register the advanced logger
         my_logger = AdvancedLogger(config)

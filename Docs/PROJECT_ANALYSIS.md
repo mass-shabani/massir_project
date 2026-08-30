@@ -357,8 +357,8 @@ This allows developers to:
   "template": {
     "project_banner_template": "\n\t{project_name}\n\t{project_version}\n",
     "system_log_template": "[{level}]\t{message}",
-    "banner_color_code": "33",
-    "system_log_color_code": "96"
+    "banner_color": "yellow",
+    "log_color": "bright_cyan"
   }
 }
 ```

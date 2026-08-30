@@ -20,7 +20,7 @@ async def main():
     # Initial settings with higher priority than JSON configuration
     initial_settings = {
         "template": {
-            "banner_color_code": "33"
+            "banner_color": "yellow"
         },
     }
 

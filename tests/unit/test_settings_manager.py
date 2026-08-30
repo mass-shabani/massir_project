@@ -294,7 +294,7 @@ class TestSettingsManagerProjectInfo:
         """Test get_project_version default value."""
         manager = SettingsManager(str(tmp_path / "settings.json"))
         
-        assert manager.get_project_version() == "0.0.5 alpha"
+        assert manager.get_project_version() == "0.2.0 Alpha"
     
     def test_get_project_info_default(self, tmp_path):
         """Test get_project_info default value."""
@@ -318,17 +318,17 @@ class TestSettingsManagerTemplates:
         
         assert "{level}" in manager.get_system_log_template()
     
-    def test_get_banner_color_code_default(self, tmp_path):
-        """Test get_banner_color_code default value."""
+    def test_get_banner_color_default(self, tmp_path):
+        """Test get_banner_color default value."""
         manager = SettingsManager(str(tmp_path / "settings.json"))
         
-        assert manager.get_banner_color_code() == "33"
+        assert manager.get_banner_color() == "yellow"
     
-    def test_get_system_log_color_code_default(self, tmp_path):
-        """Test get_system_log_color_code default value."""
+    def test_get_system_log_color_default(self, tmp_path):
+        """Test get_log_color default value."""
         manager = SettingsManager(str(tmp_path / "settings.json"))
         
-        assert manager.get_system_log_color_code() == "96"
+        assert manager.get_log_color() == "bright_cyan"
 
 
 class TestSettingsDefault:

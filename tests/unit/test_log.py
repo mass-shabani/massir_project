@@ -75,11 +75,11 @@ class TestFallbackConfig:
         assert "{level}" in template
         assert "{message}" in template
     
-    def test_get_system_log_color_code(self):
-        """Test get_system_log_color_code."""
+    def test_get_log_color(self):
+        """Test get_log_color."""
         config = _FallbackConfig()
         
-        assert config.get_system_log_color_code() == "96"
+        assert config.get_log_color() == "bright_cyan"
     
     def test_is_debug(self):
         """Test is_debug returns True."""
@@ -117,11 +117,11 @@ class TestFallbackConfig:
         
         assert config.get_banner_template() == "{project_name}\n"
     
-    def test_get_banner_color_code(self):
-        """Test get_banner_color_code."""
+    def test_get_banner_color(self):
+        """Test get_banner_color."""
         config = _FallbackConfig()
         
-        assert config.get_banner_color_code() == "33"
+        assert config.get_banner_color() == "yellow"
 
 
 class TestDefaultLogger:
@@ -155,7 +155,7 @@ class TestDefaultLogger:
         mock_config.get_hide_log_levels.return_value = []
         mock_config.is_debug.return_value = True
         mock_config.get_system_log_template.return_value = "[{level}] {message}"
-        mock_config.get_system_log_color_code.return_value = "96"
+        mock_config.get_log_color.return_value = "bright_cyan"
         mock_config.get_project_name.return_value = "Test"
         
         logger = DefaultLogger(mock_config)
@@ -262,7 +262,7 @@ class TestPrintBanner:
         mock_config.get_project_name.return_value = "Test Project"
         mock_config.get_project_version.return_value = "1.0.0"
         mock_config.get_project_info.return_value = "Test Info"
-        mock_config.get_banner_color_code.return_value = "33"
+        mock_config.get_banner_color.return_value = "yellow"
         
         print_banner(mock_config)
         
@@ -288,7 +288,7 @@ class TestPrintBanner:
         mock_config.get_project_name.return_value = "MyProject"
         mock_config.get_project_version.return_value = "2.0"
         mock_config.get_project_info.return_value = "Info"
-        mock_config.get_banner_color_code.return_value = "33"
+        mock_config.get_banner_color.return_value = "yellow"
         
         print_banner(mock_config)
         

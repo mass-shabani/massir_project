@@ -28,8 +28,9 @@ DEFAULT_SETTINGS = {
     "template": {
         "project_banner_template": "\n\t{project_name}\n\t{project_version}\n\t{project_info}\n",
         "system_log_template": "[{level}]\t{message}",
-        "banner_color_code": "33",
-        "system_log_color_code": "96"
+        "banner_color": "yellow",
+        "log_color": "bright_cyan",
+        "print_color": "white"
     },
 }
 
@@ -42,6 +43,21 @@ class DefaultConfig(CoreConfigAPI):
     def get(self, key: str) -> None:
         """Always returns None."""
         return None
+
+    def get_banner_color(self) -> str:
+        return "yellow"
+
+    def get_log_color(self) -> str:
+        return "bright_cyan"
+
+    def get_print_color(self) -> str:
+        return "white"
+
+    def get_system_log_template(self) -> str:
+        return "[{level}]\t{message}"
+
+    def get_banner_template(self) -> str:
+        return "{project_name}\n"
 
 
 def get_default_settings() -> dict:

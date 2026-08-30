@@ -90,6 +90,9 @@ class TestAdvancedLoggerInit:
         assert "{level}" in fallback.get_system_log_template()
         assert "{tag}" in fallback.get_system_log_template()
         assert "{timestamp}" in fallback.get_system_log_template()
+        assert fallback.get_log_color() == "bright_green"
+        assert fallback.get_banner_color() == "yellow"
+        assert fallback.get_print_color() == "white"
 
 
 class TestAdvancedLoggerShouldLog:
@@ -271,7 +274,8 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
-        mock_config.get_system_log_color_code.return_value = "92"
+        mock_config.get_log_color.return_value = "bright_green"
+        mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
         logger.log("Test message", level="INFO")
@@ -287,12 +291,14 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
         logger.log("Test message", level="INFO", tag="test")
         
         captured = capsys.readouterr()
-        assert "[test]" in captured.out
+        assert "test" in captured.out
+        assert "Test message" in captured.out
     
     def test_log_hidden_level_not_printed(self, capsys):
         """Test log with hidden level doesn't print."""
@@ -315,6 +321,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
         logger.log("Test message", level="INFO", 
@@ -331,6 +338,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
         logger.log("Error message", level="ERROR")
@@ -346,6 +354,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
         logger.log("Test message", level="INFO")
@@ -373,6 +382,7 @@ class TestSystemLoggerModule:
         # Mock app
         mock_app = Mock()
         mock_app.register_hook = Mock()
+        mock_app._logger_api_ref = [None]
         context._app = mock_app
         
         # Mock services
@@ -381,6 +391,11 @@ class TestSystemLoggerModule:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_log_color.return_value = "bright_cyan"
+        mock_config.get_print_color.return_value = "white"
+        mock_config.get_banner_color.return_value = "yellow"
+        mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
+        mock_config.get_project_name.return_value = "Test"
         
         context.services.set("core_config", mock_config)
         
@@ -392,8 +407,8 @@ class TestSystemLoggerModule:
     
     @pytest.mark.asyncio
     async def test_module_load_creates_logger(self, module, mock_context):
-        """Test module load creates logger service."""
-        await module.load(mock_context)
+        """Test module start creates logger service."""
+        await module.start(mock_context)
         
         logger = mock_context.services.get("core_logger")
         assert logger is not None
@@ -401,16 +416,16 @@ class TestSystemLoggerModule:
     
     @pytest.mark.asyncio
     async def test_module_load_registers_colors(self, module, mock_context):
-        """Test module load registers Colors class."""
-        await module.load(mock_context)
+        """Test module start registers Colors class."""
+        await module.start(mock_context)
         
         colors = mock_context.services.get("log_colors")
         assert colors == Colors
     
     @pytest.mark.asyncio
     async def test_module_load_registers_hooks(self, module, mock_context):
-        """Test module load registers event hooks."""
-        await module.load(mock_context)
+        """Test module start registers event hooks."""
+        await module.start(mock_context)
         
         app = mock_context.get_app()
         assert app.register_hook.called
@@ -418,7 +433,6 @@ class TestSystemLoggerModule:
     @pytest.mark.asyncio
     async def test_module_start_updates_config(self, module, mock_context, capsys):
         """Test module start updates logger config."""
-        await module.load(mock_context)
         await module.start(mock_context)
         
         captured = capsys.readouterr()
@@ -426,24 +440,21 @@ class TestSystemLoggerModule:
     
     @pytest.mark.asyncio
     async def test_module_ready_does_not_raise(self, module, mock_context):
-        """Test module ready doesn't raise."""
-        await module.load(mock_context)
-        await module.ready(mock_context)
+        """Test module start doesn't raise."""
+        await module.start(mock_context)
         # Should not raise
     
     @pytest.mark.asyncio
     async def test_module_stop_does_not_raise(self, module, mock_context):
         """Test module stop doesn't raise."""
-        await module.load(mock_context)
+        await module.start(mock_context)
         await module.stop(mock_context)
         # Should not raise
     
     @pytest.mark.asyncio
     async def test_module_full_lifecycle(self, module, mock_context):
         """Test full module lifecycle."""
-        await module.load(mock_context)
         await module.start(mock_context)
-        await module.ready(mock_context)
         await module.stop(mock_context)
         
         # Logger should still be available

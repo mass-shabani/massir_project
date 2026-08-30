@@ -27,6 +27,16 @@ class MockConfig(CoreConfigAPI):
     
     def get(self, key):
         return None
+    def get_banner_color(self):
+        return "yellow"
+    def get_log_color(self):
+        return "bright_cyan"
+    def get_print_color(self):
+        return "white"
+    def get_system_log_template(self):
+        return "[{level}]\t{message}"
+    def get_banner_template(self):
+        return "{project_name}\n"
 
 
 @pytest.mark.asyncio

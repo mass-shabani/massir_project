@@ -17,18 +17,34 @@ class SettingsManager(CoreConfigAPI):
     Project settings management.
 
     Priority order:
-    1. Defaults (default values)
-    2. Settings from JSON (file)
-    3. User Code (initial_settings) - highest priority
+    1. Module defaults (registered by modules, lowest priority)
+    2. Core defaults (default values)
+    3. Settings from JSON (file)
+    4. User Code (initial_settings) - highest priority
     """
 
-    # Class logger - for logging before main logger is registered
+    _module_defaults_registry: dict = {}
     _class_logger: Optional[CoreLoggerAPI] = None
 
     @classmethod
     def set_logger(cls, logger_api: CoreLoggerAPI):
         """Set logger for use in class."""
         cls._class_logger = logger_api
+
+    @classmethod
+    def register_module_defaults(cls, defaults: dict):
+        """Register module defaults to be merged as base layer."""
+        cls._module_defaults_registry.update(defaults)
+
+    @classmethod
+    def _deep_merge(cls, base: dict, override: dict) -> dict:
+        result = base.copy()
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = cls._deep_merge(result[key], value)
+            else:
+                result[key] = value
+        return result
 
     def _log(self, message: str, level: str = "ERROR"):
         """Log with class logger or temporary logger."""
@@ -38,25 +54,21 @@ class SettingsManager(CoreConfigAPI):
             log_internal(None, None, message, level=level, tag="config")
 
     def __init__(self, settings_path: str = "app_settings.json", initial_settings: Optional[dict] = None, path_manager=None):
-        """
-        Initialize settings manager.
+        # 1. Module defaults (lowest priority)
+        module_defaults = SettingsManager._module_defaults_registry.copy()
 
-        Args:
-            settings_path: Path to JSON file
-            initial_settings: Code settings (highest priority)
-            path_manager: Path manager instance for placeholder substitution
-        """
-        # 1. Default values
-        self._settings = get_default_settings()
+        # 2. Core defaults (override module defaults for overlapping keys)
+        core_defaults = get_default_settings()
+        self._settings = SettingsManager._deep_merge(module_defaults, core_defaults)
 
-        # 2. Read from JSON
+        # 3. Read from JSON
         self._load_settings(settings_path)
 
-        # 3. Substitute path placeholders if path_manager is available
+        # 4. Substitute path placeholders if path_manager is available
         if path_manager:
             self._substitute_path_placeholders(path_manager)
 
-        # 4. Code settings (highest priority)
+        # 5. Code settings (highest priority)
         if initial_settings:
             self.update_settings(initial_settings)
 
@@ -74,6 +86,12 @@ class SettingsManager(CoreConfigAPI):
             except Exception as e:
                 self._log(f"Failed to load settings from {full_path}: {e}")
                 self._log("Skipping settings file. Using default settings.")
+
+    def apply_module_defaults(self, defaults: dict):
+        """Apply module defaults only for keys not already present."""
+        for key, value in defaults.items():
+            if self.get(key) is None:
+                self.set(key, value)
 
     def _substitute_path_placeholders(self, path_manager):
         """
@@ -207,9 +225,12 @@ class SettingsManager(CoreConfigAPI):
     def get_system_log_template(self) -> str:
         return self.get("template.system_log_template", "[{level}]\t{message}")
 
-    def get_banner_color_code(self) -> str:
-        return self.get("template.banner_color_code", "33")
+    def get_banner_color(self) -> str:
+        return self.get("template.banner_color", "yellow")
 
-    def get_system_log_color_code(self) -> str:
-        return self.get("template.system_log_color_code", "96")
+    def get_log_color(self) -> str:
+        return self.get("template.log_color", "bright_cyan")
+
+    def get_print_color(self) -> str:
+        return self.get("template.print_color", "white")
 

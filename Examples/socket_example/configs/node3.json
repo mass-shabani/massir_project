@@ -15,8 +15,8 @@
     "template": {
         "project_banner_template": "\n==========================================================\n\tSocket Example - NODE 3\n\t1.0.0\n\tMulti-node distributed socket network\n==========================================================\n",
         "system_log_template": "[{level}]\t{message}",
-        "banner_color_code": "33",
-        "system_log_color_code": "96"
+"banner_color": "yellow",
+    "log_color": "bright_cyan"
     },
 
     "logs": {
