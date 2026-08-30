@@ -17,7 +17,6 @@ from typing import Dict, List, Optional, Tuple, Any
 from massir.core.interfaces import IModule, ModuleContext
 from massir.core.exceptions import ModuleLoadError
 from massir.core.path import Path as PathManager
-from massir.core.log import log_internal
 from massir.core.core_apis import CoreConfigAPI, CoreLoggerAPI
 
 
@@ -114,12 +113,12 @@ class ModuleLoader:
                 for disabled_name, disabled_caps in disabled_modules.items():
                     if req_cap in disabled_caps:
                         mod_name = manifest.get("name", "unknown")
-                        log_internal(
-                            config_api, logger_api,
-                            f"Module '{mod_name}' requires '{req_cap}' "
-                            f"provided by disabled module '{disabled_name}'",
-                            level="WARNING", tag="core"
-                        )
+                        if logger_api:
+                            logger_api.log(
+                                f"Module '{mod_name}' requires '{req_cap}' "
+                                f"provided by disabled module '{disabled_name}'",
+                                level="WARNING", tag="core"
+                            )
                         break
         
         return (len(missing) == 0), missing

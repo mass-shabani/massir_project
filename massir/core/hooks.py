@@ -13,7 +13,6 @@ import inspect
 from typing import Callable, Dict, List, Optional, Union
 
 from massir.core.hook_types import SystemHook
-from massir.core.log import log_internal
 from massir.core.core_apis import CoreLoggerAPI
 
 
@@ -124,11 +123,10 @@ class HooksManager:
             self._hooks[hook] = []
         self._hooks[hook].append(callback)
         
-        log_logger = logger_api or self._logger_api
-        if log_logger:
+        logger = logger_api or self._logger_api
+        if logger:
             hook_name = self._get_hook_name(hook)
-            log_internal(
-                None, log_logger,
+            logger.log(
                 f"Registered hook: {hook_name}",
                 level="CORE", tag="core_hooks"
             )
@@ -161,11 +159,11 @@ class HooksManager:
                     callback(*args, **kwargs)
             except Exception as e:
                 hook_name = self._get_hook_name(hook)
-                log_internal(
-                    None, self._logger_api,
-                    f"Hook error in '{hook_name}': {e}",
-                    level="ERROR"
-                )
+                if self._logger_api:
+                    self._logger_api.log(
+                        f"Hook error in '{hook_name}': {e}",
+                        level="ERROR"
+                    )
     
     def get_registered_hooks(self) -> List[str]:
         """

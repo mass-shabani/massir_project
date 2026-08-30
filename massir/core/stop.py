@@ -3,7 +3,6 @@ import asyncio
 from typing import List, Dict, Optional
 from massir.core.interfaces import IModule
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
-from massir.core.log import log_internal
 
 
 async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.Task],
@@ -25,7 +24,8 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
         system_module_names: List of system module names (optional)
         app_module_names: List of application module names (optional)
     """
-    log_internal(config_api, logger_api, "🛑 Shutting down framework...", level="CORE")
+    if logger_api:
+        logger_api.log("🛑 Shutting down framework...", level="CORE")
 
     # Cancel background tasks
     for task in background_tasks:
@@ -35,29 +35,37 @@ async def shutdown(modules: Dict[str, IModule], background_tasks: List[asyncio.T
     # If module name lists are provided, use the correct order
     if system_module_names is not None and app_module_names is not None:
         # Stop application modules in reverse order
-        log_internal(config_api, logger_api, "Stopping Application Modules...", level="CORE", tag="core")
+        if logger_api:
+            logger_api.log("Stopping Application Modules...", level="CORE", tag="core")
         for mod_name in reversed(app_module_names):
             if mod_name in modules:
                 try:
                     await modules[mod_name].stop(modules[mod_name]._context)
-                    log_internal(config_api, logger_api, f"Application module '{mod_name}' stopped", level="CORE", tag="core")
+                    if logger_api:
+                        logger_api.log(f"Application module '{mod_name}' stopped", level="CORE", tag="core")
                 except Exception as e:
-                    log_internal(config_api, logger_api, f"Error stopping application module '{mod_name}': {e}", level="ERROR", tag="core")
+                    if logger_api:
+                        logger_api.log(f"Error stopping application module '{mod_name}': {e}", level="ERROR", tag="core")
 
         # Stop system modules in reverse order
-        log_internal(config_api, logger_api, "Stopping System Modules...", level="CORE", tag="core")
+        if logger_api:
+            logger_api.log("Stopping System Modules...", level="CORE", tag="core")
         for mod_name in reversed(system_module_names):
             if mod_name in modules:
                 try:
                     await modules[mod_name].stop(modules[mod_name]._context)
-                    log_internal(config_api, logger_api, f"System module '{mod_name}' stopped", level="CORE", tag="core")
+                    if logger_api:
+                        logger_api.log(f"System module '{mod_name}' stopped", level="CORE", tag="core")
                 except Exception as e:
-                    log_internal(config_api, logger_api, f"Error stopping system module '{mod_name}': {e}", level="ERROR", tag="core")
+                    if logger_api:
+                        logger_api.log(f"Error stopping system module '{mod_name}': {e}", level="ERROR", tag="core")
     else:
         # Legacy mode: stop all modules in reverse order
-        log_internal(config_api, logger_api, "Stopping Modules (legacy mode)...", level="CORE", tag="core")
+        if logger_api:
+            logger_api.log("Stopping Modules (legacy mode)...", level="CORE", tag="core")
         for instance in reversed(list(modules.values())):
             try:
                 await instance.stop(instance._context)
             except Exception as e:
-                log_internal(config_api, logger_api, f"Error stopping module {instance.name}: {e}", level="ERROR", tag="core")
+                if logger_api:
+                    logger_api.log(f"Error stopping module {instance.name}: {e}", level="ERROR", tag="core")

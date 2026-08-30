@@ -18,11 +18,11 @@
     }
   ],
   "system": {
-    "auto_shutdown": true
+    "auto_shutdown": false
   },
   "template": {
     "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
-
+    "system_log_template": "{timestamp}|{level}:  {tag} > \t\t\b\b\b{message}",
     "banner_color": "green",
     "log_color": "bright_cyan"
   },

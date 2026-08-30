@@ -24,7 +24,7 @@ from massir.core.hook_types import SystemHook
 from massir.core.hooks import Hook, HooksManager
 from massir.core.module_loader import ModuleLoader
 from massir.core.api import initialize_core_services
-from massir.core.log import print_banner, log_internal
+from massir.core.log import print_banner, DefaultLogger
 from massir.core.path import Path as PathManager
 from massir.core.run_order_group import RunOrderGroupManager
 
@@ -204,12 +204,8 @@ class App:
         (including dispatching ON_SHUTDOWN_REQUEST hook) is handled
         in the run loop's finally block.
         """
-        log_internal(
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
-            "Shutdown requested programmatically...",
-            level="CORE"
-        )
+        if self._logger_api_ref[0]:
+            self._logger_api_ref[0].log("Shutdown requested programmatically...", level="CORE", tag="core")
         self._stop_event.set()
     
     def request_restart(self) -> None:
@@ -221,12 +217,8 @@ class App:
         2. Clear all loaded modules
         3. Re-bootstrap the application from scratch
         """
-        log_internal(
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
-            "Restart requested programmatically...",
-            level="CORE"
-        )
+        if self._logger_api_ref[0]:
+            self._logger_api_ref[0].log("Restart requested programmatically...", level="CORE", tag="core")
         self._restart_event.set()
         self._stop_event.set()
     
@@ -275,20 +267,12 @@ class App:
                     if delay > 0:
                         await asyncio.sleep(delay)
                     
-                    log_internal(
-                        self._config_api_ref[0],
-                        self._logger_api_ref[0],
-                        "Auto-shutdown is enabled. Initiating shutdown...",
-                        level="CORE"
-                    )
+                    if self._logger_api_ref[0]:
+                        self._logger_api_ref[0].log("Auto-shutdown is enabled. Initiating shutdown...", level="CORE", tag="core")
                     self._stop_event.set()
                 else:
-                    log_internal(
-                        self._config_api_ref[0],
-                        self._logger_api_ref[0],
-                        "Application is running. Press Ctrl+C to stop.",
-                        level="CORE"
-                    )
+                    if self._logger_api_ref[0]:
+                        self._logger_api_ref[0].log("Application is running. Press Ctrl+C to stop.", level="CORE", tag="core")
                 
                 # Wait for stop event
                 while not self._stop_event.is_set():
@@ -300,31 +284,23 @@ class App:
                         continue
                 
             except KeyboardInterrupt:
-                log_internal(
-                    self._config_api_ref[0],
-                    self._logger_api_ref[0],
-                    "\nKeyboard interrupt received. "
-                    "Initiating graceful shutdown...",
-                    level="CORE"
-                )
+                if self._logger_api_ref[0]:
+                    self._logger_api_ref[0].log(
+                        "\nKeyboard interrupt received. "
+                        "Initiating graceful shutdown...",
+                        level="CORE", 
+                        tag="core"
+                    )
             except Exception as e:
-                log_internal(
-                    self._config_api_ref[0],
-                    self._logger_api_ref[0],
-                    f"Fatal error in core execution: {e}",
-                    level="ERROR"
-                )
+                if self._logger_api_ref[0]:
+                    self._logger_api_ref[0].log(f"Fatal error in core execution: {e}", level="ERROR", tag="core")
             finally:
                 await self._shutdown_all()
                 
                 # Check if restart was requested
                 if self._restart_event.is_set():
-                    log_internal(
-                        self._config_api_ref[0],
-                        self._logger_api_ref[0],
-                        "Restarting application...",
-                        level="CORE"
-                    )
+                    if self._logger_api_ref[0]:
+                        self._logger_api_ref[0].log("Restarting application...", level="CORE", tag="core")
                     await self._reset_for_restart()
                 else:
                     break
@@ -370,12 +346,8 @@ class App:
         # Groups with run_at="on_app_bootstrap_start" execute via callback
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_START)
         
-        log_internal(
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
-            "Starting Massir Framework...",
-            level="CORE", tag="core_init"
-        )
+        if self._logger_api_ref[0]:
+            self._logger_api_ref[0].log("Starting Massir Framework...", level="CORE", tag="core_init")
         
         # Phase 5: Execute on_start groups (the default run_at)
         await self.run_groups.execute_on_start_groups(
@@ -389,12 +361,8 @@ class App:
         # Groups with run_at="on_app_bootstrap_end" execute via callback
         await self.hooks.dispatch(SystemHook.ON_APP_BOOTSTRAP_END)
         
-        log_internal(
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
-            "Framework bootstrap complete.",
-            level="CORE"
-        )
+        if self._logger_api_ref[0]:
+            self._logger_api_ref[0].log("Framework bootstrap complete.", level="CORE", tag="core")
     
     async def _shutdown_all(self) -> None:
         """
@@ -463,12 +431,8 @@ class App:
             self._initial_settings, self._settings_path
         )
         
-        log_internal(
-            self._config_api_ref[0],
-            self._logger_api_ref[0],
-            "Application state reset complete.",
-            level="CORE"
-        )
+        if self._logger_api_ref[0]:
+            self._logger_api_ref[0].log("Application state reset complete.", level="CORE", tag="core")
     
     def _setup_signal_handlers(
         self,
@@ -486,13 +450,12 @@ class App:
         """
         def _shutdown_handler() -> None:
             """Signal handler callback for shutdown."""
-            log_internal(
-                self._config_api_ref[0],
-                self._logger_api_ref[0],
-                "Shutdown signal received. "
-                "Initiating graceful shutdown...",
-                level="CORE"
-            )
+            if self._logger_api_ref[0]:
+                self._logger_api_ref[0].log(
+                    "Shutdown signal received. Initiating graceful shutdown...",
+                    level="CORE", 
+                    tag="core"
+                )
             self._stop_event.set()
         
         # Try Unix-style signal handlers first

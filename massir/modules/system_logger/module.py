@@ -492,7 +492,7 @@ class SystemLoggerModule(IModule):
         app.register_hook(SystemHook.ON_SETTINGS_LOADED, self._on_settings_loaded)
         
         # Log activation
-        my_logger.log("System Logger Module Active.", tag="System")
+        my_logger.log("System Logger Module Active.", tag="sys_logger")
     
     async def stop(self, context: 'ModuleContext') -> None:
         """
@@ -506,7 +506,7 @@ class SystemLoggerModule(IModule):
         """
         logger = context.services.get("core_logger")
         if logger:
-            logger.log("System Logger Module stopping.", tag="System")
+            logger.log("System Logger Module stopping.", tag="sys_logger")
     
     def _on_settings_loaded(self):
         """

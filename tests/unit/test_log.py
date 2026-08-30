@@ -6,56 +6,10 @@ from unittest.mock import Mock, patch, MagicMock
 
 from massir.core.log import (
     DefaultLogger,
-    _FallbackLogger,
     _FallbackConfig,
-    log_internal,
     print_banner
 )
 from massir.core.core_apis import CoreLoggerAPI
-
-
-class TestFallbackLogger:
-    """Tests for _FallbackLogger class."""
-    
-    def test_log_basic(self, capsys):
-        """Test basic log output."""
-        logger = _FallbackLogger()
-        
-        logger.log("Test message")
-        
-        captured = capsys.readouterr()
-        assert "Test message" in captured.out
-    
-    def test_log_with_level(self, capsys):
-        """Test log with level."""
-        logger = _FallbackLogger()
-        
-        logger.log("Test message", level="ERROR")
-        
-        captured = capsys.readouterr()
-        assert "[ERROR]" in captured.out
-        assert "Test message" in captured.out
-    
-    def test_log_with_tag(self, capsys):
-        """Test log with tag."""
-        logger = _FallbackLogger()
-        
-        logger.log("Test message", tag="mytag")
-        
-        captured = capsys.readouterr()
-        assert "[mytag]" in captured.out
-        assert "Test message" in captured.out
-    
-    def test_log_with_level_and_tag(self, capsys):
-        """Test log with level and tag."""
-        logger = _FallbackLogger()
-        
-        logger.log("Test message", level="WARNING", tag="core")
-        
-        captured = capsys.readouterr()
-        assert "[WARNING]" in captured.out
-        assert "[core]" in captured.out
-        assert "Test message" in captured.out
 
 
 class TestFallbackConfig:
@@ -209,33 +163,6 @@ class TestDefaultLogger:
         # Critical levels should be hidden in production
         assert logger._should_log("ERROR") == False
         assert logger._should_log("WARNING") == False
-
-
-class TestLogInternal:
-    """Tests for log_internal function."""
-    
-    def test_log_internal_with_logger(self):
-        """Test log_internal with logger API."""
-        mock_logger = Mock()
-        
-        log_internal(None, mock_logger, "Test message", level="INFO", tag="test")
-        
-        mock_logger.log.assert_called_once()
-    
-    def test_log_internal_without_logger(self, capsys):
-        """Test log_internal without logger API falls back to print."""
-        log_internal(None, None, "Test message", level="INFO", tag="test")
-        
-        captured = capsys.readouterr()
-        assert "Test message" in captured.out
-    
-    def test_log_internal_passes_correct_args(self):
-        """Test log_internal passes correct arguments to logger."""
-        mock_logger = Mock()
-        
-        log_internal(None, mock_logger, "Test message", level="WARNING", tag="core")
-        
-        mock_logger.log.assert_called_with("Test message", level="WARNING", tag="core")
 
 
 class TestPrintBanner:

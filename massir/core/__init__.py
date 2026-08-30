@@ -13,7 +13,7 @@ from .hook_types import SystemHook
 from .hooks import Hook, HooksManager
 from .module_loader import ModuleLoader
 from .api import initialize_core_services
-from .log import print_banner, log_internal, DefaultLogger
+from .log import print_banner, DefaultLogger
 from .path import Path
 from .run_order_group import (
     RunOrderGroupManager,
@@ -55,7 +55,6 @@ __all__ = [
     # Utilities
     'initialize_core_services',
     'print_banner',
-    'log_internal',
     'DefaultLogger',
     'Path',
     

@@ -9,7 +9,7 @@ from typing import Optional
 
 from massir.core.core_apis import CoreConfigAPI, CoreLoggerAPI
 from massir.core.settings_default import get_default_settings
-from massir.core.log import DefaultLogger, _FallbackConfig, log_internal
+from massir.core.log import DefaultLogger, _FallbackConfig
 
 
 class SettingsManager(CoreConfigAPI):
@@ -51,7 +51,7 @@ class SettingsManager(CoreConfigAPI):
         if SettingsManager._class_logger:
             SettingsManager._class_logger.log(message, level=level, tag="config")
         else:
-            log_internal(None, None, message, level=level, tag="config")
+            print(f"[{level}][config] {message}")
 
     def __init__(self, settings_path: str = "app_settings.json", initial_settings: Optional[dict] = None, path_manager=None):
         # 1. Module defaults (lowest priority)

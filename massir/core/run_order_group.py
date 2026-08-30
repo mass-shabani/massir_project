@@ -24,7 +24,6 @@ from massir.core.hook_types import SystemHook
 from massir.core.hooks import HooksManager
 from massir.core.module_loader import ModuleLoader
 from massir.core.path import Path as PathManager
-from massir.core.log import log_internal
 from massir.core.core_apis import CoreConfigAPI, CoreLoggerAPI
 from massir.core.exceptions import DependencyResolutionError
 
@@ -243,14 +242,14 @@ class RunOrderGroupManager:
             
             # Validate run_at using dynamic registry
             if not self.run_at_registry.is_valid(run_at):
-                log_internal(
-                    config_api_ref[0], logger_api_ref[0],
-                    f"Invalid run_at value '{run_at}' for group "
-                    f"'{group_config.get('name', f'group_{i}')}'. "
-                    f"Valid values: {self.run_at_registry.get_all_values()}. "
-                    f"Using default: {self.run_at_registry.get_default()}",
-                    level="WARNING", tag="core"
-                )
+                if logger_api_ref[0]:
+                    logger_api_ref[0].log(
+                        f"Invalid run_at value '{run_at}' for group "
+                        f"'{group_config.get('name', f'group_{i}')}'. "
+                        f"Valid values: {self.run_at_registry.get_all_values()}. "
+                        f"Using default: {self.run_at_registry.get_default()}",
+                        level="WARNING", tag="core"
+                    )
                 run_at = self.run_at_registry.get_default()
             
             group = RunOrderGroup(
@@ -262,13 +261,13 @@ class RunOrderGroupManager:
             
             self.groups.append(group)
             
-            log_internal(
-                config_api_ref[0], logger_api_ref[0],
-                f"Parsed run order group: '{group.name}' "
-                f"(run_at: {group.run_at}, path: {group.path}, "
-                f"names: {group.names})",
-                level="CORE", tag="core"
-            )
+            if logger_api_ref[0]:
+                logger_api_ref[0].log(
+                    f"Parsed run order group: '{group.name}' "
+                    f"(run_at: {group.run_at}, path: {group.path}, "
+                    f"names: {group.names})",
+                    level="CORE", tag="core_init"
+                )
     
     def register_run_at_callbacks(
         self,
@@ -311,12 +310,12 @@ class RunOrderGroupManager:
             
             self.hooks.register(hook, callback, logger_api_ref[0])
             
-            log_internal(
-                config_api_ref[0], logger_api_ref[0],
-                f"Auto-registered callback for run_at='{run_at_value}' "
-                f"(hook: {hook.value})",
-                level="CORE", tag="core"
-            )
+            if logger_api_ref[0]:
+                logger_api_ref[0].log(
+                    f"Auto-registered callback for run_at='{run_at_value}' "
+                    f"(hook: {hook.value})",
+                    level="CORE", tag="core"
+                )
     
     # =========================================================================
     # Module Discovery
@@ -350,11 +349,11 @@ class RunOrderGroupManager:
         group_path = Path(path_str)
         
         if not group_path.exists() or not group_path.is_dir():
-            log_internal(
-                config_api_ref[0], logger_api_ref[0],
-                f"Group '{group.name}' path not found: {group_path}",
-                level="WARNING", tag="core"
-            )
+            if logger_api_ref[0]:
+                logger_api_ref[0].log(
+                    f"Group '{group.name}' path not found: {group_path}",
+                    level="WARNING", tag="core"
+                )
             return []
         
         # Determine module names to load
@@ -382,23 +381,23 @@ class RunOrderGroupManager:
                         missing.append("entrypoint")
                     
                     if missing:
-                        log_internal(
-                            config_api_ref[0], logger_api_ref[0],
-                            f"Module '{name}' in group '{group.name}' "
-                            f"missing fields: {', '.join(missing)}",
-                            level="ERROR", tag="core"
-                        )
+                        if logger_api_ref[0]:
+                            logger_api_ref[0].log(
+                                f"Module '{name}' in group '{group.name}' "
+                                f"missing fields: {', '.join(missing)}",
+                                level="ERROR", tag="core"
+                            )
                         continue
                     
                     # Check if module is enabled
                     if not manifest.get("enabled", True):
                         if explicit_names:
-                            log_internal(
-                            config_api_ref[0], logger_api_ref[0],
-                                f"Module '{name}' in group '{group.name}' "
-                                f"is disabled in manifest",
-                                level="WARNING", tag="core"
-                            )
+                            if logger_api_ref[0]:
+                                logger_api_ref[0].log(
+                                    f"Module '{name}' in group '{group.name}' "
+                                    f"is disabled in manifest",
+                                    level="WARNING", tag="core"
+                                )
                         provides = manifest.get("provides", [])
                         if provides:
                             self._disabled_modules[name] = provides
@@ -414,19 +413,19 @@ class RunOrderGroupManager:
                     ))
                     
                 except Exception as e:
-                    log_internal(
-                        config_api_ref[0], logger_api_ref[0],
-                        f"Invalid manifest for '{name}' in group "
-                        f"'{group.name}': {e}",
+                    if logger_api_ref[0]:
+                        logger_api_ref[0].log(
+                            f"Invalid manifest for '{name}' in group "
+                            f"'{group.name}': {e}",
+                            level="ERROR", tag="core"
+                        )
+            else:
+                if logger_api_ref[0]:
+                    logger_api_ref[0].log(
+                        f"Module '{name}' in group '{group.name}' "
+                        f"missing manifest.json",
                         level="ERROR", tag="core"
                     )
-            else:
-                log_internal(
-                    config_api_ref[0], logger_api_ref[0],
-                    f"Module '{name}' in group '{group.name}' "
-                    f"missing manifest.json",
-                    level="ERROR", tag="core"
-                )
         
         return discovered
     
@@ -474,12 +473,12 @@ class RunOrderGroupManager:
         # Dispatch group start hook
         await self.hooks.dispatch(SystemHook.ON_GROUP_START, group.name)
         
-        log_internal(
-            config_api_ref[0], logger_api_ref[0],
-            f"Starting run order group: '{group.name}' "
-            f"(run_at: {group.run_at})",
-            level="CORE", tag="core"
-        )
+        if logger_api_ref[0]:
+            logger_api_ref[0].log(
+                f"Starting run order group: '{group.name}' "
+                f"(run_at: {group.run_at})",
+                level="CORE", tag="core"
+            )
         
         # Discover modules for this group
         group.modules = await self.discover_modules_for_group(
@@ -487,11 +486,11 @@ class RunOrderGroupManager:
         )
         
         if not group.modules:
-            log_internal(
-                config_api_ref[0], logger_api_ref[0],
-                f"No modules found in group '{group.name}'",
-                level="WARNING", tag="core"
-            )
+            if logger_api_ref[0]:
+                logger_api_ref[0].log(
+                    f"No modules found in group '{group.name}'",
+                    level="WARNING", tag="core"
+                )
             group.is_completed = True
             self._execution_order.append(group)
             await self.hooks.dispatch(SystemHook.ON_GROUP_COMPLETE, group.name)
@@ -520,20 +519,20 @@ class RunOrderGroupManager:
                 if not reqs_met:
                     is_forced = mod_info.manifest.get("forced_execute", False)
                     if not is_forced:
-                        log_internal(
-                            config_api_ref[0], logger_api_ref[0],
-                            f"Module '{mod_name}' missing requirements: "
-                            f"{missing}. Skipping.",
-                            level="WARNING", tag="core"
-                        )
+                        if logger_api_ref[0]:
+                            logger_api_ref[0].log(
+                                f"Module '{mod_name}' missing requirements: "
+                                f"{missing}. Skipping.",
+                                level="WARNING", tag="core"
+                            )
                         continue
                     else:
-                        log_internal(
-                            config_api_ref[0], logger_api_ref[0],
-                            f"Forced execution of '{mod_name}' "
-                            f"despite missing: {missing}",
-                            level="WARNING", tag="core"
-                        )
+                        if logger_api_ref[0]:
+                            logger_api_ref[0].log(
+                                f"Forced execution of '{mod_name}' "
+                                f"despite missing: {missing}",
+                                level="WARNING", tag="core"
+                            )
                 
                 # Instantiate module
                 instance = await self.loader.instantiate(
@@ -555,19 +554,19 @@ class RunOrderGroupManager:
                 for cap in provides:
                     available_provides[cap] = mod_name
                 
-                log_internal(
-                    config_api_ref[0], logger_api_ref[0],
-                    f"Module '{mod_name}' started in group '{group.name}'",
-                    level="CORE", tag="core"
-                )
+                if logger_api_ref[0]:
+                    logger_api_ref[0].log(
+                        f"Module '{mod_name}' started in group '{group.name}'",
+                        level="CORE", tag="core"
+                    )
                 
             except Exception as e:
-                log_internal(
-                    config_api_ref[0], logger_api_ref[0],
-                    f"Failed to start module '{mod_name}' in group "
-                    f"'{group.name}': {e}",
-                    level="ERROR", tag="core"
-                )
+                if logger_api_ref[0]:
+                    logger_api_ref[0].log(
+                        f"Failed to start module '{mod_name}' in group "
+                        f"'{group.name}': {e}",
+                        level="ERROR", tag="core"
+                    )
         
         group.is_completed = True
         
@@ -577,12 +576,12 @@ class RunOrderGroupManager:
         # Dispatch group complete hook
         await self.hooks.dispatch(SystemHook.ON_GROUP_COMPLETE, group.name)
         
-        log_internal(
-            config_api_ref[0], logger_api_ref[0],
-            f"Run order group '{group.name}' completed "
-            f"({len(group.modules)} modules)",
-            level="CORE", tag="core"
-        )
+        if logger_api_ref[0]:
+            logger_api_ref[0].log(
+                f"Run order group '{group.name}' completed "
+                f"({len(group.modules)} modules)",
+                level="CORE", tag="core"
+            )
         
         return True
     
@@ -669,11 +668,11 @@ class RunOrderGroupManager:
             config_api: Configuration API
             logger_api: Logger API
         """
-        log_internal(
-            config_api_ref[0], logger_api_ref[0],
-            "Shutting down all run order groups in reverse order...",
-            level="CORE", tag="core"
-        )
+        if logger_api_ref[0]:
+            logger_api_ref[0].log(
+                "Shutting down all run order groups in reverse order...",
+                level="CORE", tag="core"
+            )
         
         # Iterate groups in reverse execution order
         for group in reversed(self._execution_order):
@@ -685,11 +684,11 @@ class RunOrderGroupManager:
             # Dispatch group stop hook
             await self.hooks.dispatch(SystemHook.ON_GROUP_STOP, group.name)
             
-            log_internal(
-                config_api_ref[0], logger_api_ref[0],
-                f"Stopping run order group: '{group.name}'",
-                level="CORE", tag="core"
-            )
+            if logger_api_ref[0]:
+                logger_api_ref[0].log(
+                    f"Stopping run order group: '{group.name}'",
+                    level="CORE", tag="core"
+                )
             
             # Stop modules in reverse order within group
             for mod_info in reversed(group.modules):
@@ -702,18 +701,18 @@ class RunOrderGroupManager:
                         await self.hooks.dispatch(
                             SystemHook.ON_MODULE_STOPPED, instance
                         )
-                        log_internal(
-                            config_api_ref[0], logger_api_ref[0],
-                            f"Module '{mod_name}' stopped "
-                            f"from group '{group.name}'",
-                            level="CORE", tag="core"
-                        )
+                        if logger_api_ref[0]:
+                            logger_api_ref[0].log(
+                                f"Module '{mod_name}' stopped "
+                                f"from group '{group.name}'",
+                                level="CORE", tag="core"
+                            )
                     except Exception as e:
-                        log_internal(
-                            config_api_ref[0], logger_api_ref[0],
-                            f"Error stopping module '{mod_name}': {e}",
-                            level="ERROR", tag="core"
-                        )
+                        if logger_api_ref[0]:
+                            logger_api_ref[0].log(
+                                f"Error stopping module '{mod_name}': {e}",
+                                level="ERROR", tag="core"
+                            )
     
     # =========================================================================
     # Helper Methods
