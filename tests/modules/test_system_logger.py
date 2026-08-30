@@ -158,6 +158,8 @@ class TestAdvancedLoggerShouldLog:
         assert logger._should_log("WARNING") == False
         assert logger._should_log("EXCEPTION") == False
         assert logger._should_log("CRITICAL") == False
+        # CORE should also be hidden in production
+        assert logger._should_log("CORE") == False
     
     def test_should_log_info_in_production(self):
         """Test INFO level visible in production mode."""
@@ -170,7 +172,8 @@ class TestAdvancedLoggerShouldLog:
         logger = AdvancedLogger(mock_config)
         
         assert logger._should_log("INFO") == True
-        assert logger._should_log("CORE") == True
+        # CORE should be hidden in production
+        assert logger._should_log("CORE") == False
 
 
 class TestAdvancedLoggerFormatHttpRequest:

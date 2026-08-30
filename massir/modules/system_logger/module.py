@@ -166,6 +166,10 @@ class AdvancedLogger(CoreLoggerAPI):
         critical_levels = ["ERROR", "WARNING", "EXCEPTION", "CRITICAL"]
         if level in critical_levels and not config.is_debug():
             return False
+
+        if not config.is_debug() and level == "CORE":
+            return False
+
         return True
     
     def _format_http_request(self, message: str) -> str:

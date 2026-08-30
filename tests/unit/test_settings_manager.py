@@ -252,7 +252,7 @@ class TestSettingsManagerLogging:
         """Test get_hide_log_levels default value."""
         manager = SettingsManager(str(tmp_path / "settings.json"))
         
-        assert manager.get_hide_log_levels() == []
+        assert manager.get_hide_log_levels() == ["CORE"]
     
     def test_get_hide_log_levels_custom(self, tmp_path):
         """Test get_hide_log_levels custom value."""
@@ -271,7 +271,7 @@ class TestSettingsManagerLogging:
         """Test is_debug default value."""
         manager = SettingsManager(str(tmp_path / "settings.json"))
         
-        assert manager.is_debug() == True
+        assert manager.is_debug() == False
 
 
 class TestSettingsManagerProjectInfo:

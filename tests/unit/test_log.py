@@ -163,6 +163,8 @@ class TestDefaultLogger:
         # Critical levels should be hidden in production
         assert logger._should_log("ERROR") == False
         assert logger._should_log("WARNING") == False
+        # CORE should also be hidden in production
+        assert logger._should_log("CORE") == False
 
 
 class TestPrintBanner:

@@ -72,6 +72,12 @@ class SettingsManager(CoreConfigAPI):
         if initial_settings:
             self.update_settings(initial_settings)
 
+        # 6. Auto-hide CORE logs when debug_mode is disabled
+        if not self.is_debug():
+            hidden = self.get("logs.hide_log_levels", []) or []
+            if "CORE" not in hidden:
+                self.set("logs.hide_log_levels", hidden + ["CORE"])
+
     def _load_settings(self, path: str):
         """Read settings from JSON file with error handling."""
         full_path = Path(path)
@@ -206,7 +212,7 @@ class SettingsManager(CoreConfigAPI):
         return []
 
     def is_debug(self) -> bool:
-        return self.get("logs.debug_mode", True)
+        return self.get("logs.debug_mode", False)
 
     # --- Project information ---
     def get_project_name(self) -> str:

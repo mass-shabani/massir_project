@@ -11,7 +11,7 @@ class SystemLoggerDefaults:
     show_banner: bool = True
     hide_log_levels: List[str] = field(default_factory=list)
     hide_log_tags: List[str] = field(default_factory=list)
-    debug_mode: bool = True
+    debug_mode: bool = False
     default_log_bold: bool = False
     default_log_underline: bool = False
     default_log_italic: bool = False

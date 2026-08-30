@@ -272,7 +272,7 @@ class App:
                     self._stop_event.set()
                 else:
                     if self._logger_api_ref[0]:
-                        self._logger_api_ref[0].log("Application is running. Press Ctrl+C to stop.", level="CORE", tag="core")
+                        self._logger_api_ref[0].log("Application is running. Press Ctrl+C to stop.", level="INFO", tag="core")
                 
                 # Wait for stop event
                 while not self._stop_event.is_set():

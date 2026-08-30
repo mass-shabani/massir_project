@@ -105,6 +105,9 @@ class DefaultLogger(CoreLoggerAPI):
         if level in critical_levels and not config.is_debug():
             return False
 
+        if not config.is_debug() and level == "CORE":
+            return False
+
         return True
 
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None, **kwargs):
