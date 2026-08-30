@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 
 @dataclass
 class SystemLoggerDefaults:
-    system_log_template: str = "{timestamp} | {level}:\t{tag} | {message}"
     banner_color: str = "yellow"
     log_color: str = "bright_cyan"
     print_color: str = "white"
@@ -33,7 +32,6 @@ class SystemLoggerDefaults:
     def to_dict(self) -> dict:
         return {
             "template": {
-                "system_log_template": self.system_log_template,
                 "banner_color": self.banner_color,
                 "log_color": self.log_color,
                 "print_color": self.print_color,

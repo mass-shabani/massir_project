@@ -44,15 +44,6 @@ class DefaultConfig(CoreConfigAPI):
         """Always returns None."""
         return None
 
-    def get_banner_color(self) -> str:
-        return "yellow"
-
-    def get_log_color(self) -> str:
-        return "bright_cyan"
-
-    def get_print_color(self) -> str:
-        return "white"
-
     def get_system_log_template(self) -> str:
         return "[{level}]\t{message}"
 

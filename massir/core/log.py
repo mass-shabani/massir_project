@@ -8,32 +8,6 @@ from typing import List, Optional
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 
 
-_COLOR_NAME_TO_CODE = {
-    "black": "30",
-    "red": "31",
-    "green": "32",
-    "yellow": "33",
-    "blue": "34",
-    "magenta": "35",
-    "cyan": "36",
-    "white": "37",
-    "bright_black": "90",
-    "bright_red": "91",
-    "bright_green": "92",
-    "bright_yellow": "93",
-    "bright_blue": "94",
-    "bright_magenta": "95",
-    "bright_cyan": "96",
-    "bright_white": "97",
-}
-
-
-def _get_color_code(color_name: Optional[str]) -> str:
-    if not color_name:
-        return "37"
-    return _COLOR_NAME_TO_CODE.get(color_name.lower(), "37")
-
-
 def print_banner(config_api: CoreConfigAPI):
     """
     Print the project banner.
@@ -53,11 +27,8 @@ def print_banner(config_api: CoreConfigAPI):
         project_version=project_version,
         project_info=project_info
     )
-    color_name = config_api.get_banner_color()
     if os.name == 'nt': os.system('')
-    color_start = f'\033[{_get_color_code(color_name)}m'
-    reset_code = '\033[0m'
-    print(f"{color_start}{banner_content}{reset_code}")
+    print(banner_content)
 
 
 def log_internal(config_api: CoreConfigAPI, logger_api: CoreLoggerAPI, message: str, level: str = "INFO", tag: str = "core"):
@@ -141,9 +112,6 @@ class _FallbackConfig:
     def get_system_log_template(self) -> str:
         return "[{level}]\t{message}"
 
-    def get_log_color(self) -> str:
-        return "bright_cyan"
-
     def is_debug(self) -> bool:
         return True
 
@@ -161,12 +129,6 @@ class _FallbackConfig:
 
     def get_banner_template(self) -> str:
         return "{project_name}\n"
-
-    def get_banner_color(self) -> str:
-        return "yellow"
-
-    def get_print_color(self) -> str:
-        return "white"
 
 
 class DefaultLogger(CoreLoggerAPI):
@@ -218,23 +180,17 @@ class DefaultLogger(CoreLoggerAPI):
 
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None, **kwargs):
         """
-        Log message with color support.
+        Log message.
 
         Args:
             message: Log message
             level: Log level
             tag: Log tag
-            **kwargs: Additional keyword arguments (e.g., color)
         """
         if not self._should_log(level, tag):
             return
 
-        if os.name == 'nt':
-            os.system('')
-
         template = self.config.get_system_log_template()
-        color_name = kwargs.get("color") or self.config.get_log_color()
-        color_code = _get_color_code(color_name)
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         format_kwargs = {
@@ -251,16 +207,12 @@ class DefaultLogger(CoreLoggerAPI):
 
         formatted_msg = template.format_map(_SafeFormatDict(format_kwargs))
 
-        color_code_start = f'\033[{color_code}m'
-        reset_code = '\033[0m'
-
-        print(f"{color_code_start}{formatted_msg}{reset_code}")
+        print(formatted_msg)
 
     def print(self, message: str, 
               level: str = "INFO", 
               tag: Optional[str] = None, 
               end: str = "\n",
-              color: Optional[str] = None, 
               **kwargs):
         """
         Print a raw message without log metadata.
@@ -270,8 +222,6 @@ class DefaultLogger(CoreLoggerAPI):
             level: Log level (INFO, WARNING, ERROR, etc.), This is not displayed
             tag: Optional tag for filtering, This is not displayed
             end: String appended after the message (defaults to newline)
-            color: Foreground ANSI color code or color name
-            **kwargs: Additional keyword arguments
         """
         if not self._should_log(level, tag):
             return
@@ -279,14 +229,4 @@ class DefaultLogger(CoreLoggerAPI):
         if not isinstance(message, str):
             message = repr(message)
 
-        output = f"{message}"
-
-        if os.name == 'nt':
-            os.system('')
-
-        resolved_color = color or self.config.get_print_color()
-        color_code = _get_color_code(resolved_color)
-        if color_code:
-            output = f"\033[{color_code}m" + output + "\033[0m"
-
-        print(output, end=end)
+        print(message, end=end)

@@ -22,7 +22,7 @@ from typing import List, Optional
 from massir.core.interfaces import IModule, ModuleContext
 from massir.core.core_apis import CoreLoggerAPI, CoreConfigAPI
 from massir.core.hook_types import SystemHook
-from massir.core.log import _get_color_code
+from massir.modules.system_logger.log_defaults import get_color_code
 from massir.modules.system_logger.log_defaults import SystemLoggerDefaults
 
 
@@ -311,10 +311,10 @@ class AdvancedLogger(CoreLoggerAPI):
             style_codes.extend(styles)
 
         def _apply_style(text, fg_color, bg_color=None):
-            fg_code = _get_color_code(fg_color)
+            fg_code = get_color_code(fg_color)
             codes = [f"\033[{fg_code}m"]
             if bg_color:
-                bg_code = _get_color_code(bg_color)
+                bg_code = get_color_code(bg_color)
                 codes.append(f"\033[{bg_code}m")
             codes.extend(style_codes)
             return "".join(codes) + text + "\033[0m"
@@ -405,11 +405,11 @@ class AdvancedLogger(CoreLoggerAPI):
             suffix = ""
         
         resolved_color = color or self.config.get_print_color()
-        color_code = _get_color_code(resolved_color)
+        color_code = get_color_code(resolved_color)
         
         codes: list[str] = [f"\033[{color_code}m"]
         if bg_color:
-            bg_code = _get_color_code(bg_color)
+            bg_code = get_color_code(bg_color)
             codes.append(f"\033[{bg_code}m")
         if bold:
             codes.append("\033[1m")

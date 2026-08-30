@@ -64,21 +64,6 @@ class CoreConfigAPI(ABC):
         pass
 
     @abstractmethod
-    def get_banner_color(self) -> str:
-        """Get banner color name."""
-        pass
-
-    @abstractmethod
-    def get_log_color(self) -> str:
-        """Get default log color name."""
-        pass
-
-    @abstractmethod
-    def get_print_color(self) -> str:
-        """Get default print color name."""
-        pass
-
-    @abstractmethod
     def get_system_log_template(self) -> str:
         """Get log message format template."""
         pass
