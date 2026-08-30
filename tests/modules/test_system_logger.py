@@ -66,6 +66,7 @@ class TestAdvancedLoggerInit:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         
         logger = AdvancedLogger(mock_config)
         
@@ -105,6 +106,7 @@ class TestAdvancedLoggerShouldLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         
         logger = AdvancedLogger(mock_config)
         
@@ -144,22 +146,70 @@ class TestAdvancedLoggerShouldLog:
         assert logger._should_log("DEBUG") == False
     
     def test_should_log_critical_in_production(self):
-        """Test critical levels hidden in production mode."""
+        """Test critical levels controlled by show_critical_levels, not is_debug."""
         mock_config = Mock()
         mock_config.show_logs.return_value = True
         mock_config.is_debug.return_value = False  # Production mode
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         
         logger = AdvancedLogger(mock_config)
         
-        # Critical levels should be hidden in production
+        # Critical levels visibility controlled by show_critical_levels
+        assert logger._should_log("ERROR") == True
+        assert logger._should_log("WARNING") == True
+        assert logger._should_log("CRITICAL") == True
+        # CORE should be hidden in production (debug_mode=False)
+        assert logger._should_log("CORE") == False
+    
+    def test_show_critical_levels_0_hides_all(self):
+        """Test show_critical_levels=0 hides all critical levels."""
+        mock_config = Mock()
+        mock_config.show_logs.return_value = True
+        mock_config.is_debug.return_value = True
+        mock_config.get_hide_log_levels.return_value = []
+        mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
+        mock_config.get_show_critical_levels.return_value = 0
+        
+        logger = AdvancedLogger(mock_config)
+        
         assert logger._should_log("ERROR") == False
         assert logger._should_log("WARNING") == False
-        assert logger._should_log("EXCEPTION") == False
         assert logger._should_log("CRITICAL") == False
-        # CORE should also be hidden in production
-        assert logger._should_log("CORE") == False
+    
+    def test_show_critical_levels_1_shows_error_only(self):
+        """Test show_critical_levels=1 shows only ERROR."""
+        mock_config = Mock()
+        mock_config.show_logs.return_value = True
+        mock_config.is_debug.return_value = True
+        mock_config.get_hide_log_levels.return_value = []
+        mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
+        mock_config.get_show_critical_levels.return_value = 1
+        
+        logger = AdvancedLogger(mock_config)
+        
+        assert logger._should_log("ERROR") == True
+        assert logger._should_log("WARNING") == False
+        assert logger._should_log("CRITICAL") == False
+    
+    def test_show_critical_levels_2_shows_error_warning(self):
+        """Test show_critical_levels=2 shows ERROR and WARNING."""
+        mock_config = Mock()
+        mock_config.show_logs.return_value = True
+        mock_config.is_debug.return_value = True
+        mock_config.get_hide_log_levels.return_value = []
+        mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
+        mock_config.get_show_critical_levels.return_value = 2
+        
+        logger = AdvancedLogger(mock_config)
+        
+        assert logger._should_log("ERROR") == True
+        assert logger._should_log("WARNING") == True
+        assert logger._should_log("CRITICAL") == False
     
     def test_should_log_info_in_production(self):
         """Test INFO level visible in production mode."""
@@ -168,11 +218,12 @@ class TestAdvancedLoggerShouldLog:
         mock_config.is_debug.return_value = False
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         
         logger = AdvancedLogger(mock_config)
         
         assert logger._should_log("INFO") == True
-        # CORE should be hidden in production
+        # CORE should be hidden in production (debug_mode=False)
         assert logger._should_log("CORE") == False
 
 
@@ -277,6 +328,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.get_log_color.return_value = "bright_green"
         mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
@@ -294,6 +346,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
@@ -324,6 +377,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
@@ -341,6 +395,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
@@ -357,6 +412,7 @@ class TestAdvancedLoggerLog:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.get_system_log_template.return_value = "{timestamp} | {level}:\t{tag} | {message}"
         
         logger = AdvancedLogger(mock_config)
@@ -394,6 +450,7 @@ class TestSystemLoggerModule:
         mock_config.is_debug.return_value = True
         mock_config.get_hide_log_levels.return_value = []
         mock_config.get_hide_log_tags.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.get_log_color.return_value = "bright_cyan"
         mock_config.get_print_color.return_value = "white"
         mock_config.get_banner_color.return_value = "yellow"

@@ -95,6 +95,7 @@ class TestDefaultLogger:
         mock_config.show_logs.return_value = True
         mock_config.get_hide_log_tags.return_value = []
         mock_config.get_hide_log_levels.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.is_debug.return_value = True
         mock_config.get_system_log_template.return_value = "[{level}] {message}"
         mock_config.get_project_name.return_value = "Test"
@@ -111,6 +112,7 @@ class TestDefaultLogger:
         mock_config.show_logs.return_value = True
         mock_config.get_hide_log_tags.return_value = []
         mock_config.get_hide_log_levels.return_value = []
+        mock_config.get_show_critical_levels.return_value = 3
         mock_config.is_debug.return_value = True
         
         logger = DefaultLogger(mock_config)
@@ -150,20 +152,21 @@ class TestDefaultLogger:
         
         assert logger._should_log("DEBUG") == False
     
-    def test_should_log_returns_false_for_critical_in_production(self):
-        """Test _should_log returns False for critical levels in production."""
+    def test_should_log_returns_false_for_critical_when_disabled(self):
+        """Test _should_log returns False for critical levels when show_critical_levels=0."""
         mock_config = Mock()
         mock_config.show_logs.return_value = True
         mock_config.get_hide_log_tags.return_value = []
         mock_config.get_hide_log_levels.return_value = []
         mock_config.is_debug.return_value = False  # Production mode
+        mock_config.get_show_critical_levels.return_value = 0
         
         logger = DefaultLogger(mock_config)
         
-        # Critical levels should be hidden in production
+        # Critical levels should be hidden when show_critical_levels=0
         assert logger._should_log("ERROR") == False
         assert logger._should_log("WARNING") == False
-        # CORE should also be hidden in production
+        # CORE should also be hidden in production (debug_mode=False)
         assert logger._should_log("CORE") == False
 
 

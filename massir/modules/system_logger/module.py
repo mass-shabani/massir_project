@@ -133,6 +133,7 @@ class AdvancedLogger(CoreLoggerAPI):
             def get_hide_log_tags(self): return []
             def get_banner_color(self): return "yellow"
             def get_print_color(self): return "white"
+            def get_show_critical_levels(self): return 3
         return _SystemLoggerFallbackConfig()
     
     def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
@@ -163,8 +164,13 @@ class AdvancedLogger(CoreLoggerAPI):
         if isinstance(hidden_levels, list):
             if level in hidden_levels:
                 return False
-        critical_levels = ["ERROR", "WARNING", "EXCEPTION", "CRITICAL"]
-        if level in critical_levels and not config.is_debug():
+
+        show_critical = getattr(config, 'get_show_critical_levels', lambda: 3)()
+        if level == "ERROR" and show_critical < 1:
+            return False
+        if level == "WARNING" and show_critical < 2:
+            return False
+        if level == "CRITICAL" and show_critical < 3:
             return False
 
         if not config.is_debug() and level == "CORE":

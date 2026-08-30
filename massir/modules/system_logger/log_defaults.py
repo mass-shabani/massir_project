@@ -12,6 +12,7 @@ class SystemLoggerDefaults:
     hide_log_levels: List[str] = field(default_factory=list)
     hide_log_tags: List[str] = field(default_factory=list)
     debug_mode: bool = False
+    show_critical_levels: int = 3
     default_log_bold: bool = False
     default_log_underline: bool = False
     default_log_italic: bool = False
@@ -42,6 +43,7 @@ class SystemLoggerDefaults:
                 "hide_log_levels": self.hide_log_levels,
                 "hide_log_tags": self.hide_log_tags,
                 "debug_mode": self.debug_mode,
+                "show_critical_levels": self.show_critical_levels,
                 "default_log_bold": self.default_log_bold,
                 "default_log_underline": self.default_log_underline,
                 "default_log_italic": self.default_log_italic,

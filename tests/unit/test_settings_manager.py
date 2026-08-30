@@ -273,6 +273,12 @@ class TestSettingsManagerLogging:
         
         assert manager.is_debug() == False
 
+    def test_get_show_critical_levels_default(self, tmp_path):
+        """Test get_show_critical_levels default value."""
+        manager = SettingsManager(str(tmp_path / "settings.json"))
+        
+        assert manager.get_show_critical_levels() == 3
+
 
 class TestSettingsManagerProjectInfo:
     """Tests for project information methods."""

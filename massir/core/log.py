@@ -59,6 +59,9 @@ class _FallbackConfig:
     def get_banner_template(self) -> str:
         return "{project_name}\n"
 
+    def get_show_critical_levels(self) -> int:
+        return 3
+
 
 class DefaultLogger(CoreLoggerAPI):
     """
@@ -101,8 +104,12 @@ class DefaultLogger(CoreLoggerAPI):
             if level in hidden_levels:
                 return False
 
-        critical_levels = ["ERROR", "WARNING", "EXCEPTION", "CRITICAL"]
-        if level in critical_levels and not config.is_debug():
+        show_critical = getattr(config, 'get_show_critical_levels', lambda: 3)()
+        if level == "ERROR" and show_critical < 1:
+            return False
+        if level == "WARNING" and show_critical < 2:
+            return False
+        if level == "CRITICAL" and show_critical < 3:
             return False
 
         if not config.is_debug() and level == "CORE":

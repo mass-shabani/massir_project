@@ -214,6 +214,9 @@ class SettingsManager(CoreConfigAPI):
     def is_debug(self) -> bool:
         return self.get("logs.debug_mode", False)
 
+    def get_show_critical_levels(self) -> int:
+        return self.get("logs.show_critical_levels", 3)
+
     # --- Project information ---
     def get_project_name(self) -> str:
         return self.get("information.project_name", "Unknown Project")

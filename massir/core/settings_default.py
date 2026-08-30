@@ -18,7 +18,8 @@ DEFAULT_SETTINGS = {
         "show_banner": True,
         "hide_log_levels": [],
         "hide_log_tags": [],
-        "debug_mode": False
+        "debug_mode": False,
+        "show_critical_levels": 3
     },
     "information": {
         "project_name": "Massir Framework",

@@ -47,6 +47,9 @@ class AppModule(IModule):
                        text_color=colors.BRIGHT_MAGENTA,
                        bold=True,
                        italic=True)
+            logger.log("error test", level="ERROR", tag="app_consumer")
+            logger.log("warning test", level="WARNING", tag="app_consumer")
+            logger.log("critical test", level="CRITICAL", tag="app_consumer")
         else:
             print("   [AppModule] Fallback to standard print because system logger is missing.")
 
