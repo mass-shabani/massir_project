@@ -17,10 +17,25 @@ class SystemLoggerDefaults:
     default_log_underline: bool = False
     default_log_italic: bool = False
     default_log_dim: bool = False
+    default_log_blink: bool = False
+    default_log_inverse: bool = False
+    default_log_color: str = "bright_cyan"
+    default_level_color: str = "bright_cyan"
+    default_timestamp_color: str = "bright_cyan"
+    default_tag_color: str = "bright_cyan"
+    default_text_color: str = "bright_cyan"
+    default_level_bg_color: Optional[str] = None
+    default_timestamp_bg_color: Optional[str] = None
+    default_tag_bg_color: Optional[str] = None
+    default_text_bg_color: Optional[str] = None
     default_print_bold: bool = False
     default_print_underline: bool = False
     default_print_italic: bool = False
     default_print_dim: bool = False
+    default_print_blink: bool = False
+    default_print_inverse: bool = False
+    default_print_color: str = "white"
+    default_print_bg_color: Optional[str] = None
     level_colors: Dict[str, str] = field(default_factory=lambda: {
         "INFO": "bright_cyan",
         "DEBUG": "bright_black",
@@ -36,6 +51,17 @@ class SystemLoggerDefaults:
                 "banner_color": self.banner_color,
                 "log_color": self.log_color,
                 "print_color": self.print_color,
+                "default_log_color": self.default_log_color,
+                "default_level_color": self.default_level_color,
+                "default_timestamp_color": self.default_timestamp_color,
+                "default_tag_color": self.default_tag_color,
+                "default_text_color": self.default_text_color,
+                "default_level_bg_color": self.default_level_bg_color,
+                "default_timestamp_bg_color": self.default_timestamp_bg_color,
+                "default_tag_bg_color": self.default_tag_bg_color,
+                "default_text_bg_color": self.default_text_bg_color,
+                "default_print_color": self.default_print_color,
+                "default_print_bg_color": self.default_print_bg_color,
             },
             "logs": {
                 "show_logs": self.show_logs,
@@ -48,10 +74,14 @@ class SystemLoggerDefaults:
                 "default_log_underline": self.default_log_underline,
                 "default_log_italic": self.default_log_italic,
                 "default_log_dim": self.default_log_dim,
+                "default_log_blink": self.default_log_blink,
+                "default_log_inverse": self.default_log_inverse,
                 "default_print_bold": self.default_print_bold,
                 "default_print_underline": self.default_print_underline,
                 "default_print_italic": self.default_print_italic,
                 "default_print_dim": self.default_print_dim,
+                "default_print_blink": self.default_print_blink,
+                "default_print_inverse": self.default_print_inverse,
                 "level_colors": self.level_colors,
             },
         }

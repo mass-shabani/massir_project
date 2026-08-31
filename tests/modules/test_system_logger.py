@@ -85,13 +85,13 @@ class TestAdvancedLoggerInit:
         fallback = logger.config
         
         assert fallback.show_logs() == True
-        assert fallback.is_debug() == True
-        assert fallback.get_hide_log_levels() == []
+        assert fallback.is_debug() == False
+        assert fallback.get_hide_log_levels() == ["CORE"]
         assert fallback.get_hide_log_tags() == []
-        assert "{level}" in fallback.get_system_log_template()
-        assert "{tag}" in fallback.get_system_log_template()
-        assert "{timestamp}" in fallback.get_system_log_template()
-        assert fallback.get_log_color() == "bright_green"
+        template = fallback.get_system_log_template()
+        assert "{level}" in template
+        assert "{message}" in template
+        assert fallback.get_log_color() == "bright_cyan"
         assert fallback.get_banner_color() == "yellow"
         assert fallback.get_print_color() == "white"
 

@@ -324,17 +324,13 @@ class TestSettingsManagerTemplates:
         
         assert "{level}" in manager.get_system_log_template()
     
-    def test_get_banner_color_default(self, tmp_path):
-        """Test get_banner_color default value."""
+    def test_template_colors_not_in_core(self, tmp_path):
+        """Test that color settings are not managed by core SettingsManager."""
         manager = SettingsManager(str(tmp_path / "settings.json"))
         
-        assert manager.get_banner_color() == "yellow"
-    
-    def test_get_system_log_color_default(self, tmp_path):
-        """Test get_log_color default value."""
-        manager = SettingsManager(str(tmp_path / "settings.json"))
-        
-        assert manager.get_log_color() == "bright_cyan"
+        assert not hasattr(manager, 'get_banner_color')
+        assert not hasattr(manager, 'get_log_color')
+        assert not hasattr(manager, 'get_print_color')
 
 
 class TestSettingsDefault:

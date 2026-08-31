@@ -14,6 +14,7 @@ The module registers two services:
 - log_colors: Colors class (for use by other modules)
 """
 
+import copy
 import datetime
 import os
 import re
@@ -92,6 +93,42 @@ class Colors:
     BG_BRIGHT_WHITE = '\033[107m'
 
 
+class _SystemLoggerFallbackConfig:
+    """Fallback config based on SystemLoggerDefaults."""
+    def __init__(self):
+        self._defaults = SystemLoggerDefaults()
+        hide_log_levels = list(self._defaults.hide_log_levels)
+        if not self._defaults.debug_mode and "CORE" not in hide_log_levels:
+            hide_log_levels.append("CORE")
+        self._hide_log_levels = hide_log_levels
+
+    def get_project_name(self): return "Unknown"
+    def get_system_log_template(self): return "[{level}]\t{message}"
+    def show_logs(self): return self._defaults.show_logs
+    def is_debug(self): return self._defaults.debug_mode
+    def get_hide_log_levels(self): return list(self._hide_log_levels)
+    def get_hide_log_tags(self): return list(self._defaults.hide_log_tags)
+    def get_banner_template(self): return "{project_name}\n"
+    def show_banner(self): return self._defaults.show_banner
+    def get_log_color(self): return self._defaults.log_color
+    def get_print_color(self): return self._defaults.print_color
+    def get_banner_color(self): return self._defaults.banner_color
+    def get_show_critical_levels(self): return self._defaults.show_critical_levels
+    def get(self, key, default=None):
+        parts = key.split(".", 1)
+        if len(parts) == 2:
+            section, name = parts
+            if section in ("template", "logs"):
+                value = getattr(self._defaults, name, None)
+                if value is not None:
+                    if isinstance(value, list):
+                        return list(value)
+                    if isinstance(value, dict):
+                        return dict(value)
+                    return value
+        return default
+
+
 class AdvancedLogger(CoreLoggerAPI):
     """
     Advanced logger with color support and filtering.
@@ -117,25 +154,27 @@ class AdvancedLogger(CoreLoggerAPI):
         """
         self.config = config_api
         if self.config is None:
-            self.config = self._get_fallback()
-    
-    def _get_fallback(self):
+            self.config = _SystemLoggerFallbackConfig()
+
+    def _get_config_value(self, method_name: str, dict_key: str, default):
         """
-        Fallback config for when config_api is None.
+        Get value from config, trying method first then dict key.
+        
+        Args:
+            method_name: Name of config method to try first
+            dict_key: Dot-notation key for config.get() fallback
+            default: Default value if neither method nor key exists
+            
+        Returns:
+            Config value or default
         """
-        class _SystemLoggerFallbackConfig:
-            def get_project_name(self): return "Unknown"
-            def get_system_log_template(self): return "{timestamp}--- | {level}:\t{tag} | {message}"
-            def get_log_color(self): return "bright_green"
-            def is_debug(self): return True
-            def show_logs(self): return True
-            def get_hide_log_levels(self): return []
-            def get_hide_log_tags(self): return []
-            def get_banner_color(self): return "yellow"
-            def get_print_color(self): return "white"
-            def get_show_critical_levels(self): return 3
-        return _SystemLoggerFallbackConfig()
-    
+        getter = getattr(self.config, method_name, None)
+        if callable(getter):
+            return getter()
+        if hasattr(self.config, 'get'):
+            return self.config.get(dict_key, default)
+        return default
+
     def _should_log(self, level: str, tag: Optional[str] = None) -> bool:
         """
         Check if message should be logged based on config.
@@ -165,7 +204,7 @@ class AdvancedLogger(CoreLoggerAPI):
             if level in hidden_levels:
                 return False
 
-        show_critical = getattr(config, 'get_show_critical_levels', lambda: 3)()
+        show_critical = self._get_config_value('get_show_critical_levels', 'logs.show_critical_levels', 3)
         if level == "ERROR" and show_critical < 1:
             return False
         if level == "WARNING" and show_critical < 2:
@@ -220,28 +259,176 @@ class AdvancedLogger(CoreLoggerAPI):
             return f"{method_color}{method}{Colors.RESET} {path} {status_color}{status}{Colors.RESET}"
         return message
 
+    def _print_formatted(self, kind: str, payload: dict):
+        """
+        Unified formatting and printing for log and print outputs.
+
+        Args:
+            kind: Output kind, either "log" or "print".
+            payload: Dictionary of parameters including:
+                message, level, tag, end, color, bg_color,
+                level_color, timestamp_color, tag_color, text_color,
+                timestamp_bg_color, level_bg_color, tag_bg_color, text_bg_color,
+                bold, underline, italic, dim, blink, inverse,
+                prefix, suffix, styles,
+                format_template, format_kwargs
+        """
+        if not self._should_log(payload.get("level", "INFO"), payload.get("tag")):
+            return
+
+        if os.name == 'nt':
+            os.system('')
+
+        is_log = kind == "log"
+
+        # ---------------------------
+        # Resolve colors with hierarchy
+        # ---------------------------
+        default_fg = self._get_config_value('get_log_color', 'template.log_color', 'bright_cyan')
+        default_bg = self._get_config_value('get_default_level_bg_color', 'template.default_level_bg_color', None)
+
+        if is_log:
+            base_fg = payload.get("color") or default_fg
+            level_colors = {}
+            if hasattr(self.config, "get"):
+                level_colors = self.config.get("logs.level_colors", {}) or {}
+            level = payload.get("level", "INFO")
+            resolved_level_color = payload.get("level_color") or level_colors.get(level) or base_fg
+            resolved_timestamp_color = payload.get("timestamp_color") or base_fg
+            resolved_tag_color = payload.get("tag_color") or base_fg
+            resolved_text_color = payload.get("text_color") or base_fg
+            resolved_level_bg = payload.get("level_bg_color") or payload.get("bg_color") or default_bg
+            resolved_timestamp_bg = payload.get("timestamp_bg_color") or payload.get("bg_color") or default_bg
+            resolved_tag_bg = payload.get("tag_bg_color") or payload.get("bg_color") or default_bg
+            resolved_text_bg = payload.get("text_bg_color") or payload.get("bg_color") or default_bg
+        else:
+            base_fg = payload.get("color") or self._get_config_value('get_print_color', 'template.print_color', 'white')
+            resolved_level_color = resolved_timestamp_color = resolved_tag_color = resolved_text_color = base_fg
+            resolved_level_bg = resolved_timestamp_bg = resolved_tag_bg = resolved_text_bg = (
+                payload.get("bg_color") or self._get_config_value('get_default_print_bg_color', 'template.default_print_bg_color', None)
+            )
+
+        # ---------------------------
+        # Resolve styles with hierarchy
+        # ---------------------------
+        style_defaults_prefix = "default_log" if is_log else "default_print"
+        default_bold = self._get_config_value(f'get_{style_defaults_prefix}_bold', f'logs.{style_defaults_prefix}_bold', False)
+        default_underline = self._get_config_value(f'get_{style_defaults_prefix}_underline', f'logs.{style_defaults_prefix}_underline', False)
+        default_italic = self._get_config_value(f'get_{style_defaults_prefix}_italic', f'logs.{style_defaults_prefix}_italic', False)
+        default_dim = self._get_config_value(f'get_{style_defaults_prefix}_dim', f'logs.{style_defaults_prefix}_dim', False)
+        default_blink = self._get_config_value(f'get_{style_defaults_prefix}_blink', f'logs.{style_defaults_prefix}_blink', False)
+        default_inverse = self._get_config_value(f'get_{style_defaults_prefix}_inverse', f'logs.{style_defaults_prefix}_inverse', False)
+
+        bold = payload.get("bold") if payload.get("bold") is not None else default_bold
+        underline = payload.get("underline") if payload.get("underline") is not None else default_underline
+        italic = payload.get("italic") if payload.get("italic") is not None else default_italic
+        dim = payload.get("dim") if payload.get("dim") is not None else default_dim
+        blink = payload.get("blink") if payload.get("blink") is not None else default_blink
+        inverse = payload.get("inverse") if payload.get("inverse") is not None else default_inverse
+
+        style_codes = []
+        if bold:
+            style_codes.append("\033[1m")
+        if italic:
+            style_codes.append("\033[3m")
+        if dim:
+            style_codes.append("\033[2m")
+        if underline:
+            style_codes.append("\033[4m")
+        if blink:
+            style_codes.append("\033[5m")
+        if inverse:
+            style_codes.append("\033[7m")
+        if payload.get("styles"):
+            style_codes.extend(payload["styles"])
+
+        def _apply_style(text, fg_color, bg_color=None):
+            fg_code = get_color_code(fg_color)
+            codes = [f"\033[{fg_code}m"]
+            if bg_color:
+                bg_code = get_color_code(bg_color)
+                codes.append(f"\033[{bg_code}m")
+            codes.extend(style_codes)
+            return "".join(codes) + text + "\033[0m"
+
+        # ---------------------------
+        # Build output
+        # ---------------------------
+        if is_log:
+            format_template = payload.get("format_template", "")
+            format_kwargs = payload.get("format_kwargs", {})
+
+            class _SafeFormatDict(dict):
+                def __missing__(self, key):
+                    return ""
+
+            formatted_msg = format_template.format_map(_SafeFormatDict(format_kwargs))
+
+            result = ""
+            i = 0
+            while i < len(format_template):
+                if format_template[i] == "{":
+                    end = format_template.find("}", i)
+                    if end != -1:
+                        placeholder = format_template[i:end+1]
+                        key = placeholder[1:-1]
+                        value = format_kwargs.get(key, "")
+
+                        if key == "timestamp":
+                            colored = _apply_style(value, resolved_timestamp_color, resolved_timestamp_bg)
+                        elif key == "level":
+                            colored = _apply_style(value, resolved_level_color, resolved_level_bg)
+                        elif key == "tag":
+                            colored = _apply_style(value, resolved_tag_color, resolved_tag_bg)
+                        elif key == "message":
+                            colored = _apply_style(value, resolved_text_color, resolved_text_bg)
+                        elif key == "project_name":
+                            colored = _apply_style(value, default_fg)
+                        else:
+                            colored = value
+
+                        result += colored
+                        i = end + 1
+                        continue
+                result += format_template[i]
+                i += 1
+
+            if payload.get("prefix"):
+                result = payload["prefix"] + result
+            if payload.get("suffix"):
+                result = result + payload["suffix"]
+
+            print(result)
+        else:
+            message = payload.get("message", "")
+            if not isinstance(message, str):
+                message = repr(message)
+            output = f"{payload.get('prefix', '')}{message}{payload.get('suffix', '')}"
+            if style_codes or get_color_code(base_fg) != "37" or resolved_level_bg:
+                output = "".join(style_codes) + f"\033[{get_color_code(base_fg)}m" + output + Colors.RESET
+            print(output, end=payload.get("end", "\n"))
+
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None,
+            color: Optional[str] = None, bg_color: Optional[str] = None,
             level_color: Optional[str] = None, timestamp_color: Optional[str] = None,
             tag_color: Optional[str] = None, text_color: Optional[str] = None,
             timestamp_bg_color: Optional[str] = None,
             level_bg_color: Optional[str] = None,
             tag_bg_color: Optional[str] = None,
             text_bg_color: Optional[str] = None,
-            bold: bool = False, underline: bool = False, italic: bool = False,
-            dim: bool = False, blink: bool = False, inverse: bool = False,
+            bold: Optional[bool] = None, underline: Optional[bool] = None, italic: Optional[bool] = None,
+            dim: Optional[bool] = None, blink: Optional[bool] = None, inverse: Optional[bool] = None,
             prefix: Optional[str] = None, suffix: Optional[str] = None,
             styles: Optional[List[str]] = None):
         """
         Log a message with advanced color and style support.
 
-        Output format: [timestamp] [level] [tag] message
-        Each section can have independent foreground and background colors,
-        plus text styles like bold, italic, etc.
-
         Args:
             message: The message to log
             level: Log level (INFO, WARNING, ERROR, DEBUG, CORE)
             tag: Log tag for filtering
+            color: Overall foreground color for entire log entry
+            bg_color: Overall background color for entire log entry
             level_color: Custom color for level tag (use Colors class)
             timestamp_color: Custom color for timestamp brackets (use Colors class)
             tag_color: Custom color for tag brackets (use Colors class)
@@ -260,12 +447,6 @@ class AdvancedLogger(CoreLoggerAPI):
             suffix: Text appended to the message
             styles: Additional raw ANSI codes to apply
         """
-        if not self._should_log(level, tag):
-            return
-
-        if os.name == 'nt':
-            os.system('')
-
         template = self.config.get_system_log_template()
         core_default = "[{level}]\t{message}"
         module_default = "{timestamp} | {level}:\t{tag} | {message}"
@@ -288,82 +469,31 @@ class AdvancedLogger(CoreLoggerAPI):
             "timestamp": timestamp
         }
 
-        class _SafeFormatDict(dict):
-            def __missing__(self, key):
-                return ""
-
-        formatted_msg = format_template.format_map(_SafeFormatDict(format_kwargs))
-
-        log_color = self.config.get_log_color()
-        level_colors = {}
-        if hasattr(self.config, "get"):
-            level_colors = self.config.get("logs.level_colors", {}) or {}
-
-        resolved_level_color = level_color or level_colors.get(level) or log_color
-        resolved_timestamp_color = timestamp_color or log_color
-        resolved_tag_color = tag_color or log_color
-        resolved_text_color = text_color or log_color
-
-        style_codes = []
-        if bold:
-            style_codes.append("\033[1m")
-        if italic:
-            style_codes.append("\033[3m")
-        if dim:
-            style_codes.append("\033[2m")
-        if underline:
-            style_codes.append("\033[4m")
-        if blink:
-            style_codes.append("\033[5m")
-        if inverse:
-            style_codes.append("\033[7m")
-        if styles:
-            style_codes.extend(styles)
-
-        def _apply_style(text, fg_color, bg_color=None):
-            fg_code = get_color_code(fg_color)
-            codes = [f"\033[{fg_code}m"]
-            if bg_color:
-                bg_code = get_color_code(bg_color)
-                codes.append(f"\033[{bg_code}m")
-            codes.extend(style_codes)
-            return "".join(codes) + text + "\033[0m"
-
-        result = ""
-        i = 0
-        while i < len(format_template):
-            if format_template[i] == "{":
-                end = format_template.find("}", i)
-                if end != -1:
-                    placeholder = format_template[i:end+1]
-                    key = placeholder[1:-1]
-                    value = format_kwargs.get(key, "")
-
-                    if key == "timestamp":
-                        colored = _apply_style(value, resolved_timestamp_color, timestamp_bg_color)
-                    elif key == "level":
-                        colored = _apply_style(value, resolved_level_color, level_bg_color)
-                    elif key == "tag":
-                        colored = _apply_style(value, resolved_tag_color, tag_bg_color)
-                    elif key == "message":
-                        colored = _apply_style(value, resolved_text_color, text_bg_color)
-                    elif key == "project_name":
-                        colored = _apply_style(value, log_color)
-                    else:
-                        colored = value
-
-                    result += colored
-                    i = end + 1
-                    continue
-            result += format_template[i]
-            i += 1
-
-        if prefix:
-            result = prefix + result
-        if suffix:
-            result = result + suffix
-
-        print(result)
+        self._print_formatted("log", {
+            "level": level,
+            "tag": tag,
+            "format_template": format_template,
+            "format_kwargs": format_kwargs,
+            "color": color,
+            "bg_color": bg_color,
+            "level_color": level_color,
+            "timestamp_color": timestamp_color,
+            "tag_color": tag_color,
+            "text_color": text_color,
+            "timestamp_bg_color": timestamp_bg_color,
+            "level_bg_color": level_bg_color,
+            "tag_bg_color": tag_bg_color,
+            "text_bg_color": text_bg_color,
+            "bold": bold,
+            "underline": underline,
+            "italic": italic,
+            "dim": dim,
+            "blink": blink,
+            "inverse": inverse,
+            "prefix": prefix,
+            "suffix": suffix,
+            "styles": styles,
+        })
 
     def print(self,
               message: str,
@@ -372,12 +502,12 @@ class AdvancedLogger(CoreLoggerAPI):
               end: str = "\n",
               color: Optional[str] = None,
               bg_color: Optional[str] = None,
-              bold: bool = False,
-              underline: bool = False,
-              italic: bool = False,
-              dim: bool = False,
-              blink: bool = False,
-              inverse: bool = False,
+              bold: Optional[bool] = None,
+              underline: Optional[bool] = None,
+              italic: Optional[bool] = None,
+              dim: Optional[bool] = None,
+              blink: Optional[bool] = None,
+              inverse: Optional[bool] = None,
               prefix: Optional[str] = None,
               suffix: Optional[str] = None,
               styles: Optional[List[str]] = None):
@@ -400,48 +530,28 @@ class AdvancedLogger(CoreLoggerAPI):
             italic: Render italic text
             dim: Render dim text
             blink: Enable blinking text
-            inverse: Swap foreground/background colors
+            inverse: Swap foreground and background colors
             prefix: Text prepended to the message
             suffix: Text appended to the message
             styles: Additional raw ANSI codes to apply
         """
-        if not self._should_log(level, tag):
-            return
-        if not isinstance(message, str):
-            message = repr(message)
-        if prefix is None:
-            prefix = ""
-        if suffix is None:
-            suffix = ""
-        
-        resolved_color = color or self.config.get_print_color()
-        color_code = get_color_code(resolved_color)
-        
-        codes: list[str] = [f"\033[{color_code}m"]
-        if bg_color:
-            bg_code = get_color_code(bg_color)
-            codes.append(f"\033[{bg_code}m")
-        if bold:
-            codes.append("\033[1m")
-        if italic:
-            codes.append("\033[3m")
-        if dim:
-            codes.append("\033[2m")
-        if underline:
-            codes.append("\033[4m")
-        if blink:
-            codes.append("\033[5m")
-        if inverse:
-            codes.append("\033[7m")
-        if styles:
-            codes.extend(styles)
-        
-        if os.name == 'nt':
-            os.system('')
-        output = f"{prefix}{message}{suffix}"
-        if codes:
-            output = "".join(codes) + output + Colors.RESET
-        print(output, end=end)
+        self._print_formatted("print", {
+            "message": message,
+            "level": level,
+            "tag": tag,
+            "end": end,
+            "color": color,
+            "bg_color": bg_color,
+            "bold": bold,
+            "underline": underline,
+            "italic": italic,
+            "dim": dim,
+            "blink": blink,
+            "inverse": inverse,
+            "prefix": prefix,
+            "suffix": suffix,
+            "styles": styles,
+        })
 
 
 class SystemLoggerModule(IModule):

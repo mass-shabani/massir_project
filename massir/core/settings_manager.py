@@ -234,12 +234,3 @@ class SettingsManager(CoreConfigAPI):
     def get_system_log_template(self) -> str:
         return self.get("template.system_log_template", "[{level}]\t{message}")
 
-    def get_banner_color(self) -> str:
-        return self.get("template.banner_color", "yellow")
-
-    def get_log_color(self) -> str:
-        return self.get("template.log_color", "bright_cyan")
-
-    def get_print_color(self) -> str:
-        return self.get("template.print_color", "white")
-
