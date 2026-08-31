@@ -26,14 +26,14 @@ class SystemLoggerDefaults:
     # Colors
     # -------------------------------------------------------------------------
     banner_color: str = "yellow"
-    log_color: str = "bright_cyan"
-    print_color: str = "yellow"
+    log_color: str = "default"
+    print_color: str = "default"
     
     # Section-specific log colors (fall back to log_color when not set)
-    default_level_color: str = "bright_cyan"
-    default_timestamp_color: str = "bright_cyan"
-    default_tag_color: str = "bright_cyan"
-    default_text_color: str = "bright_cyan"
+    default_level_color: str = "default"
+    default_timestamp_color: str = "bright_black"
+    default_tag_color: str = "cyan"
+    default_text_color: str = "default"
     default_level_bg_color: Optional[str] = None
     default_timestamp_bg_color: Optional[str] = None
     default_tag_bg_color: Optional[str] = None
@@ -73,12 +73,12 @@ class SystemLoggerDefaults:
     # Level colors (maps log level to color name)
     # -------------------------------------------------------------------------
     level_colors: Dict[str, str] = field(default_factory=lambda: {
-        "INFO": "bright_cyan",
+        "INFO": "bright_green",
         "DEBUG": "bright_black",
         "WARNING": "bright_yellow",
         "ERROR": "bright_red",
-        "CRITICAL": "bright_red",
-        "CORE": "bright_green",
+        "CRITICAL": "orange",
+        "CORE": "blue",
     })
 
     def to_dict(self) -> dict:
@@ -133,9 +133,9 @@ def get_color_code(color_name: Optional[str]) -> str:
     This function delegates to Colors.get_code() for color lookup.
     
     Args:
-        color_name: Color name (e.g., "red", "bright_cyan", "green")
-        
+        color_name: Color name (e.g., "red", "bright_cyan", "green", "default")
+            
     Returns:
-        ANSI color code string (e.g., "31", "96")
+        ANSI color code string (e.g., "31", "96", "" for default)
     """
     return Colors.get_code(color_name)

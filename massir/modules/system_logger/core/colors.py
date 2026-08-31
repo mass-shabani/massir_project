@@ -66,6 +66,23 @@ class Colors:
     BRIGHT_MAGENTA = '\033[95m'
     BRIGHT_CYAN = '\033[96m'
     BRIGHT_WHITE = '\033[97m'
+
+    # =========================================================================
+    # Extended Foreground Colors (8 additional colors) - 256-color palette
+    # =========================================================================
+    ORANGE = '\033[38;5;208m'
+    PINK = '\033[38;5;218m'
+    PURPLE = '\033[38;5;141m'
+    LIME = '\033[38;5;154m'
+    TEAL = '\033[38;5;14m'
+    NAVY = '\033[38;5;18m'
+    MAROON = '\033[38;5;88m'
+    OLIVE = '\033[38;5;58m'
+    
+    # =========================================================================
+    # Default color (uses system default)
+    # =========================================================================
+    DEFAULT = ''
     
     # =========================================================================
     # Standard Background Colors (8 colors) - codes 40-47
@@ -90,7 +107,19 @@ class Colors:
     BG_BRIGHT_MAGENTA = '\033[105m'
     BG_BRIGHT_CYAN = '\033[106m'
     BG_BRIGHT_WHITE = '\033[107m'
-    
+
+    # =========================================================================
+    # Extended Background Colors (8 additional colors) - 256-color palette
+    # =========================================================================
+    BG_ORANGE = '\033[48;5;208m'
+    BG_PINK = '\033[48;5;218m'
+    BG_PURPLE = '\033[48;5;141m'
+    BG_LIME = '\033[48;5;154m'
+    BG_TEAL = '\033[48;5;14m'
+    BG_NAVY = '\033[48;5;18m'
+    BG_MAROON = '\033[48;5;88m'
+    BG_OLIVE = '\033[48;5;58m'
+
     # =========================================================================
     # Named color mappings
     # =========================================================================
@@ -109,23 +138,22 @@ class Colors:
         "bright_red": "91",
         "bright_green": "92",
         "bright_yellow": "93",
-        "bright_blue": "94",
+        "bright_blue": "94",        
         "bright_magenta": "95",
         "bright_cyan": "96",
         "bright_white": "97",
-        # Common aliases
-        "orange": "33",
-        "pink": "95",
-        "purple": "35",
-        "lime": "92",
-        "teal": "36",
-        "navy": "34",
-        "maroon": "31",
-        "olive": "33",
-        "aqua": "36",
-        "silver": "37",
-        "gray": "90",
-        "grey": "90",
+        # Default
+        "default": "",
+        # Extended aliases
+        "orange": "38;5;208",
+        "pink": "38;5;218",
+        "purple": "38;5;141",
+        "lime": "38;5;154",
+        "teal": "38;5;14",
+        "navy": "38;5;18",
+        "maroon": "38;5;88",
+        "olive": "38;5;58",
+        "grey": "38;5;58",
     }
     
     @classmethod
@@ -134,13 +162,13 @@ class Colors:
         Get ANSI foreground color code by name.
         
         Args:
-            name: Color name (e.g., "red", "bright_cyan", "green")
+            name: Color name (e.g., "red", "bright_cyan", "green", "default")
             
         Returns:
-            ANSI color code string (e.g., "31", "96")
+            ANSI color code string (e.g., "31", "96", "")
         """
         if not name:
-            return "37"
+            return ""
         return cls._NAME_TO_CODE.get(name.lower(), "37")
     
     @classmethod

@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch, MagicMock
 import io
 import sys
 
-from massir.modules.system_logger import AdvancedLogger, SystemLoggerModule, Colors
+from massir.modules.system_logger.core import AdvancedLogger, Colors, SystemLoggerDefaults, get_color_code
+from massir.modules.system_logger.module import SystemLoggerModule
 from massir.core.interfaces import ModuleContext
 
 
@@ -93,7 +94,7 @@ class TestAdvancedLoggerInit:
         assert "{message}" in template
         assert fallback.get_log_color() == "bright_cyan"
         assert fallback.get_banner_color() == "yellow"
-        assert fallback.get_print_color() == "white"
+        assert fallback.get_print_color() == "default"
 
 
 class TestAdvancedLoggerShouldLog:

@@ -147,10 +147,22 @@ class AdvancedLogger(CoreLoggerAPI):
             if hasattr(self.config, "get"):
                 level_colors = self.config.get("logs.level_colors", {}) or {}
             level = payload.get("level", "INFO")
-            resolved_level_color = payload.get("level_color") or level_colors.get(level) or base_fg
-            resolved_timestamp_color = payload.get("timestamp_color") or base_fg
-            resolved_tag_color = payload.get("tag_color") or base_fg
-            resolved_text_color = payload.get("text_color") or base_fg
+            default_level_color = self._get_config_value('get_default_level_color', 'template.default_level_color', base_fg)
+            default_timestamp_color = self._get_config_value('get_default_timestamp_color', 'template.default_timestamp_color', base_fg)
+            default_tag_color = self._get_config_value('get_default_tag_color', 'template.default_tag_color', base_fg)
+            default_text_color = self._get_config_value('get_default_text_color', 'template.default_text_color', base_fg)
+            if default_level_color == "default":
+                default_level_color = base_fg
+            if default_timestamp_color == "default":
+                default_timestamp_color = base_fg
+            if default_tag_color == "default":
+                default_tag_color = base_fg
+            if default_text_color == "default":
+                default_text_color = base_fg
+            resolved_level_color = payload.get("level_color") or level_colors.get(level) or default_level_color
+            resolved_timestamp_color = payload.get("timestamp_color") or default_timestamp_color
+            resolved_tag_color = payload.get("tag_color") or default_tag_color
+            resolved_text_color = payload.get("text_color") or default_text_color
             resolved_level_bg = payload.get("level_bg_color") or payload.get("bg_color") or default_bg
             resolved_timestamp_bg = payload.get("timestamp_bg_color") or payload.get("bg_color") or default_bg
             resolved_tag_bg = payload.get("tag_bg_color") or payload.get("bg_color") or default_bg
@@ -198,27 +210,45 @@ class AdvancedLogger(CoreLoggerAPI):
             if isinstance(fg_color, str) and fg_color.startswith('\033[') and fg_color.endswith('m'):
                 fg_code = fg_color
             else:
-                fg_code = f"\033[{get_color_code(fg_color)}m"
-            codes = [fg_code]
+                fg_code_value = get_color_code(fg_color)
+                if fg_code_value:
+                    fg_code = f"\033[{fg_code_value}m"
+                else:
+                    fg_code = ""
+            codes = []
+            if fg_code:
+                codes.append(fg_code)
             if bg_color:
                 if isinstance(bg_color, str) and bg_color.startswith('\033[') and bg_color.endswith('m'):
                     codes.append(bg_color)
                 else:
-                    codes.append(f"\033[{get_color_code(bg_color)}m")
+                    bg_code_value = get_color_code(bg_color)
+                    if bg_code_value:
+                        codes.append(f"\033[{bg_code_value}m")
             codes.extend(style_codes)
-            return "".join(codes) + text + "\033[0m"
+            if codes:
+                return "".join(codes) + text + "\033[0m"
+            return text
 
         def _build_ansi(base_fg_color, bg_color=None):
             if isinstance(base_fg_color, str) and base_fg_color.startswith('\033[') and base_fg_color.endswith('m'):
                 fg_part = base_fg_color
             else:
-                fg_part = f"\033[{get_color_code(base_fg_color)}m"
-            parts = [fg_part]
+                fg_code_value = get_color_code(base_fg_color)
+                if fg_code_value:
+                    fg_part = f"\033[{fg_code_value}m"
+                else:
+                    fg_part = ""
+            parts = []
+            if fg_part:
+                parts.append(fg_part)
             if bg_color:
                 if isinstance(bg_color, str) and bg_color.startswith('\033[') and bg_color.endswith('m'):
                     parts.append(bg_color)
                 else:
-                    parts.append(f"\033[{get_color_code(bg_color)}m")
+                    bg_code_value = get_color_code(bg_color)
+                    if bg_code_value:
+                        parts.append(f"\033[{bg_code_value}m")
             parts.extend(style_codes)
             return "".join(parts)
 
@@ -233,6 +263,8 @@ class AdvancedLogger(CoreLoggerAPI):
 
             formatted_msg = format_template.format_map(_SafeFormatDict(format_kwargs))
 
+            # First, build the result with all text colored by log_color
+            # Then recolor specific parts with their specific colors
             result = ""
             i = 0
             while i < len(format_template):
@@ -243,6 +275,7 @@ class AdvancedLogger(CoreLoggerAPI):
                         key = placeholder[1:-1]
                         value = format_kwargs.get(key, "")
 
+                        # Default to log_color for all parts
                         if key == "timestamp":
                             colored = _apply_style(value, resolved_timestamp_color, resolved_timestamp_bg)
                         elif key == "level":
@@ -254,12 +287,14 @@ class AdvancedLogger(CoreLoggerAPI):
                         elif key == "project_name":
                             colored = _apply_style(value, default_fg)
                         else:
-                            colored = value
+                            # Unknown placeholder: color with default log color
+                            colored = _apply_style(value, default_fg)
 
                         result += colored
                         i = end + 1
                         continue
-                result += format_template[i]
+                # Static template text: color with log_color
+                result += _apply_style(format_template[i], default_fg)
                 i += 1
 
             if payload.get("prefix"):
