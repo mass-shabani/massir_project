@@ -138,7 +138,7 @@ class Colors:
         "bright_red": "91",
         "bright_green": "92",
         "bright_yellow": "93",
-        "bright_blue": "94",        
+        "bright_blue": "94",
         "bright_magenta": "95",
         "bright_cyan": "96",
         "bright_white": "97",
@@ -153,7 +153,46 @@ class Colors:
         "navy": "38;5;18",
         "maroon": "38;5;88",
         "olive": "38;5;58",
-        "grey": "38;5;58",
+        "gray": "90",
+        "grey": "90",
+        "aqua": "36",
+        "silver": "37",
+    }
+    
+    _BG_NAME_TO_CODE: Dict[str, str] = {
+        # Standard background
+        "black": "40",
+        "red": "41",
+        "green": "42",
+        "yellow": "43",
+        "blue": "44",
+        "magenta": "45",
+        "cyan": "46",
+        "white": "47",
+        # Bright background
+        "bright_black": "100",
+        "bright_red": "101",
+        "bright_green": "102",
+        "bright_yellow": "103",
+        "bright_blue": "104",
+        "bright_magenta": "105",
+        "bright_cyan": "106",
+        "bright_white": "107",
+        # Default
+        "default": "",
+        # Extended aliases
+        "orange": "48;5;208",
+        "pink": "48;5;218",
+        "purple": "48;5;141",
+        "lime": "48;5;154",
+        "teal": "48;5;14",
+        "navy": "48;5;18",
+        "maroon": "48;5;88",
+        "olive": "48;5;58",
+        "gray": "100",
+        "grey": "100",
+        "aqua": "46",
+        "silver": "47",
     }
     
     @classmethod
@@ -170,6 +209,21 @@ class Colors:
         if not name:
             return ""
         return cls._NAME_TO_CODE.get(name.lower(), "37")
+    
+    @classmethod
+    def get_bg_code(cls, name: Optional[str]) -> str:
+        """
+        Get ANSI background color code by name.
+        
+        Args:
+            name: Color name (e.g., "red", "bright_cyan", "green", "default")
+            
+        Returns:
+            ANSI background color code string (e.g., "41", "106", "")
+        """
+        if not name:
+            return ""
+        return cls._BG_NAME_TO_CODE.get(name.lower(), "")
     
     @classmethod
     def ansi_fg(cls, color_id: int) -> str:
@@ -260,7 +314,7 @@ class Colors:
             if isinstance(bg, str) and bg.startswith('\033['):
                 codes.append(bg)
             else:
-                codes.append(f"\033[{cls.get_code(bg)}m")
+                codes.append(f"\033[{cls.get_bg_code(bg)}m")
         
         if bold:
             codes.append('\033[1m')

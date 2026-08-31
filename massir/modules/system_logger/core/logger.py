@@ -11,6 +11,7 @@ from massir.modules.system_logger.core.colors import Colors
 from massir.modules.system_logger.core.defaults import (
     SystemLoggerDefaults,
     get_color_code,
+    get_bg_color_code,
 )
 
 
@@ -132,7 +133,10 @@ class AdvancedLogger(CoreLoggerAPI):
 
         # Resolve colors with hierarchy
         default_fg = self._get_config_value('get_log_color', 'logs.log_color', 'default')
-        default_bg = self._get_config_value('get_default_level_bg_color', 'logs.default_level_bg_color', None)
+        default_level_bg = self._get_config_value('get_default_level_bg_color', 'logs.default_level_bg_color', None)
+        default_timestamp_bg = self._get_config_value('get_default_timestamp_bg_color', 'logs.default_timestamp_bg_color', None)
+        default_tag_bg = self._get_config_value('get_default_tag_bg_color', 'logs.default_tag_bg_color', None)
+        default_text_bg = self._get_config_value('get_default_text_bg_color', 'logs.default_text_bg_color', None)
 
         def _resolve_fg(raw_color, config_key, fallback):
             if raw_color:
@@ -163,10 +167,10 @@ class AdvancedLogger(CoreLoggerAPI):
             resolved_timestamp_color = payload.get("timestamp_color") or default_timestamp_color
             resolved_tag_color = payload.get("tag_color") or default_tag_color
             resolved_text_color = payload.get("text_color") or default_text_color
-            resolved_level_bg = payload.get("level_bg_color") or payload.get("bg_color") or default_bg
-            resolved_timestamp_bg = payload.get("timestamp_bg_color") or payload.get("bg_color") or default_bg
-            resolved_tag_bg = payload.get("tag_bg_color") or payload.get("bg_color") or default_bg
-            resolved_text_bg = payload.get("text_bg_color") or payload.get("bg_color") or default_bg
+            resolved_level_bg = payload.get("level_bg_color") or payload.get("bg_color") or default_level_bg
+            resolved_timestamp_bg = payload.get("timestamp_bg_color") or payload.get("bg_color") or default_timestamp_bg
+            resolved_tag_bg = payload.get("tag_bg_color") or payload.get("bg_color") or default_tag_bg
+            resolved_text_bg = payload.get("text_bg_color") or payload.get("bg_color") or default_text_bg
         else:
             base_fg = _resolve_fg(payload.get("color"), ('get_print_color', 'logs.print_color'), 'default')
             resolved_level_color = resolved_timestamp_color = resolved_tag_color = resolved_text_color = base_fg
@@ -222,7 +226,7 @@ class AdvancedLogger(CoreLoggerAPI):
                 if isinstance(bg_color, str) and bg_color.startswith('\033[') and bg_color.endswith('m'):
                     codes.append(bg_color)
                 else:
-                    bg_code_value = get_color_code(bg_color)
+                    bg_code_value = get_bg_color_code(bg_color)
                     if bg_code_value:
                         codes.append(f"\033[{bg_code_value}m")
             codes.extend(style_codes)
@@ -246,7 +250,7 @@ class AdvancedLogger(CoreLoggerAPI):
                 if isinstance(bg_color, str) and bg_color.startswith('\033[') and bg_color.endswith('m'):
                     parts.append(bg_color)
                 else:
-                    bg_code_value = get_color_code(bg_color)
+                    bg_code_value = get_bg_color_code(bg_color)
                     if bg_code_value:
                         parts.append(f"\033[{bg_code_value}m")
             parts.extend(style_codes)

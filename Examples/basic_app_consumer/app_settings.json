@@ -33,8 +33,7 @@
     "show_critical_levels": 3,
     "banner_color": "green",
     "log_color": "default",
-    "print_color": "default",
-    "default_text_bg_color": "red"
+    "print_color": "default"
   },
   "information": {
     "project_name": "Massir Project",

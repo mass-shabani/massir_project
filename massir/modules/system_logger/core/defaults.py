@@ -26,7 +26,7 @@ class SystemLoggerDefaults:
     # Colors
     # -------------------------------------------------------------------------
     banner_color: str = "yellow"
-    log_color: str = "default"
+    log_color: str = "bright_cyan"
     print_color: str = "default"
     
     # Section-specific log colors (fall back to log_color when not set)
@@ -141,3 +141,18 @@ def get_color_code(color_name: Optional[str]) -> str:
         ANSI color code string (e.g., "31", "96", "" for default)
     """
     return Colors.get_code(color_name)
+
+
+def get_bg_color_code(color_name: Optional[str]) -> str:
+    """
+    Convert a color name to its ANSI background color code.
+    
+    This function delegates to Colors.get_bg_code() for color lookup.
+    
+    Args:
+        color_name: Color name (e.g., "red", "bright_cyan", "green", "default")
+            
+    Returns:
+        ANSI background color code string (e.g., "41", "106", "" for default)
+    """
+    return Colors.get_bg_code(color_name)
