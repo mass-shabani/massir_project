@@ -29,7 +29,7 @@ class AppModule(IModule):
         
 
         if logger and colors:
-            logger.print("This is custom logs: ", tag="app_consumer")
+            logger.print("\nThis is custom logs: ", tag="app_consumer")
             logger.log("AppModule started successfully and using System Logger!", 
                        level="INFO", 
                        tag="app_consumer", 
@@ -48,10 +48,10 @@ class AppModule(IModule):
                        text_color=colors.BRIGHT_MAGENTA,
                        bold=True,
                        italic=True)
-            logger.print("This is a custom test for printing.", color="green", bold=True, tag="app_consumer")
             logger.log("error test", level="ERROR", tag="app_consumer")
             logger.log("warning test", level="WARNING", tag="app_consumer")
             logger.log("critical test", level="CRITICAL", tag="app_consumer")
+            logger.print("End of custom logs.\n", color="green", bold=True, tag="app_consumer")
         else:
             print("   [AppModule] Fallback to standard print because system logger is missing.")
 
