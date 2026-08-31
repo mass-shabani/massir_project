@@ -96,8 +96,14 @@ class SettingsManager(CoreConfigAPI):
     def apply_module_defaults(self, defaults: dict):
         """Apply module defaults only for keys not already present."""
         for key, value in defaults.items():
-            if self.get(key) is None:
-                self.set(key, value)
+            if isinstance(value, dict):
+                for nested_key, nested_value in value.items():
+                    full_key = f"{key}.{nested_key}"
+                    if self.get(full_key) is None:
+                        self.set(full_key, nested_value)
+            else:
+                if self.get(key) is None:
+                    self.set(key, value)
 
     def _substitute_path_placeholders(self, path_manager):
         """

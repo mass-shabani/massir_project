@@ -287,8 +287,15 @@ class AdvancedLogger(CoreLoggerAPI):
         default_fg = self._get_config_value('get_log_color', 'template.log_color', 'bright_cyan')
         default_bg = self._get_config_value('get_default_level_bg_color', 'template.default_level_bg_color', None)
 
+        def _resolve_fg(raw_color, config_key, fallback):
+            if raw_color:
+                if isinstance(raw_color, str) and raw_color.startswith('\033[') and raw_color.endswith('m'):
+                    return raw_color
+                return raw_color
+            return self._get_config_value(config_key[0], config_key[1], fallback)
+
         if is_log:
-            base_fg = payload.get("color") or default_fg
+            base_fg = _resolve_fg(payload.get("color"), ('get_log_color', 'template.log_color'), 'bright_cyan')
             level_colors = {}
             if hasattr(self.config, "get"):
                 level_colors = self.config.get("logs.level_colors", {}) or {}
@@ -302,7 +309,7 @@ class AdvancedLogger(CoreLoggerAPI):
             resolved_tag_bg = payload.get("tag_bg_color") or payload.get("bg_color") or default_bg
             resolved_text_bg = payload.get("text_bg_color") or payload.get("bg_color") or default_bg
         else:
-            base_fg = payload.get("color") or self._get_config_value('get_print_color', 'template.print_color', 'white')
+            base_fg = _resolve_fg(payload.get("color"), ('get_print_color', 'template.print_color'), 'white')
             resolved_level_color = resolved_timestamp_color = resolved_tag_color = resolved_text_color = base_fg
             resolved_level_bg = resolved_timestamp_bg = resolved_tag_bg = resolved_text_bg = (
                 payload.get("bg_color") or self._get_config_value('get_default_print_bg_color', 'template.default_print_bg_color', None)
@@ -343,13 +350,32 @@ class AdvancedLogger(CoreLoggerAPI):
             style_codes.extend(payload["styles"])
 
         def _apply_style(text, fg_color, bg_color=None):
-            fg_code = get_color_code(fg_color)
-            codes = [f"\033[{fg_code}m"]
+            if isinstance(fg_color, str) and fg_color.startswith('\033[') and fg_color.endswith('m'):
+                fg_code = fg_color
+            else:
+                fg_code = f"\033[{get_color_code(fg_color)}m"
+            codes = [fg_code]
             if bg_color:
-                bg_code = get_color_code(bg_color)
-                codes.append(f"\033[{bg_code}m")
+                if isinstance(bg_color, str) and bg_color.startswith('\033[') and bg_color.endswith('m'):
+                    codes.append(bg_color)
+                else:
+                    codes.append(f"\033[{get_color_code(bg_color)}m")
             codes.extend(style_codes)
             return "".join(codes) + text + "\033[0m"
+
+        def _build_ansi(base_fg_color, bg_color=None):
+            if isinstance(base_fg_color, str) and base_fg_color.startswith('\033[') and base_fg_color.endswith('m'):
+                fg_part = base_fg_color
+            else:
+                fg_part = f"\033[{get_color_code(base_fg_color)}m"
+            parts = [fg_part]
+            if bg_color:
+                if isinstance(bg_color, str) and bg_color.startswith('\033[') and bg_color.endswith('m'):
+                    parts.append(bg_color)
+                else:
+                    parts.append(f"\033[{get_color_code(bg_color)}m")
+            parts.extend(style_codes)
+            return "".join(parts)
 
         # ---------------------------
         # Build output
@@ -400,13 +426,16 @@ class AdvancedLogger(CoreLoggerAPI):
 
             print(result)
         else:
-            message = payload.get("message", "")
+            message = payload.get("message") or ""
             if not isinstance(message, str):
                 message = repr(message)
-            output = f"{payload.get('prefix', '')}{message}{payload.get('suffix', '')}"
-            if style_codes or get_color_code(base_fg) != "37" or resolved_level_bg:
-                output = "".join(style_codes) + f"\033[{get_color_code(base_fg)}m" + output + Colors.RESET
-            print(output, end=payload.get("end", "\n"))
+            prefix = payload.get("prefix") or ""
+            suffix = payload.get("suffix") or ""
+            output = f"{prefix}{message}{suffix}"
+            ansi = _build_ansi(base_fg, resolved_level_bg)
+            if ansi:
+                output = ansi + output + Colors.RESET
+            print(output, end=payload.get("end") or "\n")
 
     def log(self, message: str, level: str = "INFO", tag: Optional[str] = None,
             color: Optional[str] = None, bg_color: Optional[str] = None,
