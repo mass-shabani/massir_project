@@ -131,8 +131,8 @@ class AdvancedLogger(CoreLoggerAPI):
         is_log = kind == "log"
 
         # Resolve colors with hierarchy
-        default_fg = self._get_config_value('get_log_color', 'template.log_color', 'bright_cyan')
-        default_bg = self._get_config_value('get_default_level_bg_color', 'template.default_level_bg_color', None)
+        default_fg = self._get_config_value('get_log_color', 'logs.log_color', 'default')
+        default_bg = self._get_config_value('get_default_level_bg_color', 'logs.default_level_bg_color', None)
 
         def _resolve_fg(raw_color, config_key, fallback):
             if raw_color:
@@ -142,15 +142,15 @@ class AdvancedLogger(CoreLoggerAPI):
             return self._get_config_value(config_key[0], config_key[1], fallback)
 
         if is_log:
-            base_fg = _resolve_fg(payload.get("color"), ('get_log_color', 'template.log_color'), 'bright_cyan')
+            base_fg = _resolve_fg(payload.get("color"), ('get_log_color', 'logs.log_color'), 'bright_cyan')
             level_colors = {}
             if hasattr(self.config, "get"):
                 level_colors = self.config.get("logs.level_colors", {}) or {}
             level = payload.get("level", "INFO")
-            default_level_color = self._get_config_value('get_default_level_color', 'template.default_level_color', base_fg)
-            default_timestamp_color = self._get_config_value('get_default_timestamp_color', 'template.default_timestamp_color', base_fg)
-            default_tag_color = self._get_config_value('get_default_tag_color', 'template.default_tag_color', base_fg)
-            default_text_color = self._get_config_value('get_default_text_color', 'template.default_text_color', base_fg)
+            default_level_color = self._get_config_value('get_default_level_color', 'logs.default_level_color', base_fg)
+            default_timestamp_color = self._get_config_value('get_default_timestamp_color', 'logs.default_timestamp_color', base_fg)
+            default_tag_color = self._get_config_value('get_default_tag_color', 'logs.default_tag_color', base_fg)
+            default_text_color = self._get_config_value('get_default_text_color', 'logs.default_text_color', base_fg)
             if default_level_color == "default":
                 default_level_color = base_fg
             if default_timestamp_color == "default":
@@ -168,10 +168,10 @@ class AdvancedLogger(CoreLoggerAPI):
             resolved_tag_bg = payload.get("tag_bg_color") or payload.get("bg_color") or default_bg
             resolved_text_bg = payload.get("text_bg_color") or payload.get("bg_color") or default_bg
         else:
-            base_fg = _resolve_fg(payload.get("color"), ('get_print_color', 'template.print_color'), 'white')
+            base_fg = _resolve_fg(payload.get("color"), ('get_print_color', 'logs.print_color'), 'default')
             resolved_level_color = resolved_timestamp_color = resolved_tag_color = resolved_text_color = base_fg
             resolved_level_bg = resolved_timestamp_bg = resolved_tag_bg = resolved_text_bg = (
-                payload.get("bg_color") or self._get_config_value('get_default_print_bg_color', 'template.default_print_bg_color', None)
+                payload.get("bg_color") or self._get_config_value('get_default_print_bg_color', 'logs.default_print_bg_color', None)
             )
 
         # Resolve styles with hierarchy

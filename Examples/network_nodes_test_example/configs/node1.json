@@ -14,15 +14,14 @@
 
     "template": {
         "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Test - NODE 1 (Socket Transport)                ║\n║  Version: 1.0.0                                          ║\n╚════════════════════════════════════════════════════════════╝\n",
-        "system_log_template": "[{level}]\t{message}",
-"banner_color": "magenta",
-    "log_color": "bright_cyan"
     },
 
     "logs": {
         "show_logs": true,
         "show_banner": true,
-        "debug_mode": true
+        "debug_mode": true,
+        "banner_color": "magenta",
+        "log_color": "bright_cyan"
     },
 
     "information": {

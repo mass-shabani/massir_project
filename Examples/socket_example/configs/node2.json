@@ -14,15 +14,14 @@
 
     "template": {
         "project_banner_template": "\n==========================================================\n\tSocket Example - NODE 2\n\t1.0.0\n\tMulti-node distributed socket network\n==========================================================\n",
-        "system_log_template": "[{level}]\t{message}",
-"banner_color": "cyan",
-    "log_color": "bright_cyan"
     },
 
     "logs": {
         "show_logs": true,
         "show_banner": true,
-        "debug_mode": true
+        "debug_mode": true,
+        "banner_color": "cyan",
+        "log_color": "bright_cyan"
     },
 
     "information": {

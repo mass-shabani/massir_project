@@ -13,16 +13,15 @@
   ],
   "template": {
     "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
-    "system_log_template": "[{level}]\t{message}",
-    "banner_color": "green",
-    "log_color": "bright_cyan"
   },
   "logs": {
     "show_logs": true,
     "show_banner": true,
     "hide_log_tags": ["", ""],
     "hide_log_levels": [],
-    "debug_mode": true
+    "debug_mode": true,
+    "banner_color": "green",
+    "log_color": "bright_cyan"
   },
   "information": {
     "project_name": "Module Loading Order Example",

@@ -22,9 +22,7 @@
   },
   "template": {
     "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
-    "system_log_template": "{timestamp}|{level}:\t\b{tag} > {message}",
-    "banner_color": "green",
-    "log_color": "bright_cyan"
+    "system_log_template": "{timestamp}|{level}:\t\b{tag} > {message}"
   },
   "logs": {
     "show_logs": true,
@@ -32,7 +30,11 @@
     "hide_log_tags": [],
     "hide_log_levels": [],
     "debug_mode": true,
-    "show_critical_levels": 3
+    "show_critical_levels": 3,
+    "banner_color": "green",
+    "log_color": "default",
+    "print_color": "default",
+    "default_text_bg_color": "red"
   },
   "information": {
     "project_name": "Massir Project",

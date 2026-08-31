@@ -90,9 +90,19 @@ class SystemLoggerDefaults:
         """
         return {
             "template": {
+                "project_banner_template": "\n\t{project_name}\n\t{project_version}\n\t{project_info}\n",
+                "system_log_template": "{timestamp}|{level}:\t\b[{tag}] {message}"
+            },
+            "logs": {
                 "banner_color": self.banner_color,
                 "log_color": self.log_color,
                 "print_color": self.print_color,
+                "show_logs": self.show_logs,
+                "show_banner": self.show_banner,
+                "hide_log_levels": list(self.hide_log_levels),
+                "hide_log_tags": list(self.hide_log_tags),
+                "debug_mode": self.debug_mode,
+                "show_critical_levels": self.show_critical_levels,
                 "default_level_color": self.default_level_color,
                 "default_timestamp_color": self.default_timestamp_color,
                 "default_tag_color": self.default_tag_color,
@@ -101,14 +111,6 @@ class SystemLoggerDefaults:
                 "default_timestamp_bg_color": self.default_timestamp_bg_color,
                 "default_tag_bg_color": self.default_tag_bg_color,
                 "default_text_bg_color": self.default_text_bg_color,
-            },
-            "logs": {
-                "show_logs": self.show_logs,
-                "show_banner": self.show_banner,
-                "hide_log_levels": list(self.hide_log_levels),
-                "hide_log_tags": list(self.hide_log_tags),
-                "debug_mode": self.debug_mode,
-                "show_critical_levels": self.show_critical_levels,
                 "default_log_bold": self.default_log_bold,
                 "default_log_underline": self.default_log_underline,
                 "default_log_italic": self.default_log_italic,

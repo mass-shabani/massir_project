@@ -28,7 +28,7 @@ DEFAULT_SETTINGS = {
     },
     "template": {
         "project_banner_template": "\n\t{project_name}\n\t{project_version}\n\t{project_info}\n",
-        "system_log_template": "[{level}]\t{message}"
+        "system_log_template": "{timestamp}|{level}:\t\b[{tag}] {message}"
     },
 }
 

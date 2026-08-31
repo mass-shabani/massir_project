@@ -22,12 +22,8 @@ async def main():
     initial_settings = {
         # "logs": {
         #     "show_banner": True,
-        #     "hide_log_tags": ["core_init", "core_hooks"],
+        #     "hide_log_tags": ["core_init", "core_hooks"]
         # },
-        "template": {
-            # "system_log_template": "{timestamp}|{level}:  {tag} > \t\t\b\b\b{message}",
-            # "banner_color": "yellow"
-        },
     }
     # Use local settings from the SubApp folder
 
