@@ -20,8 +20,8 @@ class ServerManagerModule(IModule):
         self.logger = None
         self.config = None
     
-    async def load(self, context):
-        """Get APIs from services."""
+    async def start(self, context):
+        """Start the HTTP server."""
         self.server_api = context.services.get("server_api")
         self.net_api = context.services.get("net_api")
         self.logger = context.services.get("core_logger")
@@ -29,9 +29,7 @@ class ServerManagerModule(IModule):
         
         if self.logger:
             self.logger.log("ServerManager module loaded", tag="server")
-    
-    async def start(self, context):
-        """Start the HTTP server."""
+        
         if not self.server_api:
             if self.logger:
                 self.logger.log("ServerAPI not available, cannot start server", level="ERROR", tag="server")
@@ -81,18 +79,6 @@ class ServerManagerModule(IModule):
                 f"HTTP server starting and Website available at http://{server_config.host}:{server_config.port}",
                 tag="server"
             )
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            status = self.server_api.status if self.server_api else None
-            if status and status.is_running:
-                self.logger.log(
-                    f"Server is running at {status.url}",
-                    tag="server"
-                )
-            else:
-                self.logger.log("ServerManager module is ready", tag="server")
     
     async def stop(self, context):
         """Stop the HTTP server."""

@@ -289,8 +289,8 @@ class TemplateServiceModule(IModule):
         self.config = None
         self.http_api = None
     
-    async def load(self, context):
-        """Initialize template service."""
+    async def start(self, context):
+        """Start template service and mount static files."""
         self.logger = context.services.get("core_logger")
         self.config = context.services.get("core_config")
         self.http_api = context.services.get("http_api")
@@ -309,9 +309,7 @@ class TemplateServiceModule(IModule):
         
         if self.logger:
             self.logger.log("TemplateService module loaded", tag="template")
-    
-    async def start(self, context):
-        """Start template service and mount static files."""
+        
         # Mount static files if http_api is available
         if self.http_api and self.template_service:
             # Get the underlying FastAPI app from HTTPAPI

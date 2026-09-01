@@ -18,18 +18,17 @@ class MainAppModule(IModule):
         self.http_api = None
         self.template_service = None
         self.logger = None
-    
-    async def load(self, context):
-        """Get APIs from services."""
-        self.http_api = context.services.get("http_api")
-        self.template_service = context.services.get("template_service")
-        self.logger = context.services.get("core_logger")
-        
-        if self.logger:
-            self.logger.log("MainApp module loaded", tag="main_app")
+        self.config = None
     
     async def start(self, context):
         """Register main website routes and menu items."""
+        self.http_api = context.services.get("http_api")
+        self.template_service = context.services.get("template_service")
+        self.logger = context.services.get("core_logger")
+        self.config = context.services.get("core_config")
+        
+        if self.logger:
+            self.logger.log("MainApp module loaded", tag="main_app")
         
         # Register menu items with template service
         if self.template_service:
