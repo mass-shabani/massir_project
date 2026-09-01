@@ -504,6 +504,12 @@ class RunOrderGroupManager:
         # Build available provides from already-loaded modules
         available_provides = self._get_available_provides(modules_registry)
         
+        # Include core framework services that are always available after bootstrap
+        if config_api_ref[0] is not None:
+            available_provides.setdefault("core_config", "core")
+        if logger_api_ref[0] is not None:
+            available_provides.setdefault("core_logger", "core")
+        
         # Instantiate and start each module
         for mod_info in sorted_modules:
             mod_name = mod_info.manifest["name"]

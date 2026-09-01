@@ -33,7 +33,7 @@
     "show_banner": true,
     "hide_log_tags": [],
     "hide_log_levels": [],
-    "debug_mode": true,
+    "debug_mode": false,
     "show_critical_levels": 3,
     "banner_color": "green",
     "log_color": "default",
