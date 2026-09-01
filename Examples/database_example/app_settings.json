@@ -1,50 +1,59 @@
 {
-    "app_name": "Database Example",
-    "version": "1.0.0",
-    "modules": [
-            {
-                "path": "{massir_dir}/modules",
-                "names": ["system_logger", "network_fastapi", "system_database"],
-                "type": "all"
-            },
-            {
-                "path": "{app_dir}/app",
-                "names": [
-                    "template_service", 
-                    "server_manager", 
-                    "main_app", 
-                    "db_connection", 
-                    "db_tables", 
-                    "db_data_editor", 
-                    "db_transactions", 
-                    "db_schema", 
-                    "db_dashboard", 
-                    "db_graph"
-                ],
-                "type": "all"
-            }
-        ],
-    "system": {
-        "auto_shutdown": false
+  "modules": [
+    {
+      "name": "system_modules",
+      "run_at": "on_start",
+      "path": "{massir_dir}/modules",
+      "names": [
+        "system_logger",
+        "network_fastapi",
+        "system_database"
+      ]
     },
-    "database": {
-        "connections": [
-            {
-                "name": "default",
-                "driver": "sqlite",
-                "path": "data/example.db",
-                "cache_enabled": true,
-                "cache_ttl": 300
-            }
-        ],
-        "cache": {
-            "enabled": true,
-            "ttl": 300,
-            "max_size": 1000
-        }
-    },
-    "network": {
-        "host": "127.0.0.1",
-        "port": 8000
+    {
+      "name": "app_modules",
+      "run_at": "on_start",
+      "path": "{app_dir}/app",
+      "names": [
+        "template_service",
+        "server_manager",
+        "main_app",
+        "db_connection",
+        "db_tables",
+        "db_data_editor",
+        "db_transactions",
+        "db_schema",
+        "db_dashboard",
+        "db_graph"
+      ]
     }
+  ],
+  "template": {
+    "project_banner_template": "\n-----------------------------------------------------------\n\t{project_name}\n\t{project_version}\n\t{project_info}\n-----------------------------------------------------------\n"
+  },
+  "information": {
+    "project_name": "Database Web Example",
+    "project_version": "1.0.0",
+    "project_info": "A simple DB web editor built with Massir framework"
+  },
+  "database": {
+    "connections": [
+      {
+        "name": "default",
+        "driver": "sqlite",
+        "path": "data/example.db",
+        "cache_enabled": true,
+        "cache_ttl": 300
+      }
+    ],
+    "cache": {
+      "enabled": true,
+      "ttl": 300,
+      "max_size": 1000
+    }
+  },
+  "network": {
+    "host": "127.0.0.1",
+    "port": 8000
+  }
 }
