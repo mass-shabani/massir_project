@@ -613,18 +613,18 @@ class TestDatabaseModule:
         assert "database_service" in module.provides
     
     @pytest.mark.asyncio
-    async def test_module_load_creates_service(self, module, mock_context):
-        """Test module load creates database service."""
-        await module.load(mock_context)
+    async def test_module_start_creates_service(self, module, mock_context):
+        """Test module start creates database service."""
+        await module.start(mock_context)
         
         service = mock_context.services.get("database_service")
         assert service is not None
         assert isinstance(service, DatabaseService)
     
     @pytest.mark.asyncio
-    async def test_module_load_registers_types(self, module, mock_context):
-        """Test module load registers types."""
-        await module.load(mock_context)
+    async def test_module_start_registers_types(self, module, mock_context):
+        """Test module start registers types."""
+        await module.start(mock_context)
         
         types = mock_context.services.get("database_types")
         assert types is not None
@@ -635,30 +635,23 @@ class TestDatabaseModule:
     @pytest.mark.asyncio
     async def test_module_start_without_configs(self, module, mock_context):
         """Test module start without configs."""
-        await module.load(mock_context)
         await module.start(mock_context)
         # Should not raise
     
     @pytest.mark.asyncio
-    async def test_module_ready_does_not_raise(self, module, mock_context):
-        """Test module ready doesn't raise."""
-        await module.load(mock_context)
-        await module.ready(mock_context)
-        # Should not raise
+    
     
     @pytest.mark.asyncio
     async def test_module_stop_does_not_raise(self, module, mock_context):
         """Test module stop doesn't raise."""
-        await module.load(mock_context)
+        await module.start(mock_context)
         await module.stop(mock_context)
         # Should not raise
     
     @pytest.mark.asyncio
     async def test_module_full_lifecycle(self, module, mock_context):
         """Test full module lifecycle."""
-        await module.load(mock_context)
         await module.start(mock_context)
-        await module.ready(mock_context)
         await module.stop(mock_context)
         
         # Service should still be available

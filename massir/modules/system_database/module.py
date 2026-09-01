@@ -27,14 +27,15 @@ class DatabaseModule(IModule):
         self._logger = None
         self._config = None
     
-    async def load(self, context):
-        """Initialize database service."""
+    async def start(self, context):
+        """Initialize database service and start database connections from configuration."""
         self._logger = context.services.get("core_logger")
         self._config = context.services.get("core_config")
         
         # Create database service
         self._service = DatabaseService()
-        self._service.set_logger(self._logger)
+        if self._logger:
+            self._service.set_logger(self._logger)
         
         # Register service
         context.services.set("database_service", self._service)
@@ -51,12 +52,7 @@ class DatabaseModule(IModule):
         })
         
         if self._logger:
-            self._logger.log("DatabaseModule loaded", tag="database")
-    
-    async def start(self, context):
-        """Start database connections from configuration."""
-        if not self._service:
-            return
+            self._logger.log("DatabaseModule started", tag="database")
         
         # Get database configurations from settings
         db_configs = self._get_database_configs()
@@ -85,11 +81,6 @@ class DatabaseModule(IModule):
                 level="WARNING",
                 tag="database"
             )
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self._logger:
-            self._logger.log("DatabaseModule is ready", tag="database")
     
     async def stop(self, context):
         """Stop database service and close all connections."""
