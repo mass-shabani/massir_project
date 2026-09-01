@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch, MagicMock
 import asyncio
 
 from massir.modules.network_fastapi.module import NetworkFastAPIModule
-from massir.modules.network_fastapi.api.http import HTTPAPI, HTTPResponse
+from massir.modules.system_logger.core.colors import Colors
+from massir.modules.network_fastapi.api.http import HTTPAPI, HTTPResponse, format_http_request
 from massir.modules.network_fastapi.api.net import NetAPI, NetworkInfo, PortInfo
 from massir.modules.network_fastapi.api.router import RouterAPI
 from massir.modules.network_fastapi.api.server import ServerAPI, ServerConfig, ServerStatus, UvicornLogHandler
@@ -657,9 +658,9 @@ class TestNetworkFastAPIModule:
         assert "server_api" in module.provides
     
     @pytest.mark.asyncio
-    async def test_module_load_creates_services(self, module, mock_context):
-        """Test module load creates services."""
-        await module.load(mock_context)
+    async def test_module_start_creates_services(self, module, mock_context):
+        """Test module start creates services."""
+        await module.start(mock_context)
         
         assert mock_context.services.get("http_api") is not None
         assert mock_context.services.get("router_api") is not None
@@ -667,32 +668,114 @@ class TestNetworkFastAPIModule:
         assert mock_context.services.get("server_api") is not None
     
     @pytest.mark.asyncio
-    async def test_module_load_creates_fastapi_app(self, module, mock_context):
-        """Test module load creates FastAPI app."""
-        await module.load(mock_context)
+    async def test_module_start_creates_fastapi_app(self, module, mock_context):
+        """Test module start creates FastAPI app."""
+        await module.start(mock_context)
         
         assert module.app is not None
     
     @pytest.mark.asyncio
     async def test_module_start_does_not_raise(self, module, mock_context):
         """Test module start doesn't raise."""
-        await module.load(mock_context)
+        await module.start(mock_context)
         await module.start(mock_context)
         # Should not raise
     
     @pytest.mark.asyncio
     async def test_module_stop_does_not_raise(self, module, mock_context):
         """Test module stop doesn't raise."""
-        await module.load(mock_context)
+        await module.start(mock_context)
         await module.stop(mock_context)
         # Should not raise
     
     @pytest.mark.asyncio
     async def test_module_full_lifecycle(self, module, mock_context):
         """Test full module lifecycle."""
-        await module.load(mock_context)
+        await module.start(mock_context)
         await module.start(mock_context)
         await module.stop(mock_context)
         
         # Services should still be available
         assert mock_context.services.get("http_api") is not None
+
+
+class TestFormatHttpRequest:
+    """Tests for format_http_request function."""
+    
+    def test_format_http_request_get_200(self):
+        """Test formatting GET request with 200 status."""
+
+        message = "192.168.1.1:8080 - \"GET /api/users HTTP/1.1\" 200"
+        result = format_http_request(message)
+        
+        assert "GET" in result
+        assert "/api/users" in result
+        assert "200" in result
+        assert Colors.RESET in result
+    
+    def test_format_http_request_post_201(self):
+        """Test formatting POST request with 201 status."""
+
+        message = "192.168.1.1:8080 - \"POST /api/users HTTP/1.1\" 201"
+        result = format_http_request(message)
+        
+        assert "POST" in result
+        assert "201" in result
+    
+    def test_format_http_request_delete_204(self):
+        """Test formatting DELETE request with 204 status."""
+
+        message = "192.168.1.1:8080 - \"DELETE /api/users/1 HTTP/1.1\" 204"
+        result = format_http_request(message)
+        
+        assert "DELETE" in result
+        assert "204" in result
+    
+    def test_format_http_request_error_500(self):
+        """Test formatting request with 500 status."""
+
+        message = "192.168.1.1:8080 - \"GET /api/error HTTP/1.1\" 500"
+        result = format_http_request(message)
+        
+        assert "500" in result
+        assert Colors.BRIGHT_RED in result
+    
+    def test_format_http_request_client_error_404(self):
+        """Test formatting request with 404 status."""
+
+        message = "192.168.1.1:8080 - \"GET /api/notfound HTTP/1.1\" 404"
+        result = format_http_request(message)
+        
+        assert "404" in result
+    
+    def test_format_http_request_redirect_301(self):
+        """Test formatting request with 301 status."""
+
+        message = "192.168.1.1:8080 - \"GET /old HTTP/1.1\" 301"
+        result = format_http_request(message)
+        
+        assert "301" in result
+    
+    def test_format_http_request_non_http_message(self):
+        """Test formatting non-HTTP message returns unchanged."""
+
+        message = "This is a regular log message"
+        result = format_http_request(message)
+        
+        assert result == message
+    
+    def test_format_http_request_put_method(self):
+        """Test formatting PUT request."""
+
+        message = "192.168.1.1:8080 - \"PUT /api/users/1 HTTP/1.1\" 200"
+        result = format_http_request(message)
+        
+        assert "PUT" in result
+    
+    def test_format_http_request_patch_method(self):
+        """Test formatting PATCH request."""
+
+        message = "192.168.1.1:8080 - \"PATCH /api/users/1 HTTP/1.1\" 200"
+        result = format_http_request(message)
+        
+        assert "PATCH" in result

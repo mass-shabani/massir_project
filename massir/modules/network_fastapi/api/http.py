@@ -4,6 +4,7 @@ High-performance HTTP API abstraction for FastAPI.
 This module provides a thin wrapper around FastAPI to avoid performance overhead
 while hiding FastAPI imports from consuming modules.
 """
+import re
 from typing import Any, Callable, Dict, List, Optional, Union, TypeVar, Generic
 from functools import wraps
 from dataclasses import dataclass
@@ -274,3 +275,48 @@ class HTTPAPI:
     RedirectResponse = RedirectResponse
     PlainTextResponse = PlainTextResponse
     StaticFiles = StaticFiles
+
+
+def format_http_request(message: str) -> str:
+    """
+    Format HTTP request log messages with enhanced styling.
+    
+    Args:
+        message: Raw HTTP request log message
+        
+    Returns:
+        Formatted message with ANSI color codes
+    """
+    BRIGHT_RED = '\033[91m'
+    BRIGHT_YELLOW = '\033[93m'
+    BRIGHT_BLUE = '\033[94m'
+    BRIGHT_GREEN = '\033[92m'
+    BRIGHT_MAGENTA = '\033[95m'
+    BRIGHT_WHITE = '\033[97m'
+    RESET = '\033[0m'
+    
+    http_pattern = r'^(\d+\.\d+\.\d+\.\d+):(\d+)\s+-\s+"(\w+)\s+([^\s]+)\s+([^"]+)"\s+(\d+)'
+    match = re.match(http_pattern, message)
+    if match:
+        ip, port, method, path, protocol, status = match.groups()
+        status_code = int(status)
+        
+        if status_code >= 500:
+            status_color = BRIGHT_RED
+        elif status_code >= 400:
+            status_color = BRIGHT_YELLOW
+        elif status_code >= 300:
+            status_color = BRIGHT_BLUE
+        else:
+            status_color = BRIGHT_GREEN
+        
+        method_colors = {
+            'GET': BRIGHT_GREEN,
+            'POST': BRIGHT_BLUE,
+            'PUT': BRIGHT_YELLOW,
+            'DELETE': BRIGHT_RED,
+            'PATCH': BRIGHT_MAGENTA,
+        }
+        method_color = method_colors.get(method, BRIGHT_WHITE)
+        return f"{method_color}{method}{RESET} {path} {status_color}{status}{RESET}"
+    return message

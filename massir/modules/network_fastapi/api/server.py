@@ -11,6 +11,8 @@ from typing import Optional, Callable, Any
 from dataclasses import dataclass
 import uvicorn
 
+from .http import format_http_request
+
 
 @dataclass
 class ServerConfig:
@@ -37,9 +39,10 @@ class UvicornLogHandler(logging.Handler):
     Custom log handler that forwards uvicorn logs to a callback.
     """
     
-    def __init__(self, log_callback: Callable[[str, str, Optional[str]], None]):
+    def __init__(self, log_callback: Callable[[str, str, Optional[str]], None], format_http_request: Optional[Callable[[str], str]] = None):
         super().__init__()
         self.log_callback = log_callback
+        self.format_http_request = format_http_request
     
     def emit(self, record: logging.LogRecord):
         """Emit a log record through the callback."""
@@ -51,6 +54,10 @@ class UvicornLogHandler(logging.Handler):
         # Suppress CancelledError traceback during shutdown (normal behavior)
         if "CancelledError" in message:
             return
+        
+        # Format HTTP access logs
+        if "access" in record.name and " - " in message and '"' in message:
+            message = format_http_request(message)
         
         # Map logging levels
         level_map = {

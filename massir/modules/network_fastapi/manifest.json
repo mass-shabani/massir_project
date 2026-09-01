@@ -1,6 +1,6 @@
 {
     "name": "network_fastapi",
-    "version": "1.0",
+    "version": "0.2",
     "enabled": true,
     "entrypoint": "NetworkFastAPIModule",
     "provides": ["http_api", "router_api", "net_api", "server_api"],

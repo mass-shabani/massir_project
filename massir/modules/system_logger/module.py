@@ -52,10 +52,6 @@ class SystemLoggerModule(IModule):
         if app and hasattr(app, '_logger_api_ref'):
             app._logger_api_ref[0] = my_logger
         
-        # Register lifecycle hooks
-        app.register_hook(SystemHook.ON_MODULE_STARTED, self._on_module_started)
-        app.register_hook(SystemHook.ON_SETTINGS_LOADED, self._on_settings_loaded)
-        
         # Log activation
         my_logger.log("System Logger Module Active.", tag="sys_logger")
     
@@ -70,15 +66,3 @@ class SystemLoggerModule(IModule):
         if logger:
             logger.log("System Logger Module stopping.", tag="sys_logger")
     
-    def _on_settings_loaded(self):
-        """Handle settings loaded event."""
-        pass
-    
-    def _on_module_started(self, module_instance):
-        """
-        Handle module started event.
-        
-        Args:
-            module_instance: The module instance that just started
-        """
-        pass

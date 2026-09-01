@@ -89,36 +89,6 @@ class AdvancedLogger(CoreLoggerAPI):
 
         return True
 
-    def _format_http_request(self, message: str) -> str:
-        """
-        Format HTTP request log messages with enhanced styling.
-        """
-        http_pattern = r'^(\d+\.\d+\.\d+\.\d+):(\d+)\s+-\s+"(\w+)\s+([^\s]+)\s+([^"]+)"\s+(\d+)'
-        match = re.match(http_pattern, message)
-        if match:
-            ip, port, method, path, protocol, status = match.groups()
-            status_code = int(status)
-            
-            if status_code >= 500:
-                status_color = Colors.BRIGHT_RED
-            elif status_code >= 400:
-                status_color = Colors.BRIGHT_YELLOW
-            elif status_code >= 300:
-                status_color = Colors.BRIGHT_BLUE
-            else:
-                status_color = Colors.BRIGHT_GREEN
-            
-            method_colors = {
-                'GET': Colors.BRIGHT_GREEN,
-                'POST': Colors.BRIGHT_BLUE,
-                'PUT': Colors.BRIGHT_YELLOW,
-                'DELETE': Colors.BRIGHT_RED,
-                'PATCH': Colors.BRIGHT_MAGENTA,
-            }
-            method_color = method_colors.get(method, Colors.BRIGHT_WHITE)
-            return f"{method_color}{method}{Colors.RESET} {path} {status_color}{status}{Colors.RESET}"
-        return message
-
     def _print_formatted(self, kind: str, payload: dict):
         """
         Unified formatting and printing for log and print outputs.

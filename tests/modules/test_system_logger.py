@@ -228,97 +228,6 @@ class TestAdvancedLoggerShouldLog:
         assert logger._should_log("CORE") == False
 
 
-class TestAdvancedLoggerFormatHttpRequest:
-    """Tests for AdvancedLogger._format_http_request method."""
-    
-    def test_format_http_request_get_200(self):
-        """Test formatting GET request with 200 status."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"GET /api/users HTTP/1.1\" 200"
-        result = logger._format_http_request(message)
-        
-        assert "GET" in result
-        assert "/api/users" in result
-        assert "200" in result
-        assert Colors.RESET in result
-    
-    def test_format_http_request_post_201(self):
-        """Test formatting POST request with 201 status."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"POST /api/users HTTP/1.1\" 201"
-        result = logger._format_http_request(message)
-        
-        assert "POST" in result
-        assert "201" in result
-    
-    def test_format_http_request_delete_204(self):
-        """Test formatting DELETE request with 204 status."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"DELETE /api/users/1 HTTP/1.1\" 204"
-        result = logger._format_http_request(message)
-        
-        assert "DELETE" in result
-        assert "204" in result
-    
-    def test_format_http_request_error_500(self):
-        """Test formatting request with 500 status."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"GET /api/error HTTP/1.1\" 500"
-        result = logger._format_http_request(message)
-        
-        assert "500" in result
-        assert Colors.BRIGHT_RED in result
-    
-    def test_format_http_request_client_error_404(self):
-        """Test formatting request with 404 status."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"GET /api/notfound HTTP/1.1\" 404"
-        result = logger._format_http_request(message)
-        
-        assert "404" in result
-    
-    def test_format_http_request_redirect_301(self):
-        """Test formatting request with 301 status."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"GET /old HTTP/1.1\" 301"
-        result = logger._format_http_request(message)
-        
-        assert "301" in result
-    
-    def test_format_http_request_non_http_message(self):
-        """Test formatting non-HTTP message returns unchanged."""
-        logger = AdvancedLogger(None)
-        
-        message = "This is a regular log message"
-        result = logger._format_http_request(message)
-        
-        assert result == message
-    
-    def test_format_http_request_put_method(self):
-        """Test formatting PUT request."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"PUT /api/users/1 HTTP/1.1\" 200"
-        result = logger._format_http_request(message)
-        
-        assert "PUT" in result
-    
-    def test_format_http_request_patch_method(self):
-        """Test formatting PATCH request."""
-        logger = AdvancedLogger(None)
-        
-        message = "192.168.1.1:8080 - \"PATCH /api/users/1 HTTP/1.1\" 200"
-        result = logger._format_http_request(message)
-        
-        assert "PATCH" in result
-
-
 class TestAdvancedLoggerLog:
     """Tests for AdvancedLogger.log method."""
     
@@ -482,14 +391,6 @@ class TestSystemLoggerModule:
         
         colors = mock_context.services.get("log_colors")
         assert colors == Colors
-    
-    @pytest.mark.asyncio
-    async def test_module_load_registers_hooks(self, module, mock_context):
-        """Test module start registers event hooks."""
-        await module.start(mock_context)
-        
-        app = mock_context.get_app()
-        assert app.register_hook.called
     
     @pytest.mark.asyncio
     async def test_module_start_updates_config(self, module, mock_context, capsys):
