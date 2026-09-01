@@ -20,21 +20,13 @@ class DbConnectionModule(IModule):
     other database-related modules (tables, data_editor, transactions, schema, dashboard).
     """
     
-    def __init__(self):
-        self.http_api = None
-        self.logger = None
-        self.template = None
-        self.menu_manager = None
-        self.connection_service = None
-        self.log_manager = None
-    
-    async def load(self, context: ModuleContext):
-        """Get services and initialize connection service."""
-        self.http_api = context.services.get("http_api")
-        self.logger = context.services.get("core_logger")
-        self.template = context.services.get("template_service")
-        self.menu_manager = context.services.get("menu_manager")
-        self.path_manager = context.services.get("core_path")
+    async def start(self, context: ModuleContext):
+        """Get services, initialize connection service, register routes and menu items."""
+        http_api = context.services.get("http_api")
+        logger = context.services.get("core_logger")
+        template = context.services.get("template_service")
+        menu_manager = context.services.get("menu_manager")
+        path_manager = context.services.get("core_path")
         
         # Get database_service from system_database module (provided via context)
         database_service = context.services.get("database_service")
@@ -43,12 +35,12 @@ class DbConnectionModule(IModule):
         database_types = context.services.get("database_types")
         
         # Create a LogManager instance for the connection service
-        self.log_manager = LogManager(self.logger)
+        log_manager = LogManager(logger)
         
         # Initialize connection service with services from context
         self.connection_service = ConnectionService(
-            log_manager=self.log_manager,
-            path_manager=self.path_manager,
+            log_manager=log_manager,
+            path_manager=path_manager,
             database_service=database_service,
             database_types=database_types
         )
@@ -61,20 +53,18 @@ class DbConnectionModule(IModule):
             "ConnectionInfo": type(self.connection_service.get_connection().__class__) if self.connection_service.get_connection() else None,
             "LogManager": LogManager
         })
-    
-    async def start(self, context: ModuleContext):
-        """Register routes and menu items."""
+        
         # Register web UI routes
         register_routes(
-            self.http_api, 
-            self.template, 
+            http_api, 
+            template, 
             self.connection_service, 
-            self.logger
+            logger
         )
         
         # Register menu item
-        if self.menu_manager:
-            self.menu_manager.register_menu(
+        if menu_manager:
+            menu_manager.register_menu(
                 id="db_connection",
                 label="Connection",
                 url="/db/connection",
@@ -91,5 +81,6 @@ class DbConnectionModule(IModule):
                 await self.connection_service.disconnect(conn_name)
         
         # Unregister menu items
-        if self.menu_manager:
-            self.menu_manager.unregister_menu("db_connection")
+        menu_manager = context.services.get("menu_manager")
+        if menu_manager:
+            menu_manager.unregister_menu("db_connection")

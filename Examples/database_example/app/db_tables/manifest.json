@@ -1,7 +1,6 @@
 {
     "name": "db_tables",
     "version": "1.0.0",
-    "type": "application",
     "entrypoint": "DbTablesModule",
     "description": "Database tables management - create, drop, and manage tables",
     "enabled": true,

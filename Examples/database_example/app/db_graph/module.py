@@ -18,17 +18,7 @@ from .routes  import register_routes
 
 class DbGraphModule(IModule):
 
-    def __init__(self):
-        self.http_api           = None
-        self.logger             = None
-        self.template           = None
-        self.menu_manager       = None
-        self.graph_service      = None
-        self.connection_service = None
-
-    # ── lifecycle ──────────────────────────────────────────────────
-
-    async def load(self, context: ModuleContext):
+    async def start(self, context: ModuleContext):
         self.http_api           = context.services.get("http_api")
         self.logger             = context.services.get("core_logger")
         self.template           = context.services.get("template_service")
@@ -37,10 +27,6 @@ class DbGraphModule(IModule):
 
         self.graph_service = GraphService(self.connection_service)
 
-        if self.logger:
-            self.logger.log("DbGraph loaded", tag="db_graph")
-
-    async def start(self, context: ModuleContext):
         register_routes(
             self.http_api,
             self.template,

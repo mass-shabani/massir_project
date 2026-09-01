@@ -1,7 +1,6 @@
 {
     "name": "db_dashboard",
     "version": "1.0.0",
-    "type": "application",
     "entrypoint": "DbDashboardModule",
     "description": "Database dashboard - view database statistics and information",
     "enabled": true,

@@ -1,7 +1,6 @@
 {
     "name": "db_transactions",
     "version": "1.0.0",
-    "type": "application",
     "entrypoint": "DbTransactionsModule",
     "description": "Database transactions management - manage database transactions",
     "enabled": true,

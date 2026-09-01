@@ -8,33 +8,26 @@ from .routes.pages import register_routes
 class MainAppModule(IModule):
     """Main application module providing home and about pages."""
     
-    _logger = None
-    _http_api = None
-    _template = None
-    _menu_manager = None
-    
-    async def load(self, context: ModuleContext):
-        """Load the main app module."""
-        self._logger = context.services.get("core_logger")
-        self._http_api = context.services.get("http_api")
-        self._template = context.services.get("template_service")
-        self._menu_manager = context.services.get("menu_manager")
-    
     async def start(self, context: ModuleContext):
-        """Start the main app module - register routes and menus."""
+        """Start the main app module - load services, register routes and menus."""
+        logger = context.services.get("core_logger")
+        http_api = context.services.get("http_api")
+        template = context.services.get("template_service")
+        menu_manager = context.services.get("menu_manager")
+        
         # Register routes
-        register_routes(self._http_api, self._template, self._logger)
+        register_routes(http_api, template, logger)
         
         # Register menu items
-        if self._menu_manager:
-            self._menu_manager.register_menu(
+        if menu_manager:
+            menu_manager.register_menu(
                 id="main_app_home",
                 label="Home",
                 url="/",
                 icon="🏠",
                 order=0
             )
-            self._menu_manager.register_menu(
+            menu_manager.register_menu(
                 id="main_app_about",
                 label="About",
                 url="/about",
@@ -44,7 +37,7 @@ class MainAppModule(IModule):
     
     async def stop(self, context: ModuleContext):
         """Stop the main app module."""
-        # Unregister menu items
-        if self._menu_manager:
-            self._menu_manager.unregister_menu("main_app_home")
-            self._menu_manager.unregister_menu("main_app_about")
+        menu_manager = context.services.get("menu_manager")
+        if menu_manager:
+            menu_manager.unregister_menu("main_app_home")
+            menu_manager.unregister_menu("main_app_about")

@@ -15,16 +15,10 @@ class TemplateServiceModule(IModule):
     Template service module providing unified theme for web modules.
     """
     
-    def __init__(self):
-        self.http_api = None
-        self.logger = None
-        self.menu_manager = None
-        self.renderer = None
-    
-    async def load(self, context: ModuleContext):
-        """Get services and initialize."""
-        self.http_api = context.services.get("http_api")
-        self.logger = context.services.get("core_logger")
+    async def start(self, context: ModuleContext):
+        """Initialize services and register routes."""
+        http_api = context.services.get("http_api")
+        logger = context.services.get("core_logger")
         
         # Initialize services
         self.menu_manager = MenuManager()
@@ -33,31 +27,30 @@ class TemplateServiceModule(IModule):
         # Register services
         context.services.set("template_service", self)
         context.services.set("menu_manager", self.menu_manager)
+        
+        # Register routes and static files
+        self._register_static_routes(http_api)
     
-    async def start(self, context: ModuleContext):
-        """Register routes and static files."""
-        self._register_static_routes()
-    
-    def _register_static_routes(self):
+    def _register_static_routes(self, http_api):
         """Register static file routes."""
         import os
         from pathlib import Path
         
         static_dir = Path(__file__).parent / "static"
         
-        @self.http_api.get("/static/template/css/{filename}")
-        async def serve_css(request: self.http_api.Request):
+        @http_api.get("/static/template/css/{filename}")
+        async def serve_css(request: http_api.Request):
             """Serve CSS files."""
             filename = request.path_params["filename"]
             file_path = static_dir / "css" / filename
             
             if not file_path.exists():
-                return self.http_api.PlainTextResponse(content="Not Found", status_code=404)
+                return http_api.PlainTextResponse(content="Not Found", status_code=404)
             
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            return self.http_api.PlainTextResponse(
+            return http_api.PlainTextResponse(
                 content=content,
                 media_type="text/css"
             )
@@ -103,4 +96,3 @@ class TemplateServiceModule(IModule):
                     method: str = "POST") -> str:
         """Render a form."""
         return self.renderer.render_form(action, fields, submit_text, method)
-    

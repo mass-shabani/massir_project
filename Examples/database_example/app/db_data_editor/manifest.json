@@ -1,7 +1,6 @@
 {
     "name": "db_data_editor",
     "version": "1.0.0",
-    "type": "application",
     "entrypoint": "DbDataEditorModule",
     "description": "Database data editor - view, edit, add, and delete records",
     "enabled": true,

@@ -1,7 +1,6 @@
 {
     "name": "db_connection",
     "version": "1.0.0",
-    "type": "application",
     "entrypoint": "DbConnectionModule",
     "description": "Database connection management service - provides connection services to other modules",
     "enabled": true,
