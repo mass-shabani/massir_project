@@ -42,8 +42,8 @@ class NetworkWebSocketModule(IModule):
         self._config: dict = {}
         self._module_dir: Path = Path(__file__).parent
     
-    async def load(self, context):
-        """Load the WebSocket module."""
+    async def start(self, context):
+        """Load config, create API, register service, and start the WebSocket module."""
         self._logger = context.services.get("core_logger")
         core_config = context.services.get("core_config")
         
@@ -58,7 +58,7 @@ class NetworkWebSocketModule(IModule):
             self._resolve_path_placeholders(context.app_dir)
         
         self._validate_config()
-        
+
         # Create API
         self._api = WebSocketAPI(self._config, self._logger)
         
@@ -85,27 +85,15 @@ class NetworkWebSocketModule(IModule):
         
         if self._logger:
             self._logger.log(
-                "NetworkWebSocketModule loaded - WebSocket transport ready",
+                "NetworkWebSocketModule started - WebSocket transport ready",
                 tag="websocket"
             )
-    
-    async def start(self, context):
-        """Start the WebSocket module."""
+        
         if self._api:
             await self._api.start()
         
         if self._logger:
             self._logger.log("NetworkWebSocketModule started", tag="websocket")
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self._logger and self._api:
-            info = self._api.get_info()
-            self._logger.log(
-                f"NetworkWebSocketModule ready - "
-                f"pool max_per_peer: {info['pool']['max_per_peer']}",
-                tag="websocket"
-            )
     
     async def stop(self, context):
         """Stop the WebSocket module."""

@@ -35,9 +35,9 @@ class NetworkSocketModule(IModule):
         self._config: dict = {}
         self._module_dir: Path = Path(__file__).parent
     
-    async def load(self, context):
+    async def start(self, context):
         """
-        Load the socket module.
+        Start the socket module.
         
         Reads configuration from:
         1. config.json (default settings)
@@ -91,27 +91,15 @@ class NetworkSocketModule(IModule):
         
         if self._logger:
             self._logger.log(
-                "NetworkSocketModule loaded - Message/Stream modes ready",
+                "NetworkSocketModule started - Message/Stream modes ready",
                 tag="socket"
             )
-    
-    async def start(self, context):
-        """Start the socket module."""
+        
         if self._api:
             await self._api.start()
         
         if self._logger:
             self._logger.log("NetworkSocketModule started", tag="socket")
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self._logger and self._api:
-            info = self._api.get_info()
-            self._logger.log(
-                f"NetworkSocketModule ready - "
-                f"pool max_per_peer: {info['pool']['max_per_peer']}",
-                tag="socket"
-            )
     
     async def stop(self, context):
         """Stop the socket module."""
@@ -245,7 +233,7 @@ class NetworkSocketModule(IModule):
             raise SocketConfigError(
                 f"framing.max_message_size_bytes must be positive, got {max_size}"
             )
-        
+
         # Validate heartbeat
         hb = self._config.get("heartbeat", {})
         interval = hb.get("interval_seconds", 30.0)
@@ -255,7 +243,7 @@ class NetworkSocketModule(IModule):
                 f"heartbeat.timeout_seconds ({timeout}) must be greater than "
                 f"interval_seconds ({interval})"
             )
-        
+
         # Validate pool
         pool = self._config.get("pool", {})
         max_per_peer = pool.get("max_connections_per_peer", 5)
