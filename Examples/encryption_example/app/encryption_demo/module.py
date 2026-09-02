@@ -26,7 +26,8 @@ class EncryptionDemoModule(IModule):
         """Load services, initialize encryption, register service, and run demo if configured."""
         self.encryption = context.services.get('encryption_api')
         self.logger = context.services.get('core_logger')
-        self._encrypted_data_cls = context.services.get('encryption_types', {}).get('EncryptedData')
+        encryption_types = context.services.get('encryption_types') or {}
+        self._encrypted_data_cls = encryption_types.get('EncryptedData')
 
         core_config = context.services.get('core_config')
         if core_config:
