@@ -35,9 +35,9 @@ class EncryptionModule(IModule):
         self._config: dict = {}
         self._module_dir: Path = Path(__file__).parent
     
-    async def load(self, context):
+    async def start(self, context):
         """
-        Load the encryption module.
+        Start the encryption module.
         
         Reads configuration from:
         1. config.json (default settings in module directory)
@@ -66,28 +66,17 @@ class EncryptionModule(IModule):
         context.services.set("encryption_api", self._api)
         
         if self._logger:
-            self._logger.log(
-                "EncryptionModule loaded - AES-256-GCM, RSA-4096, HMAC-SHA256 ready",
-                tag="encryption"
-            )
-    
-    async def start(self, context):
-        """Start the encryption module (no-op for stateless module)."""
-        if self._logger:
             log_ops = self._config.get("logging", {}).get("log_operations", False)
             if log_ops:
                 self._logger.log(
                     "EncryptionModule started - ready to serve requests",
                     tag="encryption"
                 )
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self._logger:
-            self._logger.log(
-                "EncryptionModule is ready",
-                tag="encryption"
-            )
+            else:
+                self._logger.log(
+                    "EncryptionModule started - AES-256-GCM, RSA-4096, HMAC-SHA256 ready",
+                    tag="encryption"
+                )
     
     async def stop(self, context):
         """Stop the encryption module."""
