@@ -20,7 +20,7 @@
     }
   ],
   "system": {
-    "auto_shutdown": false
+    "auto_shutdown": true
   },
   "template": {
     "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
@@ -31,10 +31,10 @@
     "show_banner": true,
     "hide_log_tags": [],
     "hide_log_levels": [],
-    "debug_mode": true,
+    "debug_mode": false,
     "show_critical_levels": 3,
     "banner_color": "magenta",
-    "log_color": "bright_cyan"
+    "log_color": "default"
   },
   "information": {
     "project_name": "Encryption Example",
