@@ -36,9 +36,9 @@ class NetworkSSLModule(IModule):
         self._config: dict = {}
         self._module_dir: Path = Path(__file__).parent
     
-    async def load(self, context):
+    async def start(self, context):
         """
-        Load the SSL module.
+        Start the SSL module.
         
         Reads configuration from:
         1. config.json (default settings in module directory)
@@ -72,14 +72,12 @@ class NetworkSSLModule(IModule):
         
         if self._logger:
             self._logger.log(
-                f"NetworkSSLModule loaded - TLS {self._config.get('tls_version', '1.3')} ready",
+                f"NetworkSSLModule started - TLS {self._config.get('tls_version', '1.3')} ready",
                 tag="ssl"
             )
-    
-    async def start(self, context):
-        """Start the SSL module and begin auto-reload monitoring."""
+        
+        # Pre-load server context to catch certificate issues early
         if self._api:
-            # Pre-load server context to catch certificate issues early
             try:
                 self._api.get_server_context("default")
             except Exception as e:
@@ -97,16 +95,6 @@ class NetworkSSLModule(IModule):
         if self._logger:
             self._logger.log(
                 "NetworkSSLModule started",
-                tag="ssl"
-            )
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self._logger:
-            info = self._api.get_info() if self._api else {}
-            self._logger.log(
-                f"NetworkSSLModule ready - "
-                f"{info.get('cached_contexts', {}).get('server', 0)} server context(s) cached",
                 tag="ssl"
             )
     
