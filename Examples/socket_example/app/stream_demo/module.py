@@ -43,8 +43,14 @@ class StreamDemoModule(IModule):
         self.colors = None
         self._config: Dict = {}
     
-    async def load(self, context):
-        """Load the module and retrieve required services."""
+    async def start(self, context):
+        """
+        Start the stream demo:
+        1. Retrieve required services from the context
+        2. Load configuration from app_settings.json
+        3. Register this module as 'stream_service' for other modules
+        4. Auto-send test file if configured
+        """
         self.socket_api = context.services.get("socket_api")
         self.logger = context.services.get("core_logger")
         self.colors = context.services.get("log_colors")
@@ -58,27 +64,12 @@ class StreamDemoModule(IModule):
         context.services.set("stream_service", self)
         
         if self.logger:
-            self.logger.log("StreamDemoModule loaded", tag="stream_demo")
-    
-    async def start(self, context):
-        """Start stream demo if configured to auto-send."""
+            self.logger.log("StreamDemoModule started", tag="stream_demo")
+        
         if self._config.get("auto_send_on_start", False):
             target = self._config.get("target_peer")
             if target:
                 await self.send_test_file(target)
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            self._print_box(
-                title="🌊 STREAM DEMO READY",
-                lines=[
-                    "Mode:  Zero-copy byte passthrough",
-                    "Usage: stream_service.send_test_file(peer_id)",
-                ],
-                color=self.colors.BRIGHT_CYAN if self.colors else None,
-                bg_color=self.colors.BG_CYAN if self.colors else None
-            )
     
     async def stop(self, context):
         """Stop the module."""

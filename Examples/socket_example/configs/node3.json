@@ -1,101 +1,109 @@
 {
-    "modules": [
-        {
-            "path": "{massir_dir}/modules",
-            "type": "systems",
-            "names": ["system_logger", "network_ssl", "network_socket"]
-        },
-        {
-            "path": "{app_dir}/app",
-            "type": "all",
-            "names": "all"
-        }
-    ],
-
-    "template": {
-        "project_banner_template": "\n==========================================================\n\tSocket Example - NODE 3\n\t1.0.0\n\tMulti-node distributed socket network\n==========================================================\n",
+  "modules": [
+    {
+      "name": "system_modules",
+      "run_at": "on_start",
+      "path": "{massir_dir}/modules",
+      "names": [
+        "system_logger",
+        "network_ssl",
+        "network_socket"
+      ]
     },
-
-    "logs": {
-        "show_logs": true,
-        "show_banner": true,
-        "debug_mode": true,
-        "banner_color": "yellow",
-        "log_color": "bright_cyan"
-    },
-
-    "information": {
-        "project_name": "Socket Example",
-        "project_version": "1.0.0",
-        "project_info": "Node 3 of distributed network",
-        "node_id": "node3"
-    },
-
-    "network_ssl": {
-        "tls_version": "1.3",
-        "default_certs_path": "{app_dir}/certs",
-        "verify_client_certs": true,
-        "verify_server_certs": true,
-        "check_hostname": false,
-        "nodes": {
-            "default": {
-                "cert_file": "node3.crt",
-                "key_file": "node3.key",
-                "ca_file": "ca.crt"
-            },
-            "node1": {
-                "cert_file": "node3.crt",
-                "key_file": "node3.key",
-                "ca_file": "ca.crt"
-            },
-            "node2": {
-                "cert_file": "node3.crt",
-                "key_file": "node3.key",
-                "ca_file": "ca.crt"
-            }
-        }
-    },
-
-    "network_socket": {
-        "server": {
-            "default_host": "0.0.0.0",
-            "default_port": 8443
-        },
-        "client": {
-            "reconnect_enabled": true,
-            "reconnect_initial_delay_seconds": 2.0,
-            "reconnect_max_delay_seconds": 30.0
-        },
-        "heartbeat": {
-            "enabled": true,
-            "interval_seconds": 10.0,
-            "timeout_seconds": 30.0
-        }
-    },
-
-    "socket_node": {
-        "node_id": "node3",
-        "listen_host": "0.0.0.0",
-        "listen_port": 8443,
-        "advertise_host": "node3",
-        "peers": [
-            {"node_id": "node1", "host": "replace_with_node1_host_address", "port": 8443},
-            {"node_id": "node2", "host": "replace_with_node2_host_address", "port": 8443}
-        ],
-        "use_tls": true,
-        "auto_connect_on_start": true,
-        "auto_start_server": true
-    },
-
-    "message_demo": {
-        "enabled": true,
-        "auto_broadcast_on_start": true,
-        "broadcast_interval_seconds": 5.0,
-        "broadcast_message": "Hello from node3!"
-    },
-
-    "stream_demo": {
-        "enabled": true,
-        "auto_send_on_start": false
+    {
+      "name": "app_modules",
+      "run_at": "on_start",
+      "path": "{app_dir}/app",
+      "names": [
+        "socket_node",
+        "message_demo",
+        "stream_demo"
+      ]
     }
+  ],
+  "system": {
+    "auto_shutdown": false
+  },
+  "template": {
+    "project_banner_template": "\n==========================================================\n\tSocket Example - NODE 3\n\t1.0.0\n\tMulti-node distributed socket network\n==========================================================\n"
+  },
+  "logs": {
+    "show_logs": true,
+    "show_banner": true,
+    "hide_log_tags": [],
+    "hide_log_levels": [],
+    "debug_mode": false,
+    "show_critical_levels": 3,
+    "banner_color": "yellow",
+    "log_color": "bright_cyan"
+  },
+  "information": {
+    "project_name": "Socket Example",
+    "project_version": "1.0.0",
+    "project_info": "Node 3 of distributed network",
+    "node_id": "node3"
+  },
+  "network_ssl": {
+    "tls_version": "1.3",
+    "default_certs_path": "{app_dir}/certs",
+    "verify_client_certs": true,
+    "verify_server_certs": true,
+    "check_hostname": false,
+    "nodes": {
+      "default": {
+        "cert_file": "node3.crt",
+        "key_file": "node3.key",
+        "ca_file": "ca.crt"
+      },
+      "node1": {
+        "cert_file": "node3.crt",
+        "key_file": "node3.key",
+        "ca_file": "ca.crt"
+      },
+      "node2": {
+        "cert_file": "node3.crt",
+        "key_file": "node3.key",
+        "ca_file": "ca.crt"
+      }
+    }
+  },
+  "network_socket": {
+    "server": {
+      "default_host": "0.0.0.0",
+      "default_port": 8443
+    },
+    "client": {
+      "reconnect_enabled": true,
+      "reconnect_initial_delay_seconds": 2.0,
+      "reconnect_max_delay_seconds": 30.0
+    },
+    "heartbeat": {
+      "enabled": true,
+      "interval_seconds": 10.0,
+      "timeout_seconds": 30.0
+    }
+  },
+  "socket_node": {
+    "node_id": "node3",
+    "listen_host": "0.0.0.0",
+    "listen_port": 8443,
+    "advertise_host": "node3",
+    "peers": [
+      {"node_id": "node1", "host": "replace_with_node1_host_address", "port": 8443},
+      {"node_id": "node2", "host": "replace_with_node2_host_address", "port": 8443}
+    ],
+    "use_tls": true,
+    "auto_connect_on_start": true,
+    "auto_start_server": true
+  },
+  "message_demo": {
+    "enabled": true,
+    "auto_broadcast_on_start": true,
+    "broadcast_interval_seconds": 5.0,
+    "broadcast_message": "Hello from node3!"
+  },
+  "stream_demo": {
+    "enabled": true,
+    "auto_send_on_start": false
+  }
 }

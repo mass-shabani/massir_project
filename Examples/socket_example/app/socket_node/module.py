@@ -50,8 +50,16 @@ class SocketNodeModule(IModule):
         self._peers: List[Dict] = []
         self._connected_peers: Dict[str, Any] = {}
     
-    async def load(self, context):
-        """Load the module and configure."""
+    async def start(self, context):
+        """
+        Start the node:
+        1. Retrieve required services from the context
+        2. Load configuration from app_settings.json
+        3. Register this module as 'node_service' for other modules
+        4. Register global event handlers
+        5. Start the TLS/TCP server (non-blocking)
+        6. Connect to all configured peers (non-blocking)
+        """
         # Retrieve required services from the context
         self.socket_api = context.services.get("socket_api")
         self.ssl_api = context.services.get("ssl_api")
@@ -71,12 +79,10 @@ class SocketNodeModule(IModule):
         
         if self.logger:
             self.logger.log(
-                f"SocketNodeModule loaded - Node ID: {self._node_id}",
+                f"SocketNodeModule started - Node ID: {self._node_id}",
                 tag="node"
             )
-    
-    async def start(self, context):
-        """Start server and connect to peers."""
+        
         # =========================================================================
         # Step 1: Register global event handlers
         # =========================================================================
@@ -117,14 +123,6 @@ class SocketNodeModule(IModule):
         # =========================================================================
         if self._config.get("auto_connect_on_start", True):
             await self._connect_to_all_peers()
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log(
-                f"Node '{self._node_id}' ready with {len(self._peers)} configured peer(s)",
-                tag="node"
-            )
     
     async def stop(self, context):
         """Stop the node and cleanup all connections."""

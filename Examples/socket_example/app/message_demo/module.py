@@ -43,8 +43,13 @@ class MessageDemoModule(IModule):
         self._broadcast_task = None
         self._message_counter = 0
     
-    async def load(self, context):
-        """Load the module and retrieve required services."""
+    async def start(self, context):
+        """
+        Start the message demo:
+        1. Retrieve required services from the context
+        2. Load configuration from app_settings.json
+        3. Start periodic broadcast if configured
+        """
         self.node_service = context.services.get("node_service")
         self.logger = context.services.get("core_logger")
         self.colors = context.services.get("log_colors")
@@ -56,18 +61,16 @@ class MessageDemoModule(IModule):
         
         if self.logger:
             if self.node_service:
-                self.logger.log("MessageDemoModule loaded", tag="msg_demo")
+                self.logger.log("MessageDemoModule started", tag="msg_demo")
             else:
                 # node_service may not be available yet due to module load ordering
                 # Will retry in start() and ready() phases
                 self.logger.log(
-                    "MessageDemoModule loaded (node_service not yet available, will retry)",
+                    "MessageDemoModule started (node_service not yet available, will retry)",
                     tag="msg_demo",
                     level="WARNING"
                 )
-    
-    async def start(self, context):
-        """Start periodic broadcast if configured."""
+        
         # Retry getting node_service if not available at load time
         # This handles module ordering issues gracefully
         if not self.node_service:
@@ -85,20 +88,6 @@ class MessageDemoModule(IModule):
         if self._config.get("enabled", True) and self._config.get("auto_broadcast_on_start", True):
             await self._initial_broadcast()
             self._broadcast_task = asyncio.create_task(self._broadcast_loop())
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        # Final retry for node_service availability
-        if not self.node_service:
-            self.node_service = context.services.get("node_service")
-        
-        if self.logger and self.node_service:
-            node_id = self.node_service.get_node_id()
-            peers = self.node_service.get_connected_peers()
-            self.logger.log(
-                f"MessageDemo ready on '{node_id}' - {len(peers)} peer(s) connected",
-                tag="msg_demo"
-            )
     
     async def stop(self, context):
         """Stop broadcast task and cleanup."""
