@@ -25,37 +25,25 @@ class SSLDemoModule(IModule):
         self._config: Dict = {}
         self._server: Optional[asyncio.Server] = None
     
-    async def load(self, context):
-        """Load module and initialize services."""
+    async def start(self, context):
+        """Get services, register service, and run demo if configured."""
         self.ssl_api = context.services.get("ssl_api")
         self.logger = context.services.get("core_logger")
         
-        # Load configuration
         core_config = context.services.get("core_config")
         if core_config:
             self._config = core_config.get("ssl_demo", {})
         
-        # Register the service
         context.services.set("ssl_service", self)
         
         if self.logger:
             self.logger.log(
-                "SSLDemo module loaded - ssl_service available",
+                "SSLDemo module started - ssl_service available",
                 tag="demo"
             )
-    
-    async def start(self, context):
-        """Run demo if configured."""
+        
         if self._config.get("auto_demo_on_start", False):
             await self._run_demo()
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log(
-                "SSLDemo module ready",
-                tag="demo"
-            )
     
     async def stop(self, context):
         """Cleanup."""
@@ -105,17 +93,7 @@ class SSLDemoModule(IModule):
         port: int = 8443,
         handler=None
     ) -> asyncio.Server:
-        """
-        Start a secure TLS server.
-        
-        Args:
-            host: Host to bind to
-            port: Port to bind to
-            handler: Async function to handle client connections
-        
-        Returns:
-            asyncio.Server instance
-        """
+        """Start a secure TLS server."""
         if handler is None:
             handler = self._default_handler
         
@@ -139,18 +117,7 @@ class SSLDemoModule(IModule):
         message: bytes,
         sni_hostname: Optional[str] = None
     ) -> bytes:
-        """
-        Connect to a TLS server and exchange messages.
-        
-        Args:
-            host: Server host
-            port: Server port
-            message: Message to send
-            sni_hostname: Optional SNI hostname
-        
-        Returns:
-            Response from server
-        """
+        """Connect to a TLS server and exchange messages."""
         client_ctx = self.get_client_context(sni_hostname=sni_hostname)
         
         reader, writer = await asyncio.open_connection(
@@ -204,8 +171,6 @@ class SSLDemoModule(IModule):
         # Demo 2: Start server and connect client
         self.logger.print(f"\n🔗 Starting secure server on {host}:{port}...", tag="demo")
         
-        server_ready = asyncio.Event()
-        
         async def demo_handler(reader, writer):
             try:
                 data = await reader.read(1024)
@@ -221,9 +186,8 @@ class SSLDemoModule(IModule):
         server = await self.start_secure_server(host, port, demo_handler)
         
         async with server:
-            await asyncio.sleep(0.1)  # Let server start
+            await asyncio.sleep(0.1)
             
-            # Connect client
             self.logger.print(f"  🔌 Client connecting to {host}:{port}...", tag="demo")
             
             try:

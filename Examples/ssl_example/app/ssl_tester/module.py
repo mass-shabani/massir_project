@@ -35,35 +35,30 @@ class SSLTesterModule(IModule):
         self._test_results: Dict[str, Any] = {}
         self._certs_dir: Path = Path(__file__).parent.parent.parent / "certs"
     
-    async def load(self, context):
-        """Load module and get required services."""
+    async def start(self, context):
+        """Get required services and run all SSL tests."""
         self.ssl_api = context.services.get("ssl_api")
         self.logger = context.services.get("core_logger")
         self.colors = context.services.get("log_colors")
         
-        # Load configuration
         core_config = context.services.get("core_config")
         if core_config:
             self._config = core_config.get("ssl_tester", {})
         
         if self.logger:
             self.logger.log(
-                "SSLTester module loaded",
+                "SSLTester module started",
                 tag="tester",
                 text_color=self.colors.BRIGHT_GREEN if self.colors else None
             )
-    
-    async def start(self, context):
-        """Run all SSL tests."""
+        
         if not self._config.get("run_all_tests", True):
             if self.logger:
                 self.logger.log("Tests disabled in config", tag="tester")
             return
         
         await self._run_all_tests()
-    
-    async def ready(self, context):
-        """Display final results when all modules are ready."""
+        
         if self._config.get("output_results", True) and self._test_results:
             await self._display_summary()
     
@@ -172,7 +167,6 @@ class SSLTesterModule(IModule):
             assert server_ctx is not None
             assert isinstance(server_ctx, ssl.SSLContext)
             
-            # Check TLS version
             assert server_ctx.minimum_version >= ssl.TLSVersion.TLSv1_2
             
             results["subtests"].append({"name": "create_context", "passed": True})
@@ -353,15 +347,11 @@ class SSLTesterModule(IModule):
         
         # Test: Verify mTLS configuration
         try:
-            # Get server context with client verification
             server_ctx = self.ssl_api.get_server_context("default")
             
-            # Check if verify_mode is set for client certs
-            # Note: verify_mode depends on config.verify_client_certs
             self._log_success(f"Server verify_mode: {server_ctx.verify_mode}")
             self._log_success(f"Client verification enabled in config: {self.ssl_api._config.get('verify_client_certs', False)}")
             
-            # Get client context with certificate
             client_ctx = self.ssl_api.get_client_context("client")
             self._log_success("Client context loaded with certificate for mTLS")
             
@@ -390,8 +380,6 @@ class SSLTesterModule(IModule):
         
         # Test 1: Start TLS server and connect client
         try:
-            server_ready = asyncio.Event()
-            client_connected = asyncio.Event()
             received_data = []
             
             async def handle_client(reader, writer):
@@ -404,11 +392,9 @@ class SSLTesterModule(IModule):
                     writer.close()
                     await writer.wait_closed()
             
-            # Get contexts
             server_ctx = self.ssl_api.get_server_context("default")
             client_ctx = self.ssl_api.get_client_context("client")
             
-            # Start server
             server = await asyncio.start_server(
                 handle_client,
                 host, port,
@@ -416,32 +402,22 @@ class SSLTesterModule(IModule):
             )
             
             async with server:
-                server_ready.set()
-                
-                # Give server time to start
                 await asyncio.sleep(0.1)
                 
-                # Connect client
                 reader, writer = await asyncio.open_connection(
                     host, port,
                     ssl=client_ctx,
                     server_hostname="localhost"
                 )
                 
-                client_connected.set()
-                
-                # Send data
                 writer.write(b"Hello from TLS client!")
                 await writer.drain()
                 
-                # Receive response
                 response = await reader.read(1024)
                 
                 writer.close()
                 await writer.wait_closed()
             
-            # Verify
-            assert client_connected.is_set(), "Client should have connected"
             assert len(received_data) > 0, "Server should have received data"
             assert received_data[0] == b"Hello from TLS client!", "Data mismatch"
             assert response == b"Hello from TLS server!", "Response mismatch"
