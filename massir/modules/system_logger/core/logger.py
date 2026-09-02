@@ -306,7 +306,7 @@ class AdvancedLogger(CoreLoggerAPI):
         """
         template = self.config.get_system_log_template()
         core_default = "[{level}]\t{message}"
-        module_default = "{timestamp} | {level}:\t{tag} | {message}"
+        module_default = "{timestamp}|{level}\t\b{tag}: {message}"
 
         if isinstance(template, str) and template != core_default:
             format_template = template
@@ -401,7 +401,7 @@ class _SystemLoggerFallbackConfig:
         self._hide_log_levels = hide_log_levels
 
     def get_project_name(self): return "Unknown"
-    def get_system_log_template(self): return "[{level}]\t{message}"
+    def get_system_log_template(self): return "{timestamp}|{level}\t\b{tag}: {message}"
     def show_logs(self): return self._defaults.show_logs
     def is_debug(self): return self._defaults.debug_mode
     def get_hide_log_levels(self): return list(self._hide_log_levels)
