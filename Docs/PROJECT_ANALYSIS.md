@@ -7,17 +7,20 @@
 **Massir** is a modular application framework for Python designed to enable developers to build scalable and maintainable applications through a plugin-based architecture. The framework's core mission is to provide a structured approach to application development by separating functionality into independent, self-contained modules.
 
 ### Core Philosophy
+
 The framework is built on the principle of **modularity**, where complex applications are decomposed into smaller components that can be:
 - **Loaded, started, and stopped independently** - Each module operates autonomously
 - **Developed in parallel** - Teams can work on different modules simultaneously
 - **Dynamically configured** - Modules can be enabled/disabled without modifying core code
 - **Reused across projects** - Reducing development time through component sharing
+- **Executed in controlled groups** - Run order groups provide precise execution timing
 
 ### Key Advantages
 - **Separation of Concerns**: Each module handles specific application aspects
 - **Flexible Composition**: Applications assembled from interchangeable modules
 - **Easy Maintenance**: Changes to one module don't affect others
 - **Independent Testing**: Modules can be tested in isolation
+- **Trigger-Based Execution**: Modules can execute at specific lifecycle points
 
 ### Target Use Cases
 - Web Applications and API Gateways
@@ -47,26 +50,27 @@ massir_project/
 │   ├── ssl_example/
 │   └── web_api_example/
 ├── README.md
+├── Docs/
+│   └── PROJECT_ANALYSIS.md     # This document
+│   └── Changelog.md     
 ├── massir/                      # Core framework package
-│   ├── __init__.py
+│   ├── __init__.py             # Main entry point (exports App)
 │   ├── core/                    # Core system components
-│   │   ├── __init__.py
-│   │   ├── api.py              # API initialization
+│   │   ├── __init__.py         # Core exports
+│   │   ├── api.py              # Core services initialization
 │   │   ├── app.py              # Main App class
-│   │   ├── config.py           # Configuration handling
-│   │   ├── core_apis.py        # Core API interfaces
-│   │   ├── exceptions.py       # Custom exceptions
-│   │   ├── hook_types.py       # Hook type definitions
-│   │   ├── hooks.py            # Hook management
-│   │   ├── inject.py           # Dependency injection
-│   │   ├── interfaces.py       # Module interfaces (IModule, ModuleContext)
-│   │   ├── log.py              # Logging utilities
-│   │   ├── module_loader.py    # Module discovery and loading
-│   │   ├── path.py             # Path management
-│   │   ├── registry.py         # Service registry
-│   │   ├── settings_default.py # Default configuration values
-│   │   ├── settings_manager.py # Settings management with priority
-│   │   └── stop.py             # Graceful shutdown handling
+│   │   ├── core_apis.py        # CoreConfigAPI, CoreLoggerAPI interfaces
+│   │   ├── exceptions.py       # FrameworkError, ModuleLoadError, DependencyResolutionError
+│   │   ├── hook_types.py       # SystemHook enum
+│   │   ├── hooks.py            # Hook class, HooksManager
+│   │   ├── interfaces.py       # IModule, ModuleContext
+│   │   ├── log.py              # DefaultLogger, print_banner
+│   │   ├── module_loader.py    # ModuleLoader (instantiate, check_requirements)
+│   │   ├── path.py             # Path manager
+│   │   ├── registry.py         # ModuleRegistry (service registry)
+│   │   ├── run_order_group.py  # RunOrderGroupManager, RunOrderGroup, RunAtRegistry
+│   │   ├── settings_default.py # Default settings values
+│   │   └── settings_manager.py # SettingsManager (4-tier priority)
 │   └── modules/                # Built-in system modules
 ├── pyproject.toml
 └── tests/                      # Unit and integration tests
@@ -76,17 +80,34 @@ massir_project/
 
 #### Main Application Class (`app.py`)
 - **`App`**: The central orchestrator managing the entire application lifecycle
-- Handles module discovery, loading, starting, and stopping
+- Handles core service initialization (config, logger, path)
+- Manages run order group execution via `RunOrderGroupManager`
+- Supports both `SystemHook` and custom `Hook` registration/triggering
 - Manages background tasks and signal handlers
 - Supports graceful shutdown and hot-reload restart capabilities
-- Implements event hooks for extensibility
+- Implements phase-based bootstrap (parse → register callbacks → dispatch hooks → execute groups)
+
+#### Run Order Group Manager (`run_order_group.py`)
+- **`RunOrderGroupManager`**: Primary module execution orchestrator
+- **`RunAtRegistry`**: Dynamic registry for valid `run_at` values
+- **`RunOrderGroup`**: Dataclass for group configuration
+- **`ModuleInfo`**: Dataclass for discovered module metadata
+- Handles module discovery, dependency sorting, and group execution
+- Auto-registers callbacks for non-default `run_at` values
+- Tracks execution order for reverse shutdown
+- Supports group execution at any system hook trigger point
 
 #### Module Loader (`module_loader.py`)
-- Discovers modules from configured paths
-- Validates dependencies using `requires` and `provides` fields
-- Supports automatic dependency resolution and sorting
-- Handles system and application modules separately
-- Implements forced execution for critical modules
+- **`ModuleLoader`**: Lightweight utility for module instantiation
+- **`instantiate()`**: Creates module instance from manifest data
+- **`check_requirements()`**: Verifies module dependencies are available
+- Does NOT handle discovery, grouping, sorting, or starting (handled by RunOrderGroupManager)
+
+#### Hooks System (`hooks.py`, `hook_types.py`)
+- **`SystemHook`**: Enum for core framework lifecycle events
+- **`Hook`**: Class for module-defined custom hook types
+- **`HooksManager`**: Manages registration and dispatching of both hook types
+- Supports both synchronous and asynchronous callbacks
 
 ---
 
@@ -96,16 +117,16 @@ massir_project/
 
 The framework includes the following system modules in `massir/modules/`:
 
-| Module | Type | Purpose |
-|--------|------|---------|
-| `network_fastapi` | Network | FastAPI-based web server |
-| `network_socket` | Network | Raw TCP/UDP socket communication |
-| `network_ssl` | Network | SSL/TLS encryption layer |
-| `network_websocket` | Network | WebSocket protocol support |
-| `system_database` | System | Async database middleware (PostgreSQL, MySQL, SQLite) |
-| `system_encryption` | System | Encryption and cryptographic services |
-| `system_logger` | System | Advanced logging with color support and filtering |
-| `system_network` | System | High-level network management (unified API) |
+| Module | Provides | Purpose |
+|--------|----------|---------|
+| `network_fastapi` | `http_api`, `router_api`, `net_api`, `server_api` | FastAPI-based web server |
+| `network_socket` | `socket_api` | Raw TCP/UDP socket communication |
+| `network_ssl` | `ssl_api` | SSL/TLS encryption layer |
+| `network_websocket` | `websocket_api` | WebSocket protocol support |
+| `system_database` | `database_service`, `database_types` | Async database middleware (PostgreSQL, MySQL, SQLite) |
+| `system_encryption` | `encryption_api` | Encryption and cryptographic services |
+| `system_logger` | `core_logger`, `log_colors` | Advanced logging with color support and filtering |
+| `system_network` | `network_api` | High-level network management (unified API) |
 
 ### Module Directory Structure
 
@@ -113,11 +134,13 @@ Each module follows a standardized structure:
 
 ```
 module_name/
-├── __init__.py              # Module initialization
+├── __init__.py              # Module initialization and exports
 ├── manifest.json           # Module metadata and configuration
 ├── module.py               # Main module class implementation
 ├── requirements.txt        # Module-specific dependencies (optional)
-└── core/ or drivers/       # Internal components (optional)
+└── core/                   # Internal implementation (optional)
+    ├── __init__.py
+    └── ...                 # Internal components
 ```
 
 ### Manifest Configuration (`manifest.json`)
@@ -126,20 +149,19 @@ Each module must include a `manifest.json` file defining its metadata:
 
 ```json
 {
-  "name": "system_logger",
-  "version": "1.0",
-  "enabled": true,
-  "type": "system",
-  "entrypoint": "SystemLoggerModule",
-  "provides": ["core_logger"],
-  "requires": [],
-  "forced_execute": false
+    "name": "system_logger",
+    "version": "0.3",
+    "enabled": true,
+    "entrypoint": "SystemLoggerModule",
+    "provides": ["core_logger"],
+    "requires": [],
+    "forced_execute": false
 }
 ```
 
 **Key Fields:**
 - **`name`**: Unique identifier for the module
-- **`type`**: Either `"system"` or `"application"`
+- **`version`**: Module version string
 - **`entrypoint`**: Class name to instantiate from `module.py`
 - **`provides`**: List of capabilities/services this module offers
 - **`requires`**: List of dependencies this module needs
@@ -153,22 +175,33 @@ All modules must implement the `IModule` interface from `massir.core.interfaces`
 ```python
 class IModule(ABC):
     name: str = ""
+    id: str = ""
+    provides: list = []
+    requires: list = []
+    _context: 'ModuleContext' = None
     
-    async def load(self, context: ModuleContext):
-        """Load module and initialize resources"""
+    async def start(self, context: 'ModuleContext') -> None:
+        """Start the module. Called when run order group executes."""
         pass
     
-    async def start(self, context: ModuleContext):
-        """Start module and execute business logic"""
+    async def stop(self, context: 'ModuleContext') -> None:
+        """Stop the module. Called during shutdown in reverse order."""
         pass
-    
-    async def ready(self, context: ModuleContext):
-        """Called after all modules have started"""
-        pass
-    
-    async def stop(self, context: ModuleContext):
-        """Stop module and cleanup resources"""
-        pass
+```
+
+**Lifecycle:**
+- `start()`: Called when the module's run order group is executed. Initialize resources, register services, start servers.
+- `stop()`: Called during shutdown in reverse order of group execution. Cleanup resources, close connections.
+
+For post-start logic (replacing old `ready()`), use hooks:
+```python
+async def start(self, context):
+    app = context.get_app()
+    app.register_hook(SystemHook.ON_ALL_MODULES_STARTED, self._on_ready)
+
+async def _on_ready(self):
+    # Post-start logic
+    ...
 ```
 
 ### Module Context (`ModuleContext`)
@@ -177,14 +210,117 @@ Provides modules with access to shared services:
 - **`context.services`**: Service registry for dependency injection
 - **`context.get_app()`**: Access to the main application instance
 - **`context.metadata`**: Shared metadata storage
+- **`context.app_dir`**: Application directory path
+- **`context.massir_dir`**: Massir framework directory path
 
 ---
 
-## 4. Usage Method with Example Projects
+## 4. Configuration System
+
+### Four-Tier Priority System
+
+The `SettingsManager` implements a **four-tier priority system**:
+
+```
+Priority 1 (Highest): User Code (initial_settings)
+        ↓
+Priority 2: JSON Settings File (app_settings.json)
+        ↓
+Priority 3: Core Defaults (settings_default.py)
+        ↓
+Priority 4 (Lowest): Module Defaults (registered by modules)
+```
+
+This allows modules to:
+1. Register their own defaults (lowest priority)
+2. Framework provides core defaults
+3. Users override via JSON for deployment-specific settings
+4. Users override via code for runtime/programmatic control
+
+### Module Defaults Injection
+
+Modules can register their own configuration defaults:
+
+```python
+from massir.modules.system_logger.core.defaults import SystemLoggerDefaults
+
+# In module start():
+config = context.services.get("core_config")
+if config:
+    defaults = SystemLoggerDefaults()
+    config.apply_module_defaults(defaults.to_dict())
+```
+
+### Configuration Schema
+
+#### Module Groups (in `app_settings.json`)
+
+```json
+{
+    "modules": [
+        {
+            "name": "my_group",
+            "path": "{app_dir}/modules",
+            "names": ["module1", "module2"],
+            "run_at": "on_start"
+        }
+    ]
+}
+```
+
+**Fields:**
+- **`name`**: Optional group identifier (auto-generated if missing)
+- **`path`**: Path to module directory (supports `{massir_dir}` and `{app_dir}` placeholders)
+- **`names`**: List of module names, or `"all"` for auto-discovery
+- **`run_at`**: Execution trigger point (default: `"on_start"`)
+
+#### Run-At Values
+
+Valid `run_at` values are dynamically registered from:
+1. Default `"on_start"` (bootstrap execution)
+2. All `SystemHook` enum values (triggered when hook fires)
+
+When `SystemHook` changes, valid `run_at` values automatically update.
+
+#### System Configuration
+
+```json
+{
+    "system": {
+        "auto_shutdown": false,
+        "auto_shutdown_delay": 0.0
+    }
+}
+```
+
+#### Logging Configuration
+
+```json
+{
+    "logs": {
+        "show_logs": true,
+        "show_banner": true,
+        "hide_log_levels": [],
+        "hide_log_tags": [],
+        "debug_mode": false,
+        "show_critical_levels": 3
+    }
+}
+```
+
+**`show_critical_levels`** values:
+- `0`: Hide all critical levels (ERROR, WARNING, CRITICAL)
+- `1`: Show only ERROR
+- `2`: Show ERROR and WARNING
+- `3`: Show all critical levels (default)
+
+**`debug_mode`**: When `False` (default), CORE-level logs are automatically hidden.
+
+---
+
+## 5. Usage Method with Example Projects
 
 ### Basic Application Setup
-
-Based on the example projects, here's the standard usage pattern:
 
 #### 1. Main Entry Point (`main.py`)
 
@@ -193,7 +329,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Setup path
 MASSIR_ROOT = Path(__file__).parent.parent.parent.resolve()
 CURRENT_ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(MASSIR_ROOT))
@@ -211,13 +346,12 @@ async def main():
             }
         }
     }
-
+    
     app = App(
         initial_settings=initial_settings,
         settings_path="app_settings.json",
         app_dir=CURRENT_ROOT
     )
-
     await app.run()
 
 if __name__ == "__main__":
@@ -231,45 +365,31 @@ if __name__ == "__main__":
 
 ```json
 {
-  "modules": [
-    {
-      "path": "{massir_dir}/modules",
-      "type": "systems",
-      "names": ["system_logger", "network_fastapi"]
+    "modules": [
+        {
+            "name": "core_services",
+            "path": "{massir_dir}/modules",
+            "names": ["system_logger", "network_fastapi"],
+            "run_at": "on_start"
+        },
+        {
+            "name": "app_modules",
+            "path": "{app_dir}/app",
+            "names": "all",
+            "run_at": "on_start"
+        }
+    ],
+    "system": {
+        "auto_shutdown": false,
+        "auto_shutdown_delay": 0.0
     },
-    {
-      "path": "{app_dir}/app",
-      "type": "all",
-      "names": "all"
+    "logs": {
+        "show_logs": true,
+        "show_banner": true,
+        "debug_mode": false,
+        "show_critical_levels": 3
     }
-  ],
-  "system": {
-    "auto_shutdown": false,
-    "auto_shutdown_delay": 0.0
-  },
-  "logs": {
-    "show_logs": true,
-    "show_banner": true,
-    "debug_mode": true
-  }
 }
-```
-
-#### 3. Module Organization
-
-Create your custom modules in an `app/` directory:
-
-```
-my_project/
-├── main.py
-├── app_settings.json
-└── app/                    # Application modules directory
-    ├── auth_module/
-    │   ├── manifest.json
-    │   └── module.py
-    └── user_module/
-        ├── manifest.json
-        └── module.py
 ```
 
 ### Loading Strategies
@@ -277,212 +397,82 @@ my_project/
 **Explicit Module Loading:**
 ```json
 {
-  "path": "{app_dir}/app",
-  "type": "applications",
-  "names": ["auth_module", "user_module"]
+    "path": "{app_dir}/app",
+    "names": ["auth_module", "user_module"],
+    "run_at": "on_start"
 }
 ```
 
 **Automatic Discovery:**
 ```json
 {
-  "path": "{app_dir}/app",
-  "type": "all",
-  "names": "all"
+    "path": "{app_dir}/app",
+    "names": "all",
+    "run_at": "on_start"
 }
 ```
 
-When using `"names": "all"`, the framework automatically discovers all modules in the specified path and sorts them based on their dependency graph.
+**Deferred Execution:**
+```json
+{
+    "path": "{app_dir}/app",
+    "names": ["cleanup_module"],
+    "run_at": "on_shutdown_request"
+}
+```
 
 ---
 
-## 5. Customization, Configuration, and Configuration Freedom
+## 6. Hook System
 
-### Configuration Priority Order
+### System Hooks (`SystemHook` enum)
 
-The `SettingsManager` implements a **three-tier priority system**:
+Core framework lifecycle events:
 
+| Hook | Description |
+|------|-------------|
+| `ON_SETTINGS_LOADED` | Settings are loaded |
+| `ON_APP_BOOTSTRAP_START` | Bootstrap starts |
+| `ON_APP_BOOTSTRAP_END` | Bootstrap completes |
+| `ON_ALL_MODULES_STARTED` | All groups completed |
+| `ON_SHUTDOWN_REQUEST` | Shutdown requested |
+| `ON_RESTART_REQUEST` | Restart requested |
+| `ON_GROUP_START` | Group starts executing |
+| `ON_GROUP_COMPLETE` | Group completes |
+| `ON_GROUP_STOP` | Group stopping |
+| `ON_MODULE_STARTED` | Module's `start()` completes |
+| `ON_MODULE_STOPPED` | Module's `stop()` completes |
+| `ON_SERVICE_REGISTERED` | Service registered |
+| `ON_SERVICE_REMOVED` | Service removed |
+| `ON_ERROR` | Error occurred |
+
+### Custom Hooks (`Hook` class)
+
+Modules can define their own hooks:
+
+```python
+from massir import Hook
+
+ON_NETWORK_READY = Hook("on_network_ready")
+
+# In another module:
+app.register_hook(ON_NETWORK_READY, my_callback)
+
+# In the module that owns the hook:
+await app.trigger_hook(ON_NETWORK_READY, *args)
 ```
-Priority 1 (Highest): User Code (initial_settings)
-    ↓
-Priority 2: JSON Settings File (app_settings.json)
-    ↓
-Priority 3 (Lowest): Default Values (settings_default.py)
-```
-
-This allows developers to:
-1. Set sensible defaults in the framework
-2. Override via JSON for deployment-specific settings
-3. Override via code for runtime/programmatic control
-
-### Configuration Categories
-
-#### System Configuration
-```json
-{
-  "system": {
-    "auto_shutdown": true,
-    "auto_shutdown_delay": 10.0
-  }
-}
-```
-
-#### Logging Configuration
-```json
-{
-  "logs": {
-    "show_logs": true,
-    "show_banner": true,
-    "hide_log_levels": ["DEBUG"],
-    "hide_log_tags": ["http"],
-    "debug_mode": true
-  }
-}
-```
-
-#### Project Information
-```json
-{
-  "information": {
-    "project_name": "My Application",
-    "project_version": "1.0.0",
-    "project_info": "Custom description"
-  }
-}
-```
-
-#### Template Customization
-```json
-{
-  "template": {
-    "project_banner_template": "\n\t{project_name}\n\t{project_version}\n",
-    "system_log_template": "[{level}]\t{message}",
-    "banner_color": "yellow",
-    "log_color": "bright_cyan"
-  }
-}
-```
-
-### Module-Specific Configuration
-
-Modules can define their own configuration namespaces:
-
-```json
-{
-  "fastapi_provider": {
-    "title": "API Server",
-    "version": "1.0.0",
-    "web": {
-      "host": "0.0.0.0",
-      "port": 8080,
-      "reload": false,
-      "workers": 4
-    },
-    "cors": {
-      "origins": ["*"],
-      "credentials": true
-    }
-  }
-}
-```
-
-### Dynamic Module Control
-
-**Enable/Disable Modules:**
-- Set `"enabled": false` in `manifest.json`
-- Exclude from `names` list in settings
-
-**Dependency Management:**
-- Modules declare `requires` and `provides` in manifest
-- Framework automatically resolves dependency order
-- Circular dependencies are detected and reported
-- Missing dependencies can be bypassed with `forced_execute: true`
-
-**Path Placeholders:**
-- `{massir_dir}`: Resolves to the Massir framework directory
-- `{app_dir}`: Resolves to the user application directory
-
-### Advanced Configuration Features
-
-1. **Nested Key Access:**
-   ```python
-   config.get("logs.debug_mode", True)
-   config.get("fastapi_provider.web.port", 8080)
-   ```
-
-2. **Module Type Filtering:**
-   ```json
-   {
-     "type": "systems"    // Only load system modules
-   },
-   {
-     "type": "applications"  // Only load application modules
-   },
-   {
-     "type": "all"        // Load both types
-   }
-   ```
-
-3. **Hot Reload Support:**
-   The `App` class supports programmatic restart via `app.request_restart()`, which:
-   - Stops all modules gracefully
-   - Clears all loaded state
-   - Re-bootstraps the entire application
-   - Reloads configuration from files
-
-4. **Hook System:**
-   Register callbacks for lifecycle events:
-   ```python
-   from massir.core.hook_types import SystemHook
-   
-   app.register_hook(SystemHook.ON_SETTINGS_LOADED, callback)
-   app.register_hook(SystemHook.ON_MODULE_LOADED, callback)
-   app.register_hook(SystemHook.ON_ALL_MODULES_READY, callback)
-   app.register_hook(SystemHook.ON_SHUTDOWN_REQUEST, callback)
-   ```
-
-### Configuration Flexibility Examples
-
-**Example 1: Development vs Production**
-```json
-// Development (app_settings.dev.json)
-{
-  "logs": { "debug_mode": true },
-  "fastapi_provider": { "web": { "reload": true } }
-}
-
-// Production (app_settings.prod.json)
-{
-  "logs": { "debug_mode": false },
-  "fastapi_provider": { "web": { "reload": false, "workers": 4 } }
-}
-```
-
-**Example 2: Feature Flags**
-```json
-{
-  "modules": [
-    {
-      "path": "{app_dir}/app",
-      "type": "applications",
-      "names": ["core_module", "optional_module"]
-    }
-  ]
-}
-```
-
-Simply remove `"optional_module"` from the list to disable it without code changes.
 
 ---
 
-## Summary
+## 7. Summary
 
 Massir provides a robust, flexible foundation for building modular Python applications with:
 - Clear separation of concerns through plugin architecture
-- Comprehensive lifecycle management (load → start → ready → stop)
-- Advanced dependency resolution and automatic sorting
-- Multi-tier configuration system with clear priority rules
-- Extensible hook system for custom behaviors
+- Run order groups for precise execution control
+- Four-tier configuration system with module defaults injection
+- Extensible hook system (system + custom hooks)
+- Simple module interface (`start()`/`stop()` only)
 - Built-in support for common patterns (web APIs, databases, logging, networking)
+- Dynamic `run_at` system that automatically adapts to hook changes
 
 The framework excels at enabling teams to build complex applications from interchangeable, independently-developed components while maintaining configuration flexibility across different deployment environments.
