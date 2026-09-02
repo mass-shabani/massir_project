@@ -22,26 +22,22 @@ class EncryptionDemoModule(IModule):
         self._config: Dict = {}
         self._master_key: Optional[bytes] = None
 
-    async def load(self, context):
-        """Load module and initialize services."""
+    async def start(self, context):
+        """Load services, initialize encryption, register service, and run demo if configured."""
         self.encryption = context.services.get('encryption_api')
         self.logger = context.services.get('core_logger')
+        self._encrypted_data_cls = context.services.get('encryption_types', {}).get('EncryptedData')
 
-        # Load configuration
         core_config = context.services.get('core_config')
         if core_config:
             self._config = core_config.get('encryption_demo', {})
 
-        # Generate master key for this session
         self._master_key = self.encryption.generate_symmetric_key()
 
-        # Register the service
         context.services.set('encryption_service', self)
         if self.logger:
-            self.logger.log('EncryptionDemo module loaded - encryption_service available', tag='demo')
+            self.logger.log('EncryptionDemo module started - encryption_service available', tag='demo')
 
-    async def ready(self, context):
-        """Run auto-test if configured."""
         if self._config.get('auto_test_on_start', False):
             await self._run_demo()
 
@@ -56,121 +52,44 @@ class EncryptionDemoModule(IModule):
     # =========================================================================
     
     def encrypt_string(self, text: str) -> Dict[str, Any]:
-        """
-        Encrypt a string and return serializable result.
-        
-        Args:
-            text: String to encrypt
-            
-        Returns:
-            Dictionary containing encrypted data (JSON serializable)
-        """
         plaintext = text.encode('utf-8')
         encrypted = self.encryption.encrypt(plaintext, self._master_key)
         return encrypted.to_dict()
 
     def decrypt_string(self, encrypted_data: Dict[str, Any]) -> str:
-        """
-        Decrypt an encrypted string.
-        
-        Args:
-            encrypted_data: Dictionary from encrypt_string()
-            
-        Returns:
-            Decrypted string
-        """
-        from massir.modules.system_encryption.core.encryption_api import EncryptedData
-        encrypted = EncryptedData.from_dict(encrypted_data)
+        encrypted = self._encrypted_data_cls.from_dict(encrypted_data)
         plaintext = self.encryption.decrypt(encrypted, self._master_key)
         return plaintext.decode('utf-8')
 
     def encrypt_dict(self, data: Dict) -> Dict[str, Any]:
-        """
-        Encrypt a dictionary (JSON serializable).
-        
-        Args:
-            data: Dictionary to encrypt
-            
-        Returns:
-            Dictionary containing encrypted data
-        """
         json_bytes = json.dumps(data).encode('utf-8')
         encrypted = self.encryption.encrypt(json_bytes, self._master_key)
         return encrypted.to_dict()
 
     def decrypt_dict(self, encrypted_data: Dict[str, Any]) -> Dict:
-        """
-        Decrypt an encrypted dictionary.
-        
-        Args:
-            encrypted_data: Dictionary from encrypt_dict()
-            
-        Returns:
-            Original dictionary
-        """
-        from massir.modules.system_encryption.core.encryption_api import EncryptedData
-        
-        encrypted = EncryptedData.from_dict(encrypted_data)
+        encrypted = self._encrypted_data_cls.from_dict(encrypted_data)
         json_bytes = self.encryption.decrypt(encrypted, self._master_key)
         return json.loads(json_bytes.decode('utf-8'))
 
     def sign_message(self, message: str) -> Dict[str, Any]:
-        """
-        Create a signed message using RSA.
-        
-        Args:
-            message: Message to sign
-            
-        Returns:
-            Dictionary with message and signature
-        """
-
-        # Generate ephemeral keypair for signing
         public_key, private_key = self.encryption.generate_keypair()
         message_bytes = message.encode('utf-8')
         signature = self.encryption.sign(message_bytes, private_key)
         return {'message': message, 'signature': signature.hex(), 'public_key': self.encryption.export_public_key(public_key).decode('utf-8')}
 
     def verify_message(self, signed_data: Dict[str, Any]) -> bool:
-        """
-        Verify a signed message.
-        
-        Args:
-            signed_data: Dictionary from sign_message()
-            
-        Returns:
-            True if signature is valid
-        """
         message_bytes = signed_data['message'].encode('utf-8')
         signature = bytes.fromhex(signed_data['signature'])
         public_key = self.encryption.import_public_key(signed_data['public_key'].encode('utf-8'))
         return self.encryption.verify(message_bytes, signature, public_key)
 
     def create_hmac(self, data: str) -> Dict[str, Any]:
-        """
-        Create HMAC for data authentication.
-        
-        Args:
-            data: Data to authenticate
-            
-        Returns:
-            Dictionary with data and HMAC
-        """
-        hmac_key = self._master_key  # Use master key for HMAC
+        hmac_key = self._master_key
         data_bytes = data.encode('utf-8')
         signature = self.encryption.create_hmac(data_bytes, hmac_key)
         return {'data': data, 'hmac': signature.hex(), 'algorithm': 'sha256'}
 
     def verify_hmac(self, hmac_data: Dict[str, Any]) -> bool:
-        """
-        Verify HMAC authentication.
-        
-        Args:
-            hmac_data: Dictionary from create_hmac()
-            
-        Returns:
-            True if HMAC is valid
-        """
         data_bytes = hmac_data['data'].encode('utf-8')
         signature = bytes.fromhex(hmac_data['hmac'])
         algorithm = hmac_data.get('algorithm', 'sha256')
@@ -189,7 +108,6 @@ class EncryptionDemoModule(IModule):
         self.logger.print('🎬 Running Encryption Demo', tag='demo')
         self.logger.print('=' * 50, tag='demo')
 
-        # Demo 1: String encryption
         test_data = self._config.get('test_data', {})
         sample_message = test_data.get('sample_message', 'Hello, this is a secret message!')
         self.logger.print(f'\n📝 Original message: {sample_message}', tag='demo')
@@ -200,7 +118,6 @@ class EncryptionDemoModule(IModule):
         assert decrypted == sample_message
         self.logger.print('✅ String encryption/decryption: SUCCESS', tag='demo')
 
-        # Demo 2: Dictionary encryption
         sample_json = test_data.get('sample_json', {'user': 'alice', 'action': 'login'})
         self.logger.print(f'\n📦 Original dict: {sample_json}', tag='demo')
         encrypted_dict = self.encrypt_dict(sample_json)
@@ -209,7 +126,6 @@ class EncryptionDemoModule(IModule):
         assert decrypted_dict == sample_json
         self.logger.print('✅ Dictionary encryption/decryption: SUCCESS', tag='demo')
 
-        # Demo 3: Digital signature
         message_to_sign = 'This message is digitally signed'
         signed = self.sign_message(message_to_sign)
         self.logger.print(f'\n✍️ Signed message: {message_to_sign}', tag='demo')
@@ -217,7 +133,6 @@ class EncryptionDemoModule(IModule):
         is_valid = self.verify_message(signed)
         self.logger.print(f'✅ Signature valid: {is_valid}', tag='demo')
 
-        # Demo 4: HMAC
         data_to_auth = 'Authenticate this data'
         hmac_result = self.create_hmac(data_to_auth)
         self.logger.print(f'\n🏷️ HMAC data: {data_to_auth}', tag='demo')

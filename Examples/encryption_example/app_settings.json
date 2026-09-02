@@ -1,62 +1,66 @@
 {
-    "modules": [
-        {
-            "path": "{massir_dir}/modules",
-            "type": "systems",
-            "names": ["system_logger", "system_encryption"]
-        },
-        {
-            "path": "{app_dir}/app",
-            "type": "all",
-            "names": "all"
-        }
-    ],
-    "system": {
-    "auto_shutdown": true
+  "modules": [
+    {
+      "name": "system_modules",
+      "run_at": "on_start",
+      "path": "{massir_dir}/modules",
+      "names": [
+        "system_logger",
+        "system_encryption"
+      ]
     },
-    "template": {
-        "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
-        "system_log_template": "[{level}]\t{message}"
-    },
-
-    "logs": {
-        "show_logs": true,
-        "show_banner": true,
-        "hide_log_tags": [],
-        "hide_log_levels": [],
-        "debug_mode": true,
-        "banner_color": "magenta",
-        "log_color": "bright_cyan"
-    },
-
-    "information": {
-        "project_name": "Encryption Example",
-        "project_version": "1.0.0",
-        "project_info": "Example demonstrating system_encryption module usage"
-    },
-
-    "system_encryption": {
-        "default_algorithm": "aes-256-gcm",
-        "rsa_key_size": 4096,
-        "hmac_algorithm": "sha256",
-        "logging": {
-            "tag": "encryption",
-            "log_operations": true,
-            "log_key_generation": true
-        }
-    },
-
-    "encryption_demo": {
-        "auto_test_on_start": true,
-        "test_data": {
-            "sample_message": "This is a secret message for testing encryption!",
-            "sample_json": {"user": "alice", "action": "login", "timestamp": "2024-01-01T00:00:00Z"}
-        }
-    },
-
-    "encryption_tester": {
-        "run_all_tests": true,
-        "output_results": true,
-        "test_categories": ["aes", "rsa", "hmac", "key_management", "integration"]
+    {
+      "name": "app_modules",
+      "run_at": "on_start",
+      "path": "{app_dir}/app",
+      "names": [
+        "encryption_demo",
+        "encryption_tester"
+      ]
     }
+  ],
+  "system": {
+    "auto_shutdown": false
+  },
+  "template": {
+    "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
+    "system_log_template": "[{level}]\t{message}"
+  },
+  "logs": {
+    "show_logs": true,
+    "show_banner": true,
+    "hide_log_tags": [],
+    "hide_log_levels": [],
+    "debug_mode": true,
+    "show_critical_levels": 3,
+    "banner_color": "magenta",
+    "log_color": "bright_cyan"
+  },
+  "information": {
+    "project_name": "Encryption Example",
+    "project_version": "1.0.0",
+    "project_info": "Example demonstrating system_encryption module usage"
+  },
+  "system_encryption": {
+    "default_algorithm": "aes-256-gcm",
+    "rsa_key_size": 4096,
+    "hmac_algorithm": "sha256",
+    "logging": {
+      "tag": "encryption",
+      "log_operations": true,
+      "log_key_generation": true
+    }
+  },
+  "encryption_demo": {
+    "auto_test_on_start": true,
+    "test_data": {
+      "sample_message": "This is a secret message for testing encryption!",
+      "sample_json": {"user": "alice", "action": "login", "timestamp": "2024-01-01T00:00:00Z"}
+    }
+  },
+  "encryption_tester": {
+    "run_all_tests": true,
+    "output_results": true,
+    "test_categories": ["aes", "rsa", "hmac", "key_management", "integration"]
+  }
 }

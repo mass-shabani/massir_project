@@ -28,19 +28,18 @@ class EncryptionTesterModule(IModule):
         self._config: Dict = {}
         self._test_results: Dict[str, Any] = {}
 
-    async def load(self, context):
-        """Load module and get required services."""
+    async def start(self, context):
+        """Get required services and run all encryption tests."""
         self.encryption = context.services.get('encryption_api')
         self.logger = context.services.get('core_logger')
         self.colors = context.services.get('log_colors')
+        self._encrypted_data_cls = context.services.get('encryption_types', {}).get('EncryptedData')
         core_config = context.services.get('core_config')
         if core_config:
             self._config = core_config.get('encryption_tester', {})
         if self.logger:
-            self.logger.log('EncryptionTester module loaded', tag='tester')
+            self.logger.log('EncryptionTester module started', tag='tester')
 
-    async def ready(self, context):
-        """Run all encryption tests. Display final results when all modules are ready."""
         if not self._config.get('run_all_tests', True):
             if self.logger:
                 self.logger.log('Tests disabled in config', tag='tester')
@@ -79,6 +78,7 @@ class EncryptionTesterModule(IModule):
     # AES Tests
     # =========================================================================
     
+
     async def _test_aes(self) -> Dict:
         """Test AES-256-GCM operations."""
         results = {'passed': True, 'subtests': []}
@@ -132,7 +132,7 @@ class EncryptionTesterModule(IModule):
             results['passed'] = False
             results['subtests'].append({'name': 'encryption_with_aad', 'passed': False, 'error': str(e)})
             self._log_fail('AAD encryption', e)
-                    
+                
         # Test 4: Wrong key should fail
         try:
             key1 = self.encryption.generate_symmetric_key()
@@ -141,12 +141,10 @@ class EncryptionTesterModule(IModule):
             encrypted = self.encryption.encrypt(plaintext, key1)
             try:
                 self.encryption.decrypt(encrypted, key2)
-                # Should not reach here
                 results['passed'] = False
                 results['subtests'].append({'name': 'wrong_key_detection', 'passed': False})
                 self._log_fail('Wrong key detection', 'Should have raised exception')
             except Exception:
-                # Expected behavior
                 results['subtests'].append({'name': 'wrong_key_detection', 'passed': True})
                 self._log_success('Wrong key detection: Correctly raised exception')
         except Exception as e:
@@ -160,21 +158,16 @@ class EncryptionTesterModule(IModule):
             plaintext = b'Serialize me!'
             encrypted = self.encryption.encrypt(plaintext, key)
 
-            # Serialize to dict
             data_dict = encrypted.to_dict()
             assert isinstance(data_dict, dict)
             assert 'algorithm' in data_dict
             assert 'ciphertext' in data_dict
 
-            # Serialize to JS
             json_str = json.dumps(data_dict)
             assert isinstance(json_str, str)
 
-            # Deserialize from dict
-            from massir.modules.system_encryption.core.encryption_api import EncryptedData
-            restored = EncryptedData.from_dict(json.loads(json_str))
+            restored = self._encrypted_data_cls.from_dict(json.loads(json_str))
 
-            # Decrypt with restored data
             decrypted = self.encryption.decrypt(restored, key)
             assert decrypted == plaintext
             results['subtests'].append({'name': 'serialization', 'passed': True})
@@ -208,7 +201,7 @@ class EncryptionTesterModule(IModule):
             results['passed'] = False
             results['subtests'].append({'name': 'keypair_generation', 'passed': False, 'error': str(e)})
             self._log_fail('Keypair generation', e)
-            return results  # Can't continue without keys
+            return results
                 
         # Test 2: Encryption/Decryption
         try:
@@ -231,11 +224,9 @@ class EncryptionTesterModule(IModule):
             assert signature is not None
             assert signature != data
                         
-            # Verify with correct public key
             is_valid = self.encryption.verify(data, signature, public_key)
             assert is_valid, 'Signature should be valid'
                         
-            # Verify with wrong data
             is_valid_wrong = self.encryption.verify(b'wrong data', signature, public_key)
             assert not is_valid_wrong, 'Signature should be invalid for wrong data'
             results['subtests'].append({'name': 'digital_signature', 'passed': True})
@@ -245,26 +236,21 @@ class EncryptionTesterModule(IModule):
             results['subtests'].append({'name': 'digital_signature', 'passed': False, 'error': str(e)})
             self._log_fail('Digital signatures', e)
                     
-        # Test 4: Key export/impor
+        # Test 4: Key export/import
         try:
-            # Export public key
             pub_bytes = self.encryption.export_public_key(public_key)
             assert pub_bytes.startswith(b'-----BEGIN PUBLIC KEY-----')
                         
-            # Export private key (no password)
             priv_bytes = self.encryption.export_private_key(private_key)
             assert b'PRIVATE KEY' in priv_bytes
                         
-            # Export private key (with password)
             priv_encrypted = self.encryption.export_private_key(private_key, password=b'secret123')
             assert priv_encrypted != priv_bytes
                         
-            # Import back
             imported_pub = self.encryption.import_public_key(pub_bytes)
             imported_priv = self.encryption.import_private_key(priv_bytes)
             imported_priv_enc = self.encryption.import_private_key(priv_encrypted, password=b'secret123')
                         
-            # Verify imported keys work
             ciphertext = self.encryption.encrypt_with_public(b'test', imported_pub)
             decrypted = self.encryption.decrypt_with_private(ciphertext, imported_priv)
             assert decrypted == b'test'
@@ -306,21 +292,17 @@ class EncryptionTesterModule(IModule):
             hmac_key = self.encryption.generate_hmac_key()
             message = b'This message must be authenticated'
 
-            # Create HMAC
             signature = self.encryption.create_hmac(message, hmac_key)
             assert signature is not None
             assert len(signature) > 0
                         
-            # Verify with correct key
             is_valid = self.encryption.verify_hmac(message, signature, hmac_key)
             assert is_valid, 'HMAC should be valid'
                         
-            # Verify with wrong key
             wrong_key = self.encryption.generate_hmac_key()
             is_valid_wrong = self.encryption.verify_hmac(message, signature, wrong_key)
             assert not is_valid_wrong, 'HMAC should be invalid with wrong key'
                         
-            # Verify with tampered message
             is_valid_tampered = self.encryption.verify_hmac(b'tampered message', signature, hmac_key)
             assert not is_valid_tampered, 'HMAC should be invalid for tampered message'
             results['subtests'].append({'name': 'create_verify', 'passed': True})
@@ -340,11 +322,9 @@ class EncryptionTesterModule(IModule):
                 sig = self.encryption.create_hmac(message, hmac_key, algorithm=algo)
                 signatures[algo] = sig
                                 
-                # Verify
                 is_valid = self.encryption.verify_hmac(message, sig, hmac_key, algorithm=algo)
                 assert is_valid, f'HMAC with {algo} should be valid'
                                 
-                # Different algorithms should produce different signatures
                 for other_algo, other_sig in signatures.items():
                     if other_algo != algo:
                         assert sig != other_sig, f'{algo} and {other_algo} should produce different signatures'
@@ -374,7 +354,6 @@ class EncryptionTesterModule(IModule):
             random_64 = self.encryption.generate_random_bytes(64)
             assert len(random_64) == 64
                         
-            # Should be different each time
             random_2 = self.encryption.generate_random_bytes(32)
             assert random_32 != random_2, 'Random bytes should be different'
             results['subtests'].append({'name': 'random_bytes', 'passed': True})
@@ -411,37 +390,23 @@ class EncryptionTesterModule(IModule):
                     
         # Test 1: Hybrid encryption (RSA + AES)
         try:
-            # Scenario: Alice wants to send encrypted message to Bob
-            
-            # Bob generates RSA keypair and shares public key
             bob_public, bob_private = self.encryption.generate_keypair()
                         
-            # Alice generates AES session key
             session_key = self.encryption.generate_symmetric_key()
                         
-            # Alice encrypts message with AES
             message = b'Hello Bob! This is a secret message from Alice.'
             encrypted_message = self.encryption.encrypt(message, session_key)
                         
-            # Alice encrypts session key with Bob's public key
             encrypted_session_key = self.encryption.encrypt_with_public(session_key, bob_public)
                         
-            # Alice signs the encrypted message
             signature = self.encryption.sign(encrypted_message.ciphertext, bob_private)
 
-            # Bob receives: encrypted_session_key, encrypted_message, signature
-            
-            # Bob decrypts session key with his private key
             decrypted_session_key = self.encryption.decrypt_with_private(encrypted_session_key, bob_private)
             
             assert decrypted_session_key == session_key
                         
-            # Bob verifies signature
             is_valid = self.encryption.verify(encrypted_message.ciphertext, signature, bob_public)
             
-            # Note: In real scenario, Alice would sign with her private key
-            
-            # Bob decrypts message
             decrypted_message = self.encryption.decrypt(encrypted_message, decrypted_session_key)
             assert decrypted_message == message
             results['subtests'].append({'name': 'hybrid_encryption', 'passed': True})
@@ -453,12 +418,8 @@ class EncryptionTesterModule(IModule):
 
         # Test 2: Encrypted data storage simulation
         try:
-            # Simulate storing encrypted user data
-            
-            # Generate encryption key
             storage_key = self.encryption.generate_symmetric_key()
 
-            # User data
             user_data = {
                 'username': 'alice', 
                 'email': 'alice@example.com', 
@@ -466,22 +427,16 @@ class EncryptionTesterModule(IModule):
                 'api_key': 'secret_api_key_12345'
                          }
             
-            # Serialize to JSON
             user_json = json.dumps(user_data).encode()
 
-            # Encrypt
             encrypted_user = self.encryption.encrypt(user_json, storage_key)
 
-            # Convert to dict for storage (e.g., in database)
             stored_data = encrypted_user.to_dict()
 
-            # Later: retrieve from storage
             retrieved_json = json.dumps(stored_data)
             retrieved_dict = json.loads(retrieved_json)
-            from massir.modules.system_encryption.core.encryption_api import EncryptedData
-            reconstructed = EncryptedData.from_dict(retrieved_dict)
+            reconstructed = self._encrypted_data_cls.from_dict(retrieved_dict)
 
-            # Decrypt
             decrypted_json = self.encryption.decrypt(reconstructed, storage_key)
             decrypted_user = json.loads(decrypted_json.decode())
             assert decrypted_user == user_data

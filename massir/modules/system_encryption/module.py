@@ -12,7 +12,7 @@ from typing import Optional
 
 from massir.core.interfaces import IModule
 
-from .core.encryption_api import EncryptionAPI
+from .core.encryption_api import EncryptionAPI, EncryptedData
 from .core.exceptions import EncryptionConfigError
 
 
@@ -64,6 +64,7 @@ class EncryptionModule(IModule):
         # Create and register the API
         self._api = EncryptionAPI(self._config)
         context.services.set("encryption_api", self._api)
+        context.services.set("encryption_types", {"EncryptedData": EncryptedData})
         
         if self._logger:
             log_ops = self._config.get("logging", {}).get("log_operations", False)
