@@ -1,141 +1,148 @@
 {
-    "modules": [
-        {
-            "path": "{massir_dir}/modules",
-            "type": "systems",
-            "names": ["system_logger", "network_ssl", "network_websocket", "system_network"]
-        },
-        {
-            "path": "{app_dir}/app",
-            "type": "all",
-            "names": ["network_node", "network_tester", "network_reporter"]
-        }
-    ],
-
-    "template": {
-        "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Test - NODE 4 (WebSocket Transport)             ║\n║  Version: 1.0.0                                          ║\n╚════════════════════════════════════════════════════════════╝\n",
+  "modules": [
+    {
+      "name": "system_modules",
+      "run_at": "on_start",
+      "path": "{massir_dir}/modules",
+      "names": [
+        "system_logger",
+        "network_ssl",
+        "network_websocket",
+        "system_network"
+      ]
     },
-
-    "logs": {
-        "show_logs": true,
-        "show_banner": true,
-        "debug_mode": true,
-        "banner_color": "blue",
-        "log_color": "bright_cyan"
-    },
-
-    "information": {
-        "project_name": "Network Test",
-        "project_version": "1.0.0",
-        "project_info": "Node 4 - WebSocket Transport",
-        "node_id": "node4"
-    },
-
-    "test_config": {
-        "test_duration_seconds": 60,
-        "warmup_seconds": 10,
-        "test_interval_seconds": 5
-    },
-
-    "network_ssl": {
-        "tls_version": "1.3",
-        "default_certs_path": "{app_dir}/certs",
-        "verify_client_certs": true,
-        "verify_server_certs": true,
-        "check_hostname": false,
-        "nodes": {
-            "default": {
-                "cert_file": "node4.crt",
-                "key_file": "node4.key",
-                "ca_file": "ca.crt"
-            }
-        }
-    },
-
-    "network_websocket": {
-        "client": {
-            "reconnect_enabled": true,
-            "reconnect_initial_delay_seconds": 2.0,
-            "reconnect_max_delay_seconds": 30.0,
-            "subprotocol": "massir.v1"
-        },
-        "heartbeat": {
-            "enabled": true,
-            "interval_seconds": 20.0,
-            "timeout_seconds": 60.0
-        }
-    },
-
-    "system_network": {
-        "self_node": {
-            "node_id": "node4",
-            "metadata": {
-                "role": "cloud",
-                "region": "external",
-                "transport": "websocket"
-            },
-            "capabilities": ["gateway", "external"]
-        },
-        "topology": {
-            "type": "mesh"
-        },
-        "nodes": [
-            {
-                "node_id": "node1",
-                "transport": "socket",
-                "endpoint": {
-                    "host": "192.168.56.100",
-                    "port": 8443,
-                    "use_tls": true
-                },
-                "capabilities": ["storage", "compute", "gateway"]
-            },
-            {
-                "node_id": "node2",
-                "transport": "socket",
-                "endpoint": {
-                    "host": "192.168.56.102",
-                    "port": 8443,
-                    "use_tls": true
-                },
-                "capabilities": ["compute"]
-            },
-            {
-                "node_id": "node3",
-                "transport": "socket",
-                "endpoint": {
-                    "host": "192.168.56.103",
-                    "port": 8443,
-                    "use_tls": true
-                },
-                "capabilities": ["compute", "analytics"]
-            }
-        ],
-        "routing": {
-            "default_ttl": 10,
-            "enable_multi_hop": true
-        },
-        "connection": {
-            "auto_connect_on_start": true
-        }
-    },
-
-    "network_node": {
-        "server_transport": "websocket",
-        "listen": {
-            "host": "0.0.0.0",
-            "port": 8444,
-            "path": "/ws",
-            "use_tls": true
-        }
-    },
-
-    "network_tester": {
-        "enabled": true
-    },
-
-    "network_reporter": {
-        "enabled": true,
-        "show_report_on_shutdown": true
+    {
+      "name": "app_modules",
+      "run_at": "on_start",
+      "path": "{app_dir}/app",
+      "names": [
+        "network_node",
+        "network_tester",
+        "network_reporter"
+      ]
     }
+  ],
+  "system": {
+    "auto_shutdown": false
+  },
+  "template": {
+    "project_banner_template": "\n╔════════════════════════════════════════════════════════════╗\n║  Network Test - NODE 4 (WebSocket Transport)             ║\n║  Version: 1.0.0                                          ║\n╚════════════════════════════════════════════════════════════╝\n"
+  },
+  "logs": {
+    "show_logs": true,
+    "show_banner": true,
+    "hide_log_tags": [],
+    "hide_log_levels": [],
+    "debug_mode": true,
+    "show_critical_levels": 3,
+    "banner_color": "blue",
+    "log_color": "bright_cyan"
+  },
+  "information": {
+    "project_name": "Network Test",
+    "project_version": "1.0.0",
+    "project_info": "Node 4 - WebSocket Transport",
+    "node_id": "node4"
+  },
+  "test_config": {
+    "test_duration_seconds": 60,
+    "warmup_seconds": 10,
+    "test_interval_seconds": 5
+  },
+  "network_ssl": {
+    "tls_version": "1.3",
+    "default_certs_path": "{app_dir}/certs",
+    "verify_client_certs": true,
+    "verify_server_certs": true,
+    "check_hostname": false,
+    "nodes": {
+      "default": {
+        "cert_file": "node4.crt",
+        "key_file": "node4.key",
+        "ca_file": "ca.crt"
+      }
+    }
+  },
+  "network_websocket": {
+    "client": {
+      "reconnect_enabled": true,
+      "reconnect_initial_delay_seconds": 2.0,
+      "reconnect_max_delay_seconds": 30.0,
+      "subprotocol": "massir.v1"
+    },
+    "heartbeat": {
+      "enabled": true,
+      "interval_seconds": 20.0,
+      "timeout_seconds": 60.0
+    }
+  },
+  "system_network": {
+    "self_node": {
+      "node_id": "node4",
+      "metadata": {
+        "role": "cloud",
+        "region": "external",
+        "transport": "websocket"
+      },
+      "capabilities": ["gateway", "external"]
+    },
+    "topology": {
+      "type": "mesh"
+    },
+    "nodes": [
+      {
+        "node_id": "node1",
+        "transport": "socket",
+        "endpoint": {
+          "host": "192.168.56.100",
+          "port": 8443,
+          "use_tls": true
+        },
+        "capabilities": ["storage", "compute", "gateway"]
+      },
+      {
+        "node_id": "node2",
+        "transport": "socket",
+        "endpoint": {
+          "host": "192.168.56.102",
+          "port": 8443,
+          "use_tls": true
+        },
+        "capabilities": ["compute"]
+      },
+      {
+        "node_id": "node3",
+        "transport": "socket",
+        "endpoint": {
+          "host": "192.168.56.103",
+          "port": 8443,
+          "use_tls": true
+        },
+        "capabilities": ["compute", "analytics"]
+      }
+    ],
+    "routing": {
+      "default_ttl": 10,
+      "enable_multi_hop": true
+    },
+    "connection": {
+      "auto_connect_on_start": true
+    }
+  },
+  "network_node": {
+    "server_transport": "websocket",
+    "listen": {
+      "host": "0.0.0.0",
+      "port": 8444,
+      "path": "/ws",
+      "use_tls": true
+    }
+  },
+  "network_tester": {
+    "enabled": true
+  },
+  "network_reporter": {
+    "enabled": true,
+    "show_report_on_shutdown": true
+  }
 }

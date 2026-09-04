@@ -31,8 +31,12 @@ class NetworkReporterModule(IModule):
         self.colors = None
         self._config: Dict = {}
     
-    async def load(self, context):
-        """Load the module."""
+    async def start(self, context):
+        """
+        Start the module:
+        1. Retrieve required services from the context
+        2. Load configuration from app_settings.json
+        """
         self.network_api = context.services.get("network_api")
         self.test_results_service = context.services.get("test_results_service")
         self.logger = context.services.get("core_logger")
@@ -43,16 +47,7 @@ class NetworkReporterModule(IModule):
             self._config = core_config.get("network_reporter", {})
         
         if self.logger:
-            self.logger.log("NetworkReporterModule loaded", tag="reporter")
-    
-    async def start(self, context):
-        """Start the module."""
-        if self.logger:
-            self.logger.log("NetworkReporter ready", tag="reporter")
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        pass
+            self.logger.log("NetworkReporterModule started", tag="reporter")
     
     async def stop(self, context):
         """

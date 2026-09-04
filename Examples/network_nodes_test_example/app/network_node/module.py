@@ -30,8 +30,14 @@ class NetworkNodeModule(IModule):
         self._config: Dict = {}
         self._node_id: str = ""
     
-    async def load(self, context):
-        """Load the module."""
+    async def start(self, context):
+        """
+        Start the node:
+        1. Retrieve required services from the context
+        2. Load configuration from app_settings.json
+        3. Register as node_service
+        4. Start server and connect to peers
+        """
         self.network_api = context.services.get("network_api")
         self.socket_api = context.services.get("socket_api")
         self.websocket_api = context.services.get("websocket_api")
@@ -51,12 +57,10 @@ class NetworkNodeModule(IModule):
         
         if self.logger:
             self.logger.log(
-                f"NetworkNodeModule loaded - Node ID: {self._node_id}",
+                f"NetworkNodeModule started - Node ID: {self._node_id}",
                 tag="node"
             )
-    
-    async def start(self, context):
-        """Start server and connect to peers."""
+        
         # =========================================================================
         # Step 1: Start server
         # =========================================================================
@@ -70,6 +74,7 @@ class NetworkNodeModule(IModule):
         success_count = sum(1 for v in results.values() if v)
         
         if self.logger:
+            status = self.network_api.get_network_status()
             self._print_box(
                 title=f"🌐 NODE READY: {self._node_id}",
                 lines=[
@@ -78,11 +83,7 @@ class NetworkNodeModule(IModule):
                 ],
                 color=self.colors.BRIGHT_GREEN if self.colors else None
             )
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            status = self.network_api.get_network_status()
+            
             self.logger.log(
                 f"Node '{self._node_id}' ready - "
                 f"{status.connected_peers}/{status.required_peers} peers connected",

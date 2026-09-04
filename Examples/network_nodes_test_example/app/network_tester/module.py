@@ -56,8 +56,15 @@ class NetworkTesterModule(IModule):
             "test_end_time": None,
         }
     
-    async def load(self, context):
-        """Load the module."""
+    async def start(self, context):
+        """
+        Start the module:
+        1. Retrieve required services from the context
+        2. Load configuration from app_settings.json
+        3. Register event handlers
+        4. Register as test_results_service
+        5. Start tests and shutdown timer
+        """
         self._context = context
         
         self.network_api = context.services.get("network_api")
@@ -77,10 +84,8 @@ class NetworkTesterModule(IModule):
         self.network_api.on_peer_disconnected(self._on_peer_disconnected)
         
         if self.logger:
-            self.logger.log("NetworkTesterModule loaded", tag="tester")
-    
-    async def start(self, context):
-        """Start tests and shutdown timer."""
+            self.logger.log("NetworkTesterModule started", tag="tester")
+        
         if not self._config.get("enabled", True):
             return
         
@@ -88,7 +93,6 @@ class NetworkTesterModule(IModule):
         self._stats["test_start_time"] = self._start_time.isoformat()
         
         # Get test configuration
-        core_config = context.services.get("core_config")
         test_config = core_config.get("test_config", {}) if core_config else {}
         
         warmup_seconds = test_config.get("warmup_seconds", 10)
@@ -113,11 +117,6 @@ class NetworkTesterModule(IModule):
         self._shutdown_task = asyncio.create_task(
             self._schedule_shutdown(shutdown_delay)
         )
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
-        if self.logger:
-            self.logger.log("NetworkTester ready", tag="tester")
     
     async def stop(self, context):
         """Stop the module."""
