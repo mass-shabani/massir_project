@@ -54,8 +54,14 @@ class SystemNetworkModule(IModule):
         self._router: Optional[Router] = None
         self._connection_manager: Optional[ConnectionManager] = None
     
-    async def load(self, context):
-        """Load the network module and initialize components."""
+    async def start(self, context):
+        """
+        Start the network module:
+        1. Load config and initialize core components
+        2. Register available transport adapters
+        3. Create and register network_api service
+        4. Start adapters and auto-connect if configured
+        """
         self._logger = context.services.get("core_logger")
         core_config = context.services.get("core_config")
         
@@ -163,15 +169,13 @@ class SystemNetworkModule(IModule):
         
         if self._logger:
             self._logger.log(
-                f"SystemNetworkModule loaded - "
+                f"SystemNetworkModule started - "
                 f"node='{self_node_id}', "
                 f"transports={transports_available}, "
                 f"topology={self._topology.topology_type.value}",
                 tag="network"
             )
-    
-    async def start(self, context):
-        """Start the network module."""
+        
         # Start all adapters
         for transport in self._connection_manager.get_available_transports():
             try:
@@ -196,11 +200,6 @@ class SystemNetworkModule(IModule):
                     tag="network"
                 )
         
-        if self._logger:
-            self._logger.log("SystemNetworkModule started", tag="network")
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
         if self._logger and self._api:
             status = self._api.get_network_status()
             self._logger.log(

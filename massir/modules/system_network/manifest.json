@@ -1,7 +1,6 @@
 {
     "name": "system_network",
     "version": "1.0.0",
-    "type": "system",
     "entrypoint": "SystemNetworkModule",
     "description": "High-level network management layer providing transport-agnostic messaging, topology management, routing, and node registry. Unifies network_socket and network_websocket transports under a single network_api interface.",
     "requires": ["core_logger"],
