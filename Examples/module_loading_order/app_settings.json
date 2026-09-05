@@ -1,30 +1,43 @@
 {
   "modules": [
     {
+      "name": "system_modules",
+      "run_at": "on_start",
       "path": "{massir_dir}/modules",
-      "type": "systems",
-      "names": ["system_logger"]
+      "names": [
+        "system_logger"
+      ]
     },
     {
+      "name": "app_modules",
+      "run_at": "on_start",
       "path": "{app_dir}/app",
-      "type": "all",
-      "names": ["module3", "module2", "module1"]
+      "names": [
+        "module1",
+        "module2",
+        "module3"
+      ]
     }
   ],
+  "system": {
+    "auto_shutdown": true
+  },
   "template": {
-    "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n",
+    "project_banner_template": "\n==========================================================\n\t{project_name}\n\t{project_version}\n\t{project_info}\n==========================================================\n"
   },
   "logs": {
     "show_logs": true,
     "show_banner": true,
-    "hide_log_tags": ["", ""],
+    "hide_log_tags": [],
     "hide_log_levels": [],
     "debug_mode": true,
+    "show_critical_levels": 3,
     "banner_color": "green",
-    "log_color": "bright_cyan"
+    "log_color": "default"
   },
   "information": {
     "project_name": "Module Loading Order Example",
+    "project_version": "1.0.0",
     "project_info": "Example demonstrating the loading order of three application modules."
   },
   "fastapi_provider": {
