@@ -24,17 +24,18 @@ class UsersAPIModule(IModule):
         self.logger = None
         self.colors = None
     
-    async def load(self, context):
-        """Get HTTP API from services."""
+    async def start(self, context):
+        """
+        Start the module:
+        1. Retrieve required services from the context
+        2. Register user management routes
+        """
         self.http_api = context.services.get("http_api")
         self.logger = context.services.get("core_logger")
         self.colors = context.services.get("log_colors")
         
         if self.logger and self.colors:
             self.logger.log("UsersAPI module loaded", tag="users", text_color=self.colors.BRIGHT_BLUE)
-    
-    async def start(self, context):
-        """Register user management routes."""
         
         # GET /users - Get all users
         @self.http_api.get("/users", tags=["users"], summary="Get all users")
@@ -121,9 +122,7 @@ class UsersAPIModule(IModule):
         
         if self.logger:
             self.logger.log("Users API routes registered", tag="users")
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
+        
         if self.logger:
             self.logger.log("UsersAPI module is ready", tag="users")
     

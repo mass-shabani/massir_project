@@ -21,8 +21,12 @@ class NetworkInfoModule(IModule):
         self.logger = None
         self.colors = None
     
-    async def load(self, context):
-        """Get APIs from services."""
+    async def start(self, context):
+        """
+        Start the module:
+        1. Retrieve required services from the context
+        2. Register network information routes using router_api
+        """
         self.http_api = context.services.get("http_api")
         self.router_api = context.services.get("router_api")
         self.net_api = context.services.get("net_api")
@@ -31,9 +35,6 @@ class NetworkInfoModule(IModule):
         
         if self.logger and self.colors:
             self.logger.log("NetworkInfo module loaded", tag="network", text_color=self.colors.BRIGHT_GREEN)
-    
-    async def start(self, context):
-        """Register network information routes using router_api."""
         
         # Create a separate router for network info
         router = self.router_api.create(
@@ -113,9 +114,7 @@ class NetworkInfoModule(IModule):
         
         if self.logger:
             self.logger.log("Network info routes registered", tag="network")
-    
-    async def ready(self, context):
-        """Called when all modules are ready."""
+        
         if self.logger:
             self.logger.log("NetworkInfo module is ready", tag="network")
     
