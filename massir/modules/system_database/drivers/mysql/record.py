@@ -42,14 +42,19 @@ class MySQLRecordManager(BaseRecordManager):
         returning: Optional[List[str]] = None
     ) -> QueryResult:
         """Insert a single record."""
+        if not data:
+            sql = f"INSERT INTO {table} () VALUES ()"
+            result = await self._pool.execute(sql, ())
+            if result.success and result.last_insert_id:
+                result.rows = [data]
+            return result
+        
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["%s" for _ in data])
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
         
         result = await self._pool.execute(sql, tuple(data.values()))
         
-        # MySQL doesn't support RETURNING
-        # Return the inserted data with last_insert_id
         if result.success and result.last_insert_id:
             result.rows = [data]
         

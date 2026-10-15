@@ -41,17 +41,24 @@ class SQLiteRecordManager(BaseRecordManager):
         returning: Optional[List[str]] = None
     ) -> QueryResult:
         """Insert a single record."""
+        if not data:
+            sql = f"INSERT INTO {table} DEFAULT VALUES"
+            result = await self._pool.execute(sql, ())
+            if result.success and result.last_insert_id and returning:
+                where = {"rowid": result.last_insert_id}
+                row = await self.find_one(table, where, returning)
+                if row:
+                    result.rows = [row]
+            return result
+        
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["?" for _ in data])
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
         
         result = await self._pool.execute(sql, tuple(data.values()))
         
-        # SQLite doesn't support RETURNING in older versions
-        # Return the inserted data with last_insert_id
         if result.success and result.last_insert_id:
             if returning:
-                # Fetch the inserted row
                 where = {"rowid": result.last_insert_id}
                 row = await self.find_one(table, where, returning)
                 if row:

@@ -46,6 +46,29 @@ class PostgreSQLRecordManager(BaseRecordManager):
         returning: Optional[List[str]] = None
     ) -> QueryResult:
         """Insert a single record."""
+        if not data:
+            sql = f"INSERT INTO {table} DEFAULT VALUES"
+            returning_cols = ", ".join(returning) if returning else "*"
+            sql += f" RETURNING {returning_cols}"
+            
+            start_time = time.time()
+            try:
+                row = await self._pool.fetch_one(sql, ())
+                last_id = row.get("id") if row else None
+                return QueryResult(
+                    success=True,
+                    affected_rows=1,
+                    last_insert_id=last_id,
+                    rows=[row] if row else [],
+                    execution_time=time.time() - start_time
+                )
+            except Exception as e:
+                return QueryResult(
+                    success=False,
+                    error=str(e),
+                    execution_time=time.time() - start_time
+                )
+        
         columns = ", ".join(data.keys())
         placeholders = ", ".join([f"${i+1}" for i in range(len(data))])
         
@@ -59,10 +82,11 @@ class PostgreSQLRecordManager(BaseRecordManager):
         start_time = time.time()
         try:
             row = await self._pool.fetch_one(sql, tuple(data.values()))
+            last_id = row.get("id") if row else None
             return QueryResult(
                 success=True,
                 affected_rows=1,
-                last_insert_id=list(row.values())[0] if row else None,
+                last_insert_id=last_id,
                 rows=[row] if row else [],
                 execution_time=time.time() - start_time
             )
@@ -126,13 +150,15 @@ class PostgreSQLRecordManager(BaseRecordManager):
         params = list(data.values())
         
         if where_sql:
-            where_clause = where_sql
+            offset = len(params)
             if where_params:
-                # Re-number placeholders in where_sql
-                offset = len(params)
-                for i, p in enumerate(where_params):
+                for p in where_params:
                     params.append(p)
-                where_clause = where_sql.replace("$1", f"${offset + 1}")
+            import re
+            def replacer(match):
+                old_idx = int(match.group(1))
+                return f"${old_idx + offset}"
+            where_clause = re.sub(r"\$(\d+)", replacer, where_sql)
         else:
             where_clause, where_p = self._build_where_clause(where, len(params) + 1)
             params.extend(where_p)
@@ -256,7 +282,7 @@ class PostgreSQLRecordManager(BaseRecordManager):
         """Insert or update record (upsert) using ON CONFLICT."""
         columns = ", ".join(data.keys())
         placeholders = ", ".join([f"${i+1}" for i in range(len(data))])
-        
+
         # ON CONFLICT clause
         key_cols = ", ".join(key_columns)
         

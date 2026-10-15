@@ -37,11 +37,10 @@ class SQLiteConnection(BaseConnection):
         try:
             self._connection = await aiosqlite.connect(
                 self._db_path,
-                timeout=self.config.connect_timeout
+                timeout=self.config.connect_timeout,
+                isolation_level=None
             )
-            # Enable foreign keys
             await self._connection.execute("PRAGMA foreign_keys = ON")
-            # Return rows as dictionaries
             self._connection.row_factory = aiosqlite.Row
             self._is_connected = True
             return True
@@ -66,7 +65,6 @@ class SQLiteConnection(BaseConnection):
         start_time = time.time()
         try:
             cursor = await self._connection.execute(query, params or ())
-            await self._connection.commit()
             
             affected = cursor.rowcount if cursor.rowcount >= 0 else 0
             last_id = cursor.lastrowid
@@ -154,12 +152,13 @@ class SQLiteConnection(BaseConnection):
 
 class SQLitePool(BasePool):
     """SQLite connection pool (simplified - SQLite doesn't benefit much from pooling)."""
-    
+
     def __init__(self, config: DatabaseConfig):
         super().__init__(config)
         self._connections: List[SQLiteConnection] = []
         self._available: List[SQLiteConnection] = []
         self._lock = asyncio.Lock()
+        self._active_transactions: Dict[int, SQLiteConnection] = {}
     
     async def initialize(self) -> bool:
         """Initialize the connection pool."""
@@ -184,9 +183,30 @@ class SQLitePool(BasePool):
         self._available.clear()
         self._is_initialized = False
         return True
-    
+
+    def _current_task_id(self) -> Optional[int]:
+        """Get current asyncio task id."""
+        task = asyncio.current_task()
+        return id(task) if task else None
+
+    def set_active_transaction(self, connection: SQLiteConnection) -> None:
+        """Mark a connection as the active transaction connection."""
+        task_id = self._current_task_id()
+        if task_id is not None:
+            self._active_transactions[task_id] = connection
+
+    def clear_active_transaction(self) -> None:
+        """Clear the active transaction marker."""
+        task_id = self._current_task_id()
+        if task_id is not None:
+            self._active_transactions.pop(task_id, None)
+
     async def acquire(self) -> SQLiteConnection:
         """Acquire a connection."""
+        task_id = self._current_task_id()
+        if task_id is not None and task_id in self._active_transactions:
+            return self._active_transactions[task_id]
+        
         async with self._lock:
             if self._available:
                 return self._available.pop()
@@ -202,6 +222,11 @@ class SQLitePool(BasePool):
     
     async def release(self, connection: SQLiteConnection) -> None:
         """Release a connection back to the pool."""
+        task_id = self._current_task_id()
+        if task_id is not None and task_id in self._active_transactions:
+            if self._active_transactions[task_id] is connection:
+                return
+        
         async with self._lock:
             if connection in self._connections:
                 self._available.append(connection)

@@ -33,11 +33,8 @@ class MySQLTransaction(BaseTransaction):
             return False
         
         try:
-            # Ping to ensure connection is alive before commit
-            await self._connection.ping(reconnect=True)
             await self._connection.commit()
         except Exception as e:
-            # If commit fails, try to rollback
             try:
                 await self._connection.rollback()
             except:
@@ -56,8 +53,6 @@ class MySQLTransaction(BaseTransaction):
             return False
         
         try:
-            # Ping to ensure connection is alive before rollback
-            await self._connection.ping(reconnect=True)
             await self._connection.rollback()
         except Exception as e:
             raise TransactionError(f"Failed to rollback transaction: {e}")

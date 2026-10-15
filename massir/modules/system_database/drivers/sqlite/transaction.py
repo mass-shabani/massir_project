@@ -21,6 +21,7 @@ class SQLiteTransaction(BaseTransaction):
             return True
         
         self._connection = await self._pool.acquire()
+        self._pool.set_active_transaction(self._connection)
         await self._connection.begin_transaction()
         self._is_active = True
         return True
@@ -33,7 +34,6 @@ class SQLiteTransaction(BaseTransaction):
         try:
             await self._connection.commit()
         except Exception as e:
-            # If commit fails, try to rollback
             try:
                 await self._connection.rollback()
             except:
@@ -41,6 +41,7 @@ class SQLiteTransaction(BaseTransaction):
             raise TransactionError(f"Failed to commit transaction: {e}")
         finally:
             self._is_active = False
+            self._pool.clear_active_transaction()
             if self._connection:
                 await self._pool.release(self._connection)
                 self._connection = None
@@ -57,6 +58,7 @@ class SQLiteTransaction(BaseTransaction):
             raise TransactionError(f"Failed to rollback transaction: {e}")
         finally:
             self._is_active = False
+            self._pool.clear_active_transaction()
             if self._connection:
                 await self._pool.release(self._connection)
                 self._connection = None
