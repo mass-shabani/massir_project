@@ -45,8 +45,9 @@ class SQLiteRecordManager(BaseRecordManager):
             sql = f"INSERT INTO {table} DEFAULT VALUES"
             result = await self._pool.execute(sql, ())
             if result.success and result.last_insert_id and returning:
-                where = {"rowid": result.last_insert_id}
-                row = await self.find_one(table, where, returning)
+                row = await self.find_one(table, {"id": result.last_insert_id}, returning)
+                if row is None:
+                    row = await self.find_one(table, {"rowid": result.last_insert_id}, returning)
                 if row:
                     result.rows = [row]
             return result
@@ -59,8 +60,9 @@ class SQLiteRecordManager(BaseRecordManager):
         
         if result.success and result.last_insert_id:
             if returning:
-                where = {"rowid": result.last_insert_id}
-                row = await self.find_one(table, where, returning)
+                row = await self.find_one(table, {"id": result.last_insert_id}, returning)
+                if row is None:
+                    row = await self.find_one(table, {"rowid": result.last_insert_id}, returning)
                 if row:
                     result.rows = [row]
         

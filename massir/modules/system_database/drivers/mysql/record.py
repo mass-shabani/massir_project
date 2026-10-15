@@ -279,14 +279,28 @@ class MySQLRecordManager(BaseRecordManager):
         batch_size: int = 1000
     ) -> AsyncIterator[Dict[str, Any]]:
         """Stream records for large result sets."""
-        offset = 0
-        while True:
-            batch = await self.find_many(
-                table, where, columns, order_by,
-                limit=batch_size, offset=offset
-            )
-            if not batch:
-                break
-            for row in batch:
-                yield row
-            offset += batch_size
+        import aiomysql
+        
+        col_list = ", ".join(columns) if columns else "*"
+        sql = f"SELECT {col_list} FROM {table}"
+        params = ()
+        
+        if where:
+            where_clause, params = self._build_where_clause(where)
+            sql += f" WHERE {where_clause}"
+        
+        if order_by:
+            sql += f" ORDER BY {', '.join(order_by)}"
+        
+        conn = await self._pool.acquire()
+        try:
+            async with conn.cursor(aiomysql.SSCursor) as cursor:
+                await cursor.execute(sql, params)
+                while True:
+                    rows = await cursor.fetchmany(batch_size)
+                    if not rows:
+                        break
+                    for row in rows:
+                        yield dict(row)
+        finally:
+            await self._pool.release(conn)

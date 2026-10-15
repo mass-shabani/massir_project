@@ -301,13 +301,15 @@ class CacheManager:
         self._max_size = max_size
         self._enabled = True
     
-    def get_cache(self, db_name: str) -> QueryCache:
+    async def get_cache(self, db_name: str) -> QueryCache:
         """Get or create cache for a database."""
         if db_name not in self._caches:
-            self._caches[db_name] = QueryCache(
+            cache = QueryCache(
                 max_size=self._max_size,
                 default_ttl=self._default_ttl
             )
+            await cache.start()
+            self._caches[db_name] = cache
         return self._caches[db_name]
     
     async def start_all(self):
@@ -329,7 +331,7 @@ class CacheManager:
         """Get cached result."""
         if not self._enabled:
             return None
-        cache = self.get_cache(db_name)
+        cache = await self.get_cache(db_name)
         return await cache.get(query, params, db_name)
     
     async def set(
@@ -343,14 +345,14 @@ class CacheManager:
         """Cache a result."""
         if not self._enabled:
             return
-        cache = self.get_cache(db_name)
+        cache = await self.get_cache(db_name)
         await cache.set(query, value, params, db_name, ttl)
     
     async def invalidate(self, db_name: str, table_name: str):
         """Invalidate cache for a table."""
         if not self._enabled:
             return
-        cache = self.get_cache(db_name)
+        cache = await self.get_cache(db_name)
         await cache.invalidate_table(table_name, db_name)
     
     async def clear_all(self):

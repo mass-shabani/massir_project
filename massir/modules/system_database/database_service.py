@@ -143,9 +143,19 @@ class DatabaseConnection:
         use_cache: bool = True
     ) -> Optional[Dict[str, Any]]:
         """Find a single record."""
-        # For now, skip caching on find operations
-        # A more sophisticated implementation would cache query results
-        return await self._record.find_one(table, where, columns, order_by)
+        if use_cache and self._cache_enabled and self._cache:
+            query = f"find_one:{table}:{where}:{columns}:{order_by}"
+            cached = await self._cache.get(self.name, query)
+            if cached is not None:
+                return cached
+        
+        result = await self._record.find_one(table, where, columns, order_by)
+        
+        if use_cache and self._cache_enabled and self._cache and result is not None:
+            query = f"find_one:{table}:{where}:{columns}:{order_by}"
+            await self._cache.set(self.name, query, result)
+        
+        return result
     
     async def find_many(
         self, 
@@ -154,10 +164,23 @@ class DatabaseConnection:
         columns: Optional[List[str]] = None,
         order_by: Optional[List[str]] = None,
         limit: Optional[int] = None,
-        offset: Optional[int] = None
+        offset: Optional[int] = None,
+        use_cache: bool = True
     ) -> List[Dict[str, Any]]:
         """Find multiple records."""
-        return await self._record.find_many(table, where, columns, order_by, limit, offset)
+        if use_cache and self._cache_enabled and self._cache:
+            query = f"find_many:{table}:{where}:{columns}:{order_by}:{limit}:{offset}"
+            cached = await self._cache.get(self.name, query)
+            if cached is not None:
+                return cached
+        
+        result = await self._record.find_many(table, where, columns, order_by, limit, offset)
+        
+        if use_cache and self._cache_enabled and self._cache:
+            query = f"find_many:{table}:{where}:{columns}:{order_by}:{limit}:{offset}"
+            await self._cache.set(self.name, query, result)
+        
+        return result
     
     async def count(
         self, 

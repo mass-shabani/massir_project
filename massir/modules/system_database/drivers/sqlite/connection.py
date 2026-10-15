@@ -228,7 +228,7 @@ class SQLitePool(BasePool):
                 return
         
         async with self._lock:
-            if connection in self._connections:
+            if connection in self._connections and connection not in self._available:
                 self._available.append(connection)
     
     async def execute(

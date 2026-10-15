@@ -86,10 +86,14 @@ class PostgreSQLSchemaManager(BaseSchemaManager):
         sql = f"CREATE TABLE {if_not_exists} {table_def.name} ({', '.join(columns_sql)})"
         
         result = await self._pool.execute(sql)
+        if not result.success:
+            return result
         
         # Create indexes
         for idx in table_def.indexes:
-            await self.create_index(table_def.name, idx)
+            idx_result = await self.create_index(table_def.name, idx)
+            if not idx_result.success:
+                return idx_result
         
         # Add comment if provided
         if table_def.comment:
