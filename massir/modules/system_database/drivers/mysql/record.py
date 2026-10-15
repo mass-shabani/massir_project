@@ -69,18 +69,32 @@ class MySQLRecordManager(BaseRecordManager):
         if not data:
             return QueryResult(success=True, affected_rows=0)
         
-        columns = ", ".join(data[0].keys())
-        placeholders = ", ".join(["%s" for _ in data[0]])
-        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+        columns = list(data[0].keys())
+        if not columns:
+            return QueryResult(
+                success=False,
+                error="no columns provided for insert_many"
+            )
         
-        # Batch insert
+        for i, row in enumerate(data):
+            if set(row.keys()) != set(columns):
+                return QueryResult(
+                    success=False,
+                    error=f"row {i} has inconsistent columns"
+                )
+        
+        col_list = ", ".join(columns)
+        placeholders = ", ".join(["%s" for _ in columns])
+        sql = f"INSERT INTO {table} ({col_list}) VALUES ({placeholders})"
+        
         total_affected = 0
         conn = await self._pool.acquire()
         try:
             await conn.begin()
             async with conn.cursor() as cursor:
                 for row in data:
-                    await cursor.execute(sql, tuple(row.values()))
+                    values = tuple(row[col] for col in columns)
+                    await cursor.execute(sql, values)
                     total_affected += cursor.rowcount
             await conn.commit()
             return QueryResult(success=True, affected_rows=total_affected)
@@ -99,6 +113,12 @@ class MySQLRecordManager(BaseRecordManager):
         where_params: Optional[tuple] = None
     ) -> QueryResult:
         """Update records."""
+        if not data:
+            return QueryResult(
+                success=False,
+                error="no data provided for update"
+            )
+        
         set_clause = ", ".join([f"{k} = %s" for k in data.keys()])
         params = list(data.values())
         
@@ -227,6 +247,12 @@ class MySQLRecordManager(BaseRecordManager):
         update_columns: Optional[List[str]] = None
     ) -> QueryResult:
         """Insert or update record (upsert) using ON DUPLICATE KEY UPDATE."""
+        if not data:
+            return QueryResult(
+                success=False,
+                error="no data provided for upsert"
+            )
+        
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["%s" for _ in data])
         

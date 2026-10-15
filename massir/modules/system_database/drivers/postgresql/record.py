@@ -106,11 +106,21 @@ class PostgreSQLRecordManager(BaseRecordManager):
         if not data:
             return QueryResult(success=True, affected_rows=0)
         
-        # Use COPY for bulk insert (more efficient)
         columns = list(data[0].keys())
-        col_list = ", ".join(columns)
+        if not columns:
+            return QueryResult(
+                success=False,
+                error="no columns provided for insert_many"
+            )
         
-        # Build values with proper placeholders
+        for i, row in enumerate(data):
+            if set(row.keys()) != set(columns):
+                return QueryResult(
+                    success=False,
+                    error=f"row {i} has inconsistent columns"
+                )
+        
+        col_list = ", ".join(columns)
         total_affected = 0
         start_time = time.time()
         
@@ -145,6 +155,12 @@ class PostgreSQLRecordManager(BaseRecordManager):
         where_params: Optional[tuple] = None
     ) -> QueryResult:
         """Update records."""
+        if not data:
+            return QueryResult(
+                success=False,
+                error="no data provided for update"
+            )
+        
         set_parts = [f"{k} = ${i+1}" for i, k in enumerate(data.keys())]
         set_clause = ", ".join(set_parts)
         params = list(data.values())
@@ -280,10 +296,15 @@ class PostgreSQLRecordManager(BaseRecordManager):
         update_columns: Optional[List[str]] = None
     ) -> QueryResult:
         """Insert or update record (upsert) using ON CONFLICT."""
+        if not data:
+            return QueryResult(
+                success=False,
+                error="no data provided for upsert"
+            )
+        
         columns = ", ".join(data.keys())
         placeholders = ", ".join([f"${i+1}" for i in range(len(data))])
-
-        # ON CONFLICT clause
+        
         key_cols = ", ".join(key_columns)
         
         if update_columns:
@@ -302,9 +323,11 @@ class PostgreSQLRecordManager(BaseRecordManager):
         start_time = time.time()
         try:
             row = await self._pool.fetch_one(sql, tuple(data.values()))
+            last_id = row.get("id") if row else None
             return QueryResult(
                 success=True,
                 affected_rows=1,
+                last_insert_id=last_id,
                 rows=[row] if row else [],
                 execution_time=time.time() - start_time
             )

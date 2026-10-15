@@ -1,6 +1,6 @@
 {
     "name": "system_database",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "entrypoint": "DatabaseModule",
     "description": "Async database middleware for relational databases (PostgreSQL, MySQL, SQLite) with connection pooling, caching, and unified API",
     "requires": ["core_logger", "core_config"],
