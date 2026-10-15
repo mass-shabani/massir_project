@@ -125,7 +125,8 @@ class PostgreSQLRecordManager(BaseRecordManager):
         start_time = time.time()
         
         try:
-            async with self._pool._pool.acquire() as conn:
+            conn = await self._pool.acquire()
+            try:
                 async with conn.transaction():
                     for row in data:
                         values = [row[col] for col in columns]
@@ -133,6 +134,8 @@ class PostgreSQLRecordManager(BaseRecordManager):
                         sql = f"INSERT INTO {table} ({col_list}) VALUES ({placeholders})"
                         await conn.execute(sql, *values)
                         total_affected += 1
+            finally:
+                await self._pool.release(conn)
             
             return QueryResult(
                 success=True,
@@ -266,7 +269,7 @@ class PostgreSQLRecordManager(BaseRecordManager):
         where_params: Optional[tuple] = None
     ) -> int:
         """Count records."""
-        sql = f"SELECT COUNT(*) FROM {table}"
+        sql = f"SELECT COUNT(*) as cnt FROM {table}"
         params = ()
         
         if where_sql:
@@ -276,8 +279,8 @@ class PostgreSQLRecordManager(BaseRecordManager):
             where_clause, params = self._build_where_clause(where)
             sql += f" WHERE {where_clause}"
         
-        result = await self._pool.fetch_value(sql, params)
-        return result or 0
+        result = await self._pool.fetch_one(sql, params)
+        return result["cnt"] if result else 0
     
     async def exists(
         self, 

@@ -135,8 +135,10 @@ class PostgreSQLSQLExecutor(BaseSQLExecutor):
         batch_size: int = 1000
     ) -> AsyncIterator[Dict[str, Any]]:
         """Stream results for large queries using cursor."""
-        async with self._pool._pool.acquire() as conn:
+        conn = await self._pool.acquire()
+        try:
             async with conn.transaction():
-                # Use a server-side cursor for large results
-                async for row in conn.cursor(sql, *(params or ())):
+                async for row in conn.cursor(sql, *(params or ()), prefetch=batch_size):
                     yield dict(row)
+        finally:
+            await self._pool.release(conn)

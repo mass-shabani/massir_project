@@ -35,10 +35,12 @@ class SQLiteConnection(BaseConnection):
     async def connect(self) -> bool:
         """Establish database connection."""
         try:
-            self._connection = await aiosqlite.connect(
-                self._db_path,
-                timeout=self.config.connect_timeout,
-                isolation_level=None
+            self._connection = await asyncio.wait_for(
+                aiosqlite.connect(
+                    self._db_path,
+                    isolation_level=None
+                ),
+                timeout=self.config.connect_timeout
             )
             await self._connection.execute("PRAGMA foreign_keys = ON")
             self._connection.row_factory = aiosqlite.Row
@@ -162,9 +164,7 @@ class SQLitePool(BasePool):
     
     async def initialize(self) -> bool:
         """Initialize the connection pool."""
-        # For SQLite, we create a minimal pool
-        # SQLite handles concurrency differently
-        min_size = min(self.config.pool_min_size, 1)  # At least 1
+        min_size = max(1, self.config.pool_min_size)
         
         for _ in range(min_size):
             conn = SQLiteConnection(self.config)

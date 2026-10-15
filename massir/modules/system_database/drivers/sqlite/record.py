@@ -239,8 +239,8 @@ class SQLiteRecordManager(BaseRecordManager):
             where_clause, params = self._build_where_clause(where)
             sql += f" WHERE {where_clause}"
         
-        result = await self._pool.fetch_value(sql, params)
-        return result or 0
+        result = await self._pool.fetch_one(sql, params)
+        return result["cnt"] if result else 0
     
     async def exists(
         self, 

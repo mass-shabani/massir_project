@@ -23,8 +23,10 @@ class CacheEntry:
     @property
     def expired(self) -> bool:
         """Check if entry has expired."""
-        if self.ttl <= 0:
-            return False  # Never expires
+        if self.ttl < 0:
+            return False  # Negative ttl = never expires
+        if self.ttl == 0:
+            return True  # Zero ttl = immediately expired
         return time.time() > (self.created_at + self.ttl)
     
     @property
@@ -252,16 +254,14 @@ class QueryCache:
         """
         Invalidate all cache entries that might involve a table.
         
-        This is a simple implementation that clears all cache entries
-        when a table is modified. A more sophisticated implementation
-        could parse queries to determine affected tables.
+        NOTE: This is a conservative implementation that clears the entire
+        cache when any table is modified. A future version will parse queries
+        to determine affected tables precisely.
         
         Args:
             table_name: Table name
             db_name: Database name
         """
-        # For simplicity, clear all cache when a table is modified
-        # TODO: Implement smarter invalidation based on query parsing
         await self.clear()
     
     def get_stats(self) -> Dict[str, Any]:

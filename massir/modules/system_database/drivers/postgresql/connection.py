@@ -1,143 +1,14 @@
 """
-PostgreSQL connection and pool implementation using asyncpg.
+PostgreSQL connection pool implementation using asyncpg.
 """
 import time
-import asyncio
-import asyncpg
 from typing import Any, Dict, List, Optional
-from contextlib import asynccontextmanager
 
-from ...core.connection import BaseConnection, BasePool
+import asyncpg
+
+from ...core.connection import BasePool
 from ...core.types import DatabaseConfig, QueryResult
-from ...core.exceptions import ConnectionError, PoolError, QueryError
-
-
-class PostgreSQLConnection(BaseConnection):
-    """PostgreSQL connection implementation."""
-    
-    def __init__(self, config: DatabaseConfig):
-        super().__init__(config)
-    
-    async def connect(self) -> bool:
-        """Establish database connection."""
-        try:
-            self._connection = await asyncpg.connect(
-                host=self.config.host,
-                port=self.config.port or 5432,
-                database=self.config.database,
-                user=self.config.user,
-                password=self.config.password,
-                timeout=self.config.connect_timeout,
-                command_timeout=self.config.command_timeout
-            )
-            self._is_connected = True
-            return True
-        except Exception as e:
-            self._is_connected = False
-            raise ConnectionError(f"Failed to connect to PostgreSQL: {e}")
-    
-    async def disconnect(self) -> bool:
-        """Close database connection."""
-        if self._connection:
-            await self._connection.close()
-            self._connection = None
-            self._is_connected = False
-        return True
-    
-    async def execute(
-        self, 
-        query: str, 
-        params: Optional[tuple] = None
-    ) -> QueryResult:
-        """Execute a query."""
-        start_time = time.time()
-        try:
-            # asyncpg uses $1, $2 style placeholders
-            result = await self._connection.execute(query, *(params or ()))
-            
-            # Parse result tag (e.g., "INSERT 0 5" -> affected_rows=5)
-            parts = result.split()
-            affected = int(parts[-1]) if len(parts) > 1 and parts[-1].isdigit() else 0
-            
-            return QueryResult(
-                success=True,
-                affected_rows=affected,
-                execution_time=time.time() - start_time
-            )
-        except Exception as e:
-            return QueryResult(
-                success=False,
-                error=str(e),
-                execution_time=time.time() - start_time
-            )
-    
-    async def fetch_one(
-        self, 
-        query: str, 
-        params: Optional[tuple] = None
-    ) -> Optional[Dict[str, Any]]:
-        """Execute query and fetch single row."""
-        try:
-            row = await self._connection.fetchrow(query, *(params or ()))
-            if row:
-                return dict(row)
-            return None
-        except Exception as e:
-            raise QueryError(f"Failed to fetch row: {e}")
-    
-    async def fetch_all(
-        self, 
-        query: str, 
-        params: Optional[tuple] = None
-    ) -> List[Dict[str, Any]]:
-        """Execute query and fetch all rows."""
-        try:
-            rows = await self._connection.fetch(query, *(params or ()))
-            return [dict(row) for row in rows]
-        except Exception as e:
-            raise QueryError(f"Failed to fetch rows: {e}")
-    
-    async def fetch_value(
-        self, 
-        query: str, 
-        params: Optional[tuple] = None
-    ) -> Any:
-        """Execute query and fetch single value."""
-        try:
-            row = await self._connection.fetchrow(query, *(params or ()))
-            if row:
-                return list(row.values())[0]
-            return None
-        except Exception as e:
-            raise QueryError(f"Failed to fetch value: {e}")
-    
-    async def begin_transaction(self) -> bool:
-        """Begin a transaction."""
-        self._connection._con._top_xact = self._connection._con.transaction()
-        await self._connection._con._top_xact.start()
-        return True
-    
-    async def commit(self) -> bool:
-        """Commit current transaction."""
-        if hasattr(self._connection._con, '_top_xact') and self._connection._con._top_xact:
-            await self._connection._con._top_xact.commit()
-            self._connection._con._top_xact = None
-        return True
-    
-    async def rollback(self) -> bool:
-        """Rollback current transaction."""
-        if hasattr(self._connection._con, '_top_xact') and self._connection._con._top_xact:
-            await self._connection._con._top_xact.rollback()
-            self._connection._con._top_xact = None
-        return True
-    
-    async def ping(self) -> bool:
-        """Check if connection is alive."""
-        try:
-            await self.fetch_value("SELECT 1")
-            return True
-        except Exception:
-            return False
+from ...core.exceptions import PoolError
 
 
 class PostgreSQLPool(BasePool):

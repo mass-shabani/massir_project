@@ -44,7 +44,12 @@ class PostgreSQLSchemaManager(BaseSchemaManager):
         if column.primary_key:
             parts.append("PRIMARY KEY")
         if column.auto_increment:
-            parts[1] = "SERIAL"  # PostgreSQL uses SERIAL for auto-increment
+            if column.type == ColumnType.BIGINT:
+                parts[1] = "BIGSERIAL"
+            elif column.type == ColumnType.SMALLINT:
+                parts[1] = "SMALLSERIAL"
+            else:
+                parts[1] = "SERIAL"
         if not column.nullable and not column.primary_key:
             parts.append("NOT NULL")
         if column.unique and not column.primary_key:

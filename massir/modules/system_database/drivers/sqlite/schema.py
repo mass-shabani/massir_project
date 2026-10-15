@@ -296,8 +296,6 @@ class SQLiteSchemaManager(BaseSchemaManager):
                 info = await self._pool.fetch_all(f"PRAGMA index_info({row['name']})")
                 columns = [i["name"] for i in info]
                 
-                # Check if unique
-                index_info = await self._pool.fetch_one(f"PRAGMA index_info({row['name']})")
                 unique = False
                 # Get unique info from sql
                 sql_row = await self._pool.fetch_one(
