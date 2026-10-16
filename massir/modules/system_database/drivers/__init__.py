@@ -10,7 +10,6 @@ from .sqlite import (
     SQLiteTransaction,
 )
 from .postgresql import (
-    PostgreSQLConnection,
     PostgreSQLPool,
     PostgreSQLSchemaManager,
     PostgreSQLRecordManager,
@@ -18,7 +17,6 @@ from .postgresql import (
     PostgreSQLTransaction,
 )
 from .mysql import (
-    MySQLConnection,
     MySQLPool,
     MySQLSchemaManager,
     MySQLRecordManager,
@@ -35,14 +33,12 @@ __all__ = [
     "SQLiteSQLExecutor",
     "SQLiteTransaction",
     # PostgreSQL
-    "PostgreSQLConnection",
     "PostgreSQLPool",
     "PostgreSQLSchemaManager",
     "PostgreSQLRecordManager",
     "PostgreSQLSQLExecutor",
     "PostgreSQLTransaction",
     # MySQL
-    "MySQLConnection",
     "MySQLPool",
     "MySQLSchemaManager",
     "MySQLRecordManager",
