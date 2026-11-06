@@ -1,7 +1,10 @@
 """
 Unit tests for ModuleRegistry.
 """
-import pytest
+try:
+    import pytest  # noqa: F401
+except Exception:
+    pass
 from massir.core.registry import ModuleRegistry
 
 
